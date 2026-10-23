@@ -1,0 +1,550 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Yash Study Hub</title><link rel="icon" href="logo.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#ffffff;--card:#f4f6ff;--card2:#e8ecff;--tile:#ffffff;--navy:#000066;--tx:#0b1240;--tx70:#3a4270;--mu:#5b6385;--ac:#1a3bcc;--gold:#ffd400;--line:#c5cef5;--yel:#fff29;--bad:#d22}
+*{box-sizing:border-box}
+body{margin:0;font:15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+a{color:var(--ac);text-decoration:none}
+.material-icons{font-family:'Material Icons';font-size:22px;line-height:1;vertical-align:middle;-webkit-font-feature-settings:'liga';font-feature-settings:'liga'}
+.shell{display:flex;min-height:100vh}
+aside.side{display:none}
+@media(min-width:900px){aside.side{display:flex;flex-direction:column;gap:4px;width:230px;flex:none;background:var(--navy);padding:16px 12px;position:sticky;top:0;height:100vh}}
+.side a{display:flex;align-items:center;gap:12px;color:#fff;padding:12px 14px;border-radius:12px;font-weight:600}
+.side a.on{background:rgba(255,255,255,.16);color:var(--yel)}
+.side a:hover{background:rgba(255,255,255,.1)}
+nav.bn{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--navy);padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:9}
+nav.bn a{flex:1;text-align:center;color:#b4bbea;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.bn a.on{color:var(--yel);font-weight:700}
+@media(min-width:900px){nav.bn{display:none}}
+main.content{flex:1;min-width:0;padding-bottom:84px}
+@media(min-width:900px){main.content{padding-bottom:24px}}
+.wrap{max-width:1100px;margin:auto;padding:0 16px}
+.topbar{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.topbar img{width:46px;height:46px;border-radius:13px;background:#fff;object-fit:cover;flex:none}
+.topbar .nm{flex:1;min-width:0}.topbar b{display:block;font-size:17px}
+.topbar small{display:block;color:var(--yel);font-size:11px;font-weight:700;letter-spacing:.3px}
+.topbar .bell{color:#fff;font-size:26px;padding:6px;border-radius:50%;position:relative}
+.topbar .bell.dot::after{content:"";position:absolute;top:4px;right:4px;width:10px;height:10px;border-radius:50%;background:#e53935;border:2px solid var(--navy)}
+.hi{color:var(--tx70);font-size:14.5px;margin:14px 0 10px}.hi span{color:var(--ac);font-weight:700}
+.ban{position:relative;border-radius:16px;overflow:hidden;aspect-ratio:16/9;background:var(--card);max-height:420px;width:100%}
+.track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:100%;scrollbar-width:none}
+.track::-webkit-scrollbar{display:none}
+.track img{flex:0 0 100%;width:100%;height:100%;object-fit:cover;scroll-snap-align:start;cursor:pointer}
+.dots{display:flex;justify-content:center;gap:6px;margin:8px 0 0}
+.dots i{width:7px;height:7px;border-radius:50%;background:#b4bbea}.dots i.on{background:var(--ac)}
+.sec{display:flex;justify-content:space-between;align-items:center;margin:22px 0 10px;font-size:16px;font-weight:700}
+.sec a{font-size:13px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+@media(min-width:900px){.tiles{gap:16px}.tile{min-height:116px}}
+.tile{background:var(--tile);border:1.5px solid var(--gold);box-shadow:0 0 10px #ffd40066;border-radius:16px;min-height:88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--tx);padding:10px 4px;text-align:center}
+.tile .e{font-size:28px}.tile .l{font-size:12.5px;font-weight:700}
+.soc{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);margin-top:18px;color:var(--tx)}
+.soc .av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:17px;flex:none}
+.soc .t{flex:1;min-width:0}.soc .t b{display:block;font-size:13.5px}.soc .t small{color:var(--mu);font-size:11.5px}
+.soc .cta{color:#fff;font-weight:700;font-size:12px;padding:6px 14px;border-radius:20px}
+.study{margin-top:16px}
+.bar{height:8px;background:var(--card2);border-radius:6px;overflow:hidden;margin:6px 0}.bar i{display:block;height:100%;background:var(--ac)}
+.strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
+.vc{flex:0 0 160px;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--line);color:var(--tx)}
+.vc img{width:160px;height:90px;object-fit:cover;display:block}
+.vc div{padding:8px;font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+button,input,select,textarea{font:inherit;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--tx)}
+button.p{background:var(--gold);color:#000;border:0;font-weight:700;cursor:pointer}
+button.s{background:var(--card2);border:1px solid var(--line);cursor:pointer}
+input,textarea{width:100%;margin:6px 0}
+.box{max-width:400px;margin:60px auto;padding:0 16px}
+.err{color:var(--bad)}.mu{color:var(--mu)}
+.card{background:var(--card);border-radius:14px;padding:14px;display:block;color:var(--tx);border:1px solid var(--line);margin:10px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.grid .card{margin:0}
+.grid .card .i{font-size:30px}.grid .card small{color:var(--mu);display:block;margin-top:4px}
+.grid .card img{width:100%;border-radius:10px;aspect-ratio:16/9;object-fit:cover;margin-bottom:8px}
+iframe{width:100%;border:0;border-radius:12px;background:#000}.v{aspect-ratio:16/9}.pdf{height:78vh}
+.q{background:var(--card);border-radius:14px;padding:14px;margin:12px 0;border:1px solid var(--line)}
+.q label{display:block;padding:9px 10px;margin:5px 0;border-radius:10px;border:1px solid var(--line);cursor:pointer;background:#fff}
+.q label input{width:auto;margin-right:8px}
+.ok{background:#1b8a3a22!important}.no{background:#d2222222!important}
+.rep{background:#fff;border-radius:10px;padding:10px;margin-top:8px;border:1px solid var(--line)}
+.pageTitle{margin:18px 0 6px;font-size:20px}
+.modes{display:flex;gap:8px;margin:8px 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.chip{display:inline-block;padding:7px 12px;border-radius:20px;border:1px solid var(--line);background:#fff;color:var(--tx);font-size:13px;cursor:pointer}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.cacard .tp{color:var(--ac);font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase}
+.cacard p{margin:6px 0;line-height:1.45}
+.cacard .hiT{color:var(--tx70)}
+.cacard hr{border:0;border-top:1px solid var(--line);margin:8px 0}
+.cacard .src{color:var(--mu);font-size:11.5px}
+.cat{color:var(--ac);font-size:11px;font-weight:700;display:block;margin-top:4px}
+.pdfbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.pdfbar a{display:inline-flex;align-items:center;gap:4px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--tx);font-size:13px}
+.btnlink{display:inline-flex;gap:8px;align-items:center;margin-top:12px;background:var(--gold);color:#000;font-weight:700;padding:10px 16px;border-radius:10px}
+.mtop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--card2);padding:10px;border-radius:12px;margin-top:6px}
+.mtime{font-weight:700;font-size:17px;color:var(--ac);margin-right:auto}
+.opt{display:flex;gap:10px;align-items:center;padding:12px;border:1.5px solid var(--line);border-radius:12px;margin:8px 0;background:#fff;cursor:pointer}
+.opt.sel{background:#fff3b0;border-color:var(--ac)}
+.badge{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--mu);display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+.opt.sel .badge{background:var(--gold);border-color:var(--ac)}
+.okb{border-color:#1b8a3a!important;background:#e6f6ea!important}
+.nob{border-color:#d22!important;background:#fde8e8!important}
+.qtext{font-size:16px;font-weight:600;margin:8px 0;line-height:1.45}
+.passage{background:var(--card2);padding:10px;border-radius:10px;color:var(--tx70);font-size:13.5px;margin-bottom:8px}
+.mbar{display:flex;gap:8px;justify-content:space-between;margin-top:12px;background:var(--card2);padding:10px;border-radius:12px}
+.pal{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:8px;margin-top:8px}
+.pn{padding:8px 0;border-radius:10px;border:1px solid var(--line);background:var(--card2);font-weight:700;color:var(--tx)}
+.pn.ans{background:#2e7d32;color:#fff;border-color:#2e7d32}
+.pn.cur{border:2px solid var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.days a{display:inline-block;padding:8px 12px;border-radius:20px;border:1px solid var(--line);margin:4px 4px 0 0;color:var(--tx)}
+.days a.on{background:var(--gold);border-color:var(--gold);font-weight:700}
+body{font-family:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main.content>*{animation:fadeUp .35s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.topbar{background:linear-gradient(135deg,#000066 0%,#1a1aa6 100%);box-shadow:0 4px 16px #00006633;border-radius:0 0 22px 22px}
+.topbar img{box-shadow:0 2px 8px #0004}
+.tile{transition:transform .18s ease,box-shadow .18s ease;background:linear-gradient(180deg,#fff,#fffdf0)}
+.tile:hover{transform:translateY(-3px);box-shadow:0 8px 20px #ffd40088}
+.tile .e{width:50px;height:50px;border-radius:16px;background:#fff8d6;display:grid;place-items:center;font-size:26px}
+.card{box-shadow:0 2px 10px #1a3bcc12;transition:transform .15s ease,box-shadow .15s ease}
+a.card:hover{transform:translateY(-2px);box-shadow:0 8px 18px #1a3bcc22}
+.grid .card .i{width:46px;height:46px;border-radius:14px;background:var(--card2);display:grid;place-items:center;font-size:24px;margin-bottom:6px}
+.ban{box-shadow:0 8px 24px #00006626}
+.soc{box-shadow:0 4px 14px #0001;transition:background .4s ease}
+button.p,.btnlink{box-shadow:0 4px 12px #ffd40088;transition:transform .12s ease}
+button.p:active,.btnlink:active{transform:scale(.97)}
+button.p:disabled{opacity:.5;box-shadow:none}
+.vc{box-shadow:0 2px 10px #0001;transition:transform .15s ease}.vc:hover{transform:translateY(-2px)}
+.pageTitle{font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px}
+.pageTitle::before{content:"";width:5px;height:22px;border-radius:3px;background:var(--gold)}
+.side .brand{display:flex;align-items:center;gap:10px;color:#fff;padding:6px 8px 16px;font-weight:700}
+.side .brand img{width:40px;height:40px;border-radius:12px;background:#fff}
+.side .brand small{display:block;color:var(--yel);font-size:10px;letter-spacing:.4px}
+.socrow{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin:10px 0 18px}
+.socrow a{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--tx)}
+.socrow .sb{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px;box-shadow:0 4px 10px #0003}
+.socrow small{font-size:11px}
+::selection{background:var(--gold)}
+</style></head><body>
+<div class="shell">
+ <aside class="side" id="side"></aside>
+ <main class="content" id="app">Loading…</main>
+</div>
+<nav class="bn" id="bn" style="display:none"></nav>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+if(typeof firebase==='undefined'){document.getElementById('app').innerHTML='<div class="box"><h2>Ye page sahi tarike se nahi khul raha</h2><p class="mu">Is file ko phone ke file viewer me mat kholo. Website ka link Chrome browser me kholo.</p></div>';throw new Error('firebase not loaded');}
+firebase.initializeApp({apiKey:"AIzaSyDSAvRzTNcXVENKNSUe0LqwuHLNZHRtHh0",authDomain:"yash-study-hub-450d2.firebaseapp.com",projectId:"yash-study-hub-450d2",storageBucket:"yash-study-hub-450d2.firebasestorage.app",messagingSenderId:"782647828219",appId:"1:782647828219:web:bd86accdd0eeffed165a5e"});
+const auth=firebase.auth(),db=firebase.firestore(),app=document.getElementById('app');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const yid=u=>(String(u).match(/(?:v=|youtu\.be\/|embed\/|live\/|shorts\/)([\w-]{11})/)||[])[1]||'';
+const ord=(a,b)=>(a.order??1e9)-(b.order??1e9)||(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0);
+const list=async q=>(await q.get()).docs.map(d=>({id:d.id,...d.data()}));
+const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
+const J={get:(k,d)=>{try{const v=localStorage.getItem('ysh_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('ysh_'+k,JSON.stringify(v))}catch(e){}}};
+const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const DAY=864e5;
+let cfg={appName:'Yash Study Hub',tagline:'COMPETITIVE EXAM PREP',telegramUrl:'https://t.me/YashStudyHub',paymentTelegramUrl:'https://t.me/YSHinfo',whatsappUrl:'https://whatsapp.com/channel/0029VbCnzSvKmCPLxoMBuk33',youtubeUrl:'https://www.youtube.com/c/YashStudyHub',upiId:'yshpay@upi'};
+let lang='hi',timers=[];
+const clearT=()=>{timers.forEach(clearInterval);timers=[]};
+const tile=(h,i,t,s='')=>`<a class="card" href="#/${h}"><div class="i">${i}</div><b>${esc(t)}</b><small>${esc(s)}</small></a>`;
+const vcard=v=>{const id=yid(v.youtubeLink);return `<a class="card" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><b>${esc(v.title)}</b></a>`};
+const back='<p><a href="javascript:history.back()">← Back</a></p>';
+const empty='<p class="mu">Abhi kuch nahi hai / अभी कुछ नहीं है।</p>';
+const topBar=()=>`<div class="topbar"><img src="logo.png" alt=""><div class="nm"><b>${esc(cfg.appName)}</b><small>${esc(cfg.tagline)}</small></div><a id="bell" class="bell material-icons" href="#/notifications" title="Notifications">notifications</a></div>`;
+const wrap=h=>`<div class="wrap">${h}</div>`;
+const TILES=[['mocks','📝','Mock Tests'],['pdfs','📚','PDF Library'],['fmcq','✅','Free MCQs'],['batches','🎓','Paid Batches'],['mycourse','📖','My Course'],['queries','💬','Queries'],['quiz','🧠','Daily Quiz'],['notebook','📓','Notebook'],['progress','📊','Progress']];
+const BN=[['home','home','Home'],['news','newspaper','News'],['pdfs','picture_as_pdf','PDFs'],['ca','account_balance','C.Affairs'],['profile','person','Profile']];
+
+// ---------- local study data (phone-saved, same idea as the app) ----------
+function touchStreak(){const st=J.get('streak',{last:'',count:0}),t=dayKey(),y=dayKey(new Date(Date.now()-DAY));
+ if(st.last!==t){st.count=st.last===y?st.count+1:1;st.last=t;J.set('streak',st)}return st.count}
+function goalToday(){const g=J.get('goalDay',{day:'',n:0});return g.day===dayKey()?g.n:0}
+function addGoal(n){if(!n)return;const t=dayKey(),g=J.get('goalDay',{day:'',n:0});J.set('goalDay',{day:t,n:(g.day===t?g.n:0)+n})}
+function addMistakes(qs,subject,source){const m=J.get('mistakes',[]);qs.forEach(q=>{if(!m.some(x=>x.text===q.text))m.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||'',subject,source,at:Date.now()})});J.set('mistakes',m.slice(0,300))}
+function rmMistake(i){const m=J.get('mistakes',[]);m.splice(i,1);J.set('mistakes',m);route()}
+const examDays=()=>{const e=J.get('exam',null);if(!e)return null;const t0=new Date();t0.setHours(0,0,0,0);return Math.ceil((new Date(e.date+'T00:00:00')-t0)/DAY)};
+function studyCard(){const s=touchStreak(),g=goalVal(),gd=goalToday(),ex=J.get('exam',null),d=examDays();
+ return `<div class="card study"><div><span class="material-icons" style="color:#e65100">local_fire_department</span> <b>${s} din ka streak</b></div>
+ <div style="margin-top:8px">Aaj ka goal: <b>${gd} / ${g} Qs</b></div><div class="bar"><i style="width:${Math.min(100,gd/g*100)}%"></i></div>
+ ${ex&&d!==null?`<div>📅 <b>${esc(ex.name)}</b> — ${d>=0?d+' din bache':'ho chuki hai'}</div>`:`<a href="#/profile">Exam date set karein →</a>`}</div>`}
+
+function loginView(mode='login'){
+ showNav(null);
+ app.innerHTML=`<div class="box"><h2>${mode=='signup'?'Sign Up':'Login'}</h2><input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><p class="err" id="m"></p>
+ <button class="p" id="go">${mode=='signup'?'Create account':'Login'}</button>
+ <p><a href="javascript:void 0" id="sw">${mode=='signup'?'Already have account? Login':'New here? Sign up'}</a> · <a href="javascript:void 0" id="fp">Forgot password</a></p></div>`;
+ const v=id=>document.getElementById(id).value.trim(),m=t=>document.getElementById('m').textContent=t;
+ document.getElementById('sw').onclick=()=>loginView(mode=='signup'?'login':'signup');
+ document.getElementById('fp').onclick=()=>auth.sendPasswordResetEmail(v('e')).then(()=>m('Reset email bhej diya / ईमेल भेजा गया'),e=>m(e.message));
+ document.getElementById('go').onclick=()=>(mode=='signup'?auth.createUserWithEmailAndPassword(v('e'),document.getElementById('p').value):auth.signInWithEmailAndPassword(v('e'),document.getElementById('p').value)).catch(e=>m(e.message));
+}
+
+const qt=(q,k,hi)=>(hi&&q[k+'Hi'])||q[k];
+function qHtml(Q,prefix,hi){window.QS=window.QS||{};QS[prefix]=Q;const sv=J.get('bookmarks',[]);return Q.map((q,i)=>`<div class="q">${q.passage?`<p class="mu">${esc(qt(q,'passage',hi))}</p>`:''}<b>${i+1}. ${esc(qt(q,'text',hi))}</b>`+(hi&&q.optionsHi?.length?q.optionsHi:q.options).map((o,j)=>`<label><input type="radio" name="${prefix}${i}" value="${j}">${esc(o)}</label>`).join('')+`<div id="${prefix}x${i}"></div><button class="s" style="margin-top:6px" onclick="bm('${prefix}',${i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></div>`).join('')}
+function grade(Q,prefix,mp,ng,hi){let s=0,c=0,w=0;const ans=[];
+ Q.forEach((q,i)=>{const r=document.querySelector(`input[name=${prefix}${i}]:checked`),a=r?+r.value:null;ans.push(a);
+  document.querySelectorAll(`input[name=${prefix}${i}]`).forEach(e=>{e.disabled=true;const p=e.parentElement;if(+e.value==q.correctIndex)p.classList.add('ok');else if(+e.value==a)p.classList.add('no')});
+  if(a!==null){if(a==q.correctIndex){c++;s+=mp}else{w++;s-=ng}}
+  const ex=hi&&q.explanationHi||q.explanation;if(ex)document.getElementById(prefix+'x'+i).innerHTML='<p class="mu">💡 '+esc(ex)+'</p>'});
+ return {s,c,w,ans}}
+
+const CA_TOPICS={"national": ["National", "राष्ट्रीय"], "international": ["International", "अंतर्राष्ट्रीय"], "states": ["State News", "राज्य समाचार"], "economy": ["Economy", "अर्थव्यवस्था"], "banking": ["Banking & Finance", "बैंकिंग व वित्त"], "trade": ["Trade & Commerce", "व्यापार व वाणिज्य"], "polity": ["Polity & Governance", "राजव्यवस्था"], "schemes": ["Schemes", "योजनाएं"], "appointments": ["Appointments", "नियुक्तियां"], "awards": ["Awards", "पुरस्कार"], "sports": ["Sports", "खेल"], "days": ["Important Days", "महत्वपूर्ण दिवस"], "summits": ["Summits & Conferences", "सम्मेलन व बैठकें"], "mou": ["Agreements & MoUs", "समझौते व एमओयू"], "reports": ["Reports & Indices", "रिपोर्ट व सूचकांक"], "books": ["Books & Authors", "पुस्तकें व लेखक"], "obituary": ["Obituary", "निधन"], "defence": ["Defence", "रक्षा"], "security": ["Internal Security", "आंतरिक सुरक्षा"], "science_tech": ["Science & Tech", "विज्ञान व तकनीक"], "space": ["Space", "अंतरिक्ष"], "environment": ["Environment", "पर्यावरण"], "energy": ["Energy & Power", "ऊर्जा"], "agriculture": ["Agriculture", "कृषि"], "health": ["Health", "स्वास्थ्य"], "education": ["Education", "शिक्षा"], "infrastructure": ["Railways & Infra", "रेलवे व अवसंरचना"], "culture": ["Culture & Heritage", "संस्कृति व विरासत"], "misc": ["Others", "अन्य"]};
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function caLbl(k,lang){const p=CA_TOPICS[k]||CA_TOPICS.misc;return lang=='hi'?p[1]:p[0]}
+function caCard(x,lang){const en=lang!='hi'&&x.en,hi=lang!='en'&&x.hi;
+ return `<div class="card cacard"><div class="tp">${esc(caLbl(x.topic,lang))}</div>${en?`<p>${esc(x.en)}</p>`:''}${en&&hi?'<hr>':''}${hi?`<p class="hiT">${esc(x.hi)}</p>`:''}<a class="src" ${x.link?`href="${esc(x.link)}" target="_blank" rel="noopener"`:''}>Source: ${esc(x.source||'')}${x.link?' ›':''}</a></div>`}
+function caSet(k,v){const C=window.CAS=window.CAS||{mode:'daily',day:-1,topic:'all',lang:'both'};
+ if(k=='day'){C.day=+v;C.topic='all'}else if(k=='mode')C.mode=v;else if(k=='topic')C.topic=v;else if(k=='lang')C.lang=v;route()}
+
+const ADMIN_EMAIL='yashpcmishra@gmail.com';
+const isAdminUser=()=>!!(auth.currentUser&&String(auth.currentUser.email).toLowerCase()==ADMIN_EMAIL&&auth.currentUser.emailVerified);
+const V={admin:()=>adminPage(),
+async fmcq(){const ix=await fmIndex();
+ if(!ix||!ix.exams?.length||!ix.sets?.length)return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">Free MCQs are not ready yet. Please check again later.</p>`);
+ return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every month: Current Affairs (from PIB), Static GK, General Science and General Studies (syllabus-based).</p><div class="grid">`+ix.exams.map(e=>tile('fmx/'+e.id,e.emoji||'📝',e.name,ix.sets.filter(s=>s.examId==e.id).length+' sets')).join('')+'</div>')},
+async fmx(eid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid);if(!e)return wrap(back+empty);
+ return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div class="grid">`+(ix.subjects||[]).map(s=>tile('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length+' months')).join('')+'</div>')},
+async fms(eid,sid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid),s=(ix?.subjects||[]).find(x=>x.id==sid);if(!e||!s)return wrap(back+empty);
+ const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>b.monthKey.localeCompare(a.monthKey)),done=J.get('fmDone',{});
+ return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'#2e7d32':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmMonth(m.monthKey))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}')" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):'<p class="mu">No set for this subject yet.</p>'))},
+async fmq(sid){const ix=await fmIndex();const m=(ix?.sets||[]).find(x=>x.id==sid);if(!m)return wrap(back+empty);
+ let set;try{set=await fmSet(sid)}catch(e){return wrap(back+'<p class="err">This set could not be opened. Check your internet and try again.</p>')}
+ const e=ix.exams.find(x=>x.id==m.examId),s=ix.subjects.find(x=>x.id==m.subjectId);
+ window.FQ={m,Q:set.Q,i:0,picked:null,ans:Array(set.Q.length).fill(null),hi:lang=='hi',done:false,title:(s?s.name:'')+' · '+fmMonth(m.monthKey),exam:e?e.name:'',subject:s?s.name:''};(window.QS=window.QS||{}).fq=set.Q;
+ return wrap(back+`<h2 class="pageTitle">${esc(FQ.title)}</h2><div id="fq"></div>`)},
+async home(){
+ const [items,banners,st]=await Promise.all([
+  db.doc('appConfig/latestVideos').get().then(d=>d.data()?.items||[]).catch(()=>[]),
+  db.collection('banners').orderBy('order').get().then(s=>s.docs.map(d=>({id:d.id,...d.data()}))).catch(()=>[]),
+  db.doc('students/'+auth.currentUser.uid).get().then(d=>d.data()||{}).catch(()=>({}))]);
+ let vids=items.filter(v=>yid(v.youtubeLink)).slice(0,10);
+ if(!vids.length)vids=await list(db.collection('videos').where('source','==','youtube_auto').limit(50)).then(a=>a.filter(v=>!v.hidden&&yid(v.youtubeLink)).sort((a,b)=>(b.publishedAt?.seconds||0)-(a.publishedAt?.seconds||0)).slice(0,10)).catch(()=>[]);
+ const name=String(st.name||'').trim();
+ const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
+ return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
+ +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}"><span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
+ +`<div id="soc" class="soc"></div>`+studyCard()
+ +`<div class="sec">YouTube Videos <a href="${esc(cfg.youtubeUrl)}" target="_blank" rel="noopener">Channel</a></div>`
+ +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>')
+ +`</div>`},
+async videos(){
+ const [f,v]=await Promise.all([list(db.collection('videoFolders').where('batchId','==','free')),list(db.collection('videos').where('batchId','==',null))]);
+ f.sort(ord);const vs=v.filter(x=>!x.hidden&&yid(x.youtubeLink)).sort((a,b)=>(b.publishedAt?.seconds||b.createdAt?.seconds||0)-(a.publishedAt?.seconds||a.createdAt?.seconds||0));
+ return wrap(`<h2 class="pageTitle">Video Classes</h2>`+(f.length?'<div class="grid">'+f.map(x=>tile('vf/'+x.id,'📁',x.name)).join('')+'</div>':'')+(vs.length?`<h2 class="pageTitle">Latest</h2><div class="grid">`+vs.slice(0,40).map(vcard).join('')+'</div>':f.length?'':empty))},
+async vf(id){const v=(await list(db.collection('videos').where('folderId','==',id))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?'<div class="grid">'+v.map(vcard).join('')+'</div>':empty))},
+async play(id,t){return wrap(back+`<h2 class="pageTitle">${esc(decodeURIComponent(t||''))}</h2><iframe class="v" src="https://www.youtube.com/embed/${esc(id)}?autoplay=1&rel=0&cc_load_policy=1&playsinline=1" allow="accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe><a class="btnlink" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in YouTube</a>`)},
+async pdfs(){const f=(await list(db.collection('pdfFolders').where('type','==','free'))).sort(ord);return wrap(`<h2 class="pageTitle">PDF Library</h2>`+(f.length?'<div class="grid">'+f.map(x=>tile('pf/'+x.id,'📁',x.name)).join('')+'</div>':empty))},
+async pf(id){const p=(await list(db.collection('pdfs').where('folderId','==',id))).sort(ord);return wrap(back+(p.length?'<div class="grid">'+p.map(x=>tile('pdf/'+encodeURIComponent(x.driveLink)+'/'+encodeURIComponent(x.title),'📄',x.title)).join('')+'</div>':empty))},
+async pdf(l,t){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/),id=m&&(m[1]||m[2]);
+ const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u);
+ const dl=id?`https://drive.google.com/uc?export=download&id=${id}`:u;
+ return wrap(`<h2 class="pageTitle">${esc(decodeURIComponent(t||'PDF'))}</h2><div class="pdfbar"><a href="javascript:history.back()"><span class="material-icons">arrow_back</span>Back</a><a href="javascript:void 0" onclick="document.getElementById('pdfv').src=document.getElementById('pdfv').src"><span class="material-icons">refresh</span>Reload</a><a href="${esc(u)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in browser</a><a href="${esc(dl)}" target="_blank" rel="noopener"><span class="material-icons">download</span>Download</a></div>
+ <iframe id="pdfv" class="pdf" src="${esc(src)}"></iframe>`)},
+async batches(){const b=(await list(db.collection('batches'))).sort(ord);return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(b.length?'<div class="grid">'+b.map(x=>tile('batch/'+x.id,'🎓',x.title,x.price>0?'₹'+x.price:'Free')).join('')+'</div>':empty))},
+async batch(id){
+ const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data(),em=auth.currentUser.email.toLowerCase();
+ if(b.price>0&&!isAdminUser()){let ok=false,msg='';const code=ls.get('code_'+id)||'';
+  if(code)try{const a=(await db.doc(`batchAccess/${em}_${id}`).get()).data();ok=a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date());if(!ok)msg='Code galat ya expire ho gaya'}catch(e){msg='Access expire / not found'}
+  if(!ok)return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2><p>Price: ₹${b.price} · UPI: ${esc(cfg.upiId)}</p><p class="mu">Payment ke baad Telegram par screenshot bhejo, access code milega.</p><a class="card" href="${esc(cfg.paymentTelegramUrl)}" target="_blank" rel="noopener">Payment / Request on Telegram ↗</a><input id="c" placeholder="Access code"><p class="err">${msg}</p><button class="p" onclick="ls.set('code_${id}',document.getElementById('c').value.trim());route()">Unlock</button>`)}
+ const [vf,pf,mf]=await Promise.all([list(db.collection('videoFolders').where('batchId','==',id)),list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('mockTestFolders').where('batchIds','array-contains',id))]);
+ const S=(t,a,p,i)=>a.length?`<h2 class="pageTitle">${t}</h2><div class="grid">`+a.sort(ord).map(x=>tile(p+x.id,i,x.name||x.examName)).join('')+'</div>':'';
+ return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2>`+(S('Videos',vf,'vf/','🎬')+S('PDFs',pf,'pf/','📄')+S('Mock Tests',mf,'mf/','📝')||empty))},
+async mycourse(){
+ const bs=(await list(db.collection('batches'))).filter(b=>b.price>0);const em=auth.currentUser.email.toLowerCase();const got=[];
+ if(isAdminUser())got.push(...bs);else await Promise.all(bs.map(async b=>{const code=ls.get('code_'+b.id)||'';if(!code)return;
+  try{const a=(await db.doc(`batchAccess/${em}_${b.id}`).get()).data();if(a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date()))got.push(b)}catch(e){}}));
+ return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?'<div class="grid">'+got.map(b=>tile('batch/'+b.id,'🎓',b.title)).join('')+'</div>':'<p class="mu">Abhi koi course unlock nahi hai. Paid Batches me jaakar access code daalein.</p>'))},
+async queries(){
+ const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+ return wrap(`<h2 class="pageTitle">Queries / सवाल</h2><div class="card"><textarea id="qt2" rows="3" placeholder="Apna doubt yahan likhein / Write your doubt"></textarea><button class="p" onclick="sendQ()">Send / भेजें</button></div>`
+ +q.map(x=>`<div class="card"><div>${esc(x.text)}</div>${x.reply?`<div class="rep"><b>Reply / जवाब:</b> ${esc(x.reply)}</div>`:'<small class="mu">Abhi jawab nahi aaya</small>'}</div>`).join(''))},
+async notifications(){J.set('notifSeen',Date.now());
+ const cut=firebase.firestore.Timestamp.fromDate(new Date(Date.now()-DAY));
+ const s=await db.collection('notifications').where('sentAt','>',cut).orderBy('sentAt','desc').limit(50).get();
+ return wrap(`<h2 class="pageTitle">Notifications / सूचनाएं</h2>`+(s.docs.length?s.docs.map(d=>{const x=d.data();const t=x.sentAt?.toDate?x.sentAt.toDate().toLocaleString('en-IN'):'';return `<div class="card"><b>${esc(x.title)}</b><div>${esc(x.body)}</div><small class="mu">${esc(t)}</small></div>`}).join(''):'<p class="mu">Pichhle 1 din me koi notification nahi hai.</p>'))},
+async quiz(day){
+ const days=[...Array(7)].map((_,i)=>dayKey(new Date(Date.now()-i*DAY)));const d=day||days[0];
+ const dq=await db.doc('dailyCA/quiz_'+d).get().then(x=>x.data()?.questions||[]).catch(()=>[]);
+ const Q=dq.filter(q=>q&&q.text&&Array.isArray(q.options)&&q.options.length==4&&q.correctIndex>=0&&q.correctIndex<=3);
+ window.QZ={day:d,Q};
+ const done=J.get('quizDone',{})[d];
+ return wrap(`<h2 class="pageTitle">Daily Quiz / रोज़ का क्विज़</h2><div class="days">${days.map(x=>`<a class="${x==d?'on':''}" href="#/quiz/${x}">${x.slice(5)}</a>`).join('')}</div>`
+ +(done?`<div class="card">✅ Pehla prayas: <b>${done.score} / ${done.total}</b> (score isi ka count hota hai)</div>`:'')
+ +(Q.length?`<p class="mu">${Q.length} questions · PIB Current Affairs</p>`+qHtml(Q,'z',lang=='hi')+`<button class="p" onclick="submitQuiz()">Submit</button><div id="res"></div>`:'<p class="mu">Is din ka quiz abhi nahi hai.</p>'))},
+async saved(){const sv=J.get('bookmarks',[]);return wrap(back+`<h2 class="pageTitle">Saved questions / सेव किए सवाल</h2>`+(sv.length?sv.map((x,i)=>`<div class="q"><b>${esc(x.text)}</b>${x.options.map((o,j)=>`<div class="card" style="${j==x.correctIndex?'border-color:#1b8a3a':''}">${j==x.correctIndex?'✅ ':''}${esc(o)}</div>`).join('')}${x.explanation?`<p class="mu">💡 ${esc(x.explanation)}</p>`:''}<button class="s" onclick="rmBm(${i})">Remove</button></div>`).join(''):empty))},
+async notebook(){const m=J.get('mistakes',[]);
+ return wrap(`<h2 class="pageTitle">Mistake Notebook</h2><p><a href="#/saved">⭐ Saved questions</a></p>`+(m.length?`<div class="row"><button class="p" onclick="practiceMistakes()">Practice (${Math.min(10,m.length)})</button></div>`+m.map((x,i)=>`<div class="q"><b>${esc(x.text)}</b>${x.options.map((o,j)=>`<div class="card" style="${j==x.correctIndex?'border-color:#1b8a3a':''}">${j==x.correctIndex?'✅ ':''}${esc(o)}</div>`).join('')}${x.explanation?`<p class="mu">💡 ${esc(x.explanation)}</p>`:''}<small class="mu">${esc(x.subject||'')} ${esc(x.source||'')}</small><div><button class="s" onclick="rmMistake(${i})">Remove</button></div></div>`).join(''):empty))},
+async practice(){const Q=window.PQ||[];if(!Q.length)return wrap(back+empty);
+ return wrap(back+`<h2 class="pageTitle">Mistake Practice</h2>`+qHtml(Q,'pz',false)+`<button class="p" onclick="submitPractice()">Submit</button><div id="res"></div>`)},
+async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
+ const sm=h.reduce((a,x)=>a+x.marks,0),sx=h.reduce((a,x)=>a+x.maxMarks,0),sc=h.reduce((a,x)=>a+x.correct,0),sw=h.reduce((a,x)=>a+x.wrong,0);
+ const avg=sx?Math.round(sm/sx*100):0,acc=(sc+sw)?Math.round(sc/(sc+sw)*100):0;
+ const subj={};h.forEach(x=>{const k=x.subject||'General';subj[k]=subj[k]||{c:0,w:0};subj[k].c+=x.correct;subj[k].w+=x.wrong});
+ const recent=h.slice(0,10).reverse();
+ return wrap(`<h2 class="pageTitle">My Progress / मेरी प्रगति</h2><div class="tiles" style="grid-template-columns:repeat(3,1fr)">
+ <div class="tile"><span class="e">${h.length}</span><span class="l">Tests</span></div><div class="tile"><span class="e">${avg}%</span><span class="l">Avg score</span></div><div class="tile"><span class="e">${acc}%</span><span class="l">Accuracy</span></div></div>
+ <div class="sec">Recent tests (%)</div>`+(recent.length?recent.map(x=>`<div class="card"><div>${esc(x.title)}</div><div class="bar"><i style="width:${x.maxMarks?Math.max(0,x.marks/x.maxMarks*100):0}%"></i></div><small class="mu">${x.marks} / ${x.maxMarks}</small></div>`).join(''):empty)
+ +`<div class="sec">Subject-wise accuracy</div>`+(Object.keys(subj).length?Object.entries(subj).map(([k,v])=>{const p=(v.c+v.w)?Math.round(v.c/(v.c+v.w)*100):0;return `<div class="card"><b>${esc(k)}</b> — ${p}%<div class="bar"><i style="width:${p}%"></i></div></div>`}).join(''):'<p class="mu">Abhi subject ka data nahi hai.</p>')
+ +`<p class="mu">Mistakes saved: ${m.length}</p>`)},
+async news(c){const all=['banking','ssc','up_state','sports','technology','space','defence'];
+ const n=await list(db.collection('newsItems').where('category','in',c?[c]:all).orderBy('pubDate','desc').limit(30));
+ return wrap(`<h2 class="pageTitle">News</h2><p><a href="#/news">All</a>${all.map(x=>` · <a href="#/news/${x}">${x}</a>`).join('')}</p>`+(n.length?n.map(x=>`<a class="card" href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small class="mu">${esc(x.categoryLabel)}</small></a>`).join(''):empty))},
+async ca(){
+ const CAS=window.CAS=window.CAS||{mode:'daily',day:-1,topic:'all',lang:'both'};
+ const head=`<h2 class="pageTitle">Current Affairs / करेंट अफेयर्स</h2><div class="modes"><button class="${CAS.mode=='daily'?'p':'s'}" onclick="caSet('mode','daily')">Daily One-Liners</button><button class="${CAS.mode=='news'?'p':'s'}" onclick="caSet('mode','news')">News</button></div>`;
+ if(CAS.mode=='news'){
+  const n=await list(db.collection('newsItems').where('category','in',['national','hindi_news','hindi_ca']).orderBy('pubDate','desc').limit(30));
+  return wrap(head+(n.length?n.map(x=>`<a class="card" href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small class="cat">${esc(x.categoryLabel)}</small></a>`).join(''):'<p class="mu">No news yet — please check back later</p>'));
+ }
+ const days=[...Array(7)].map((_,i)=>{const d=new Date(Date.now()+19800000-i*DAY);const key=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;return {key,label:i==0?'Today':i==1?'Yesterday':`${String(d.getUTCDate()).padStart(2,'0')} ${MON[d.getUTCMonth()]}`}});
+ const datas=await Promise.all(days.map(d=>db.doc('dailyCA/'+d.key).get().then(x=>x.data()?.items||[]).catch(()=>[])));
+ let idx=CAS.day>=0?CAS.day:datas.findIndex(a=>a.length);if(idx<0)idx=0;
+ const items=datas[idx]||[];
+ const note=CAS.day<0&&idx>0?`<p class="mu">Aaj ki lines abhi available nahi hain. ${days[idx].label} ki dikha rahe hain.</p>`:'';
+ const topics=['all',...Object.keys(CA_TOPICS).filter(k=>items.some(x=>x.topic==k))];
+ const sel=topics.includes(CAS.topic)?CAS.topic:'all';
+ const shown=items.filter(x=>sel=='all'||x.topic==sel).sort((a,b)=>(b.sortKey||0)-(a.sortKey||0));
+ return wrap(head
+  +`<div class="chips">${days.map((d,i)=>`<a class="chip ${i==idx?'on':''}" onclick="caSet('day',${i})">${d.label}</a>`).join('')}</div>`
+  +`<div class="chips">${topics.map(k=>`<a class="chip ${k==sel?'on':''}" onclick="caSet('topic','${k}')">${k=='all'?(CAS.lang=='hi'?'सभी':'All'):esc(caLbl(k,CAS.lang))}</a>`).join('')}</div>`
+  +`<div class="chips">${[['both','Both'],['hi','हिंदी'],['en','English']].map(([k,t])=>`<a class="chip ${CAS.lang==k?'on':''}" onclick="caSet('lang','${k}')">${t}</a>`).join('')}</div>`
+  +note+(shown.length?shown.map(x=>caCard(x,CAS.lang)).join(''):empty))},
+async mocks(){const f=(await list(db.collection('mockTestFolders'))).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div class="grid">'+f.map(x=>tile('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
+async mf(id){const t=await list(db.collection('mockTests').where('folderId','==',id));
+ const sub={},ung=[];t.forEach(x=>{const k=(x.subject||'').trim().toLowerCase();if(!k)ung.push(x);else{(sub[k]=sub[k]||{name:x.subject.trim(),tests:[]}).tests.push(x)}});
+ const groups=Object.entries(sub);const testTile=x=>tile('test/'+x.id,'✍️',x.title,(x.questions||[]).length+' Qs'+(x.durationMinutes?' · '+x.durationMinutes+' min':''));
+ if(!t.length)return wrap(back+empty);
+ let h=back;
+ if(groups.length)h+='<h2 class="pageTitle">Subjects / विषय</h2><div class="grid">'+groups.map(([k,g])=>tile('ms/'+id+'/'+encodeURIComponent(k),'📚',g.name,g.tests.length+(g.tests.length==1?' test':' tests'))).join('')+'</div>';
+ const shown=groups.length?ung:t;
+ if(shown.length)h+=(groups.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div class="grid">'+shown.map(testTile).join('')+'</div>';
+ return wrap(h)},
+async ms(folderId,key){const k=decodeURIComponent(key||'');const t=(await list(db.collection('mockTests').where('folderId','==',folderId))).filter(x=>(x.subject||'').trim().toLowerCase()==k);
+ const name=t[0]?t[0].subject.trim():'';
+ return wrap(back+`<h2 class="pageTitle">${esc(name)}</h2>`+(t.length?'<div class="grid">'+t.map(x=>tile('test/'+x.id,'✍️',x.title,(x.questions||[]).length+' Qs'+(x.durationMinutes?' · '+x.durationMinutes+' min':''))).join('')+'</div>':empty))},
+async test(id){const d=await db.doc('mockTests/'+id).get();if(!d.exists)return wrap(back+empty);const t=d.data(),Q=t.questions||[];window.T={t,Q,id,start:Date.now(),ans:[],i:0,pal:false,done:false,hi:lang=='hi'};
+ return wrap(back+`<h2 class="pageTitle">${esc(t.title)}</h2><div id="mtest"></div>`)},
+async board(id){const s=await db.collection('mockScores').doc(id).collection('scores').limit(300).get();
+ const rows=s.docs.map(d=>({uid:d.id,score:d.data().score||0,timeSec:d.data().timeSec||0})).sort((a,b)=>b.score-a.score||a.timeSec-b.timeSec);
+ const me=auth.currentUser.uid,my=rows.findIndex(r=>r.uid==me);
+ const row=(r,i)=>`<div class="card" style="${r.uid==me?'border-color:var(--gold);background:#fff8d6':''}"><b>#${i+1}</b> ${r.uid==me?'(You)':'Student'} — <b>${r.score}</b> marks · ${Math.floor(r.timeSec/60)}m ${r.timeSec%60}s</div>`;
+ return wrap(back+`<h2 class="pageTitle">Leaderboard / लीडरबोर्ड</h2>`+(rows.length?rows.slice(0,20).map(row).join('')+(my>=20?`<p class="mu">Aapka rank: #${my+1}</p>`:''):empty))},
+async profile(){const d=await db.doc('students/'+auth.currentUser.uid).get().then(x=>x.data()||{}).catch(()=>({}));const ex=J.get('exam',null),g=goalVal();
+ return wrap(`<h2 class="pageTitle">Profile</h2><div class="card"><b>${esc(d.name||'')}</b><br><span class="mu">${esc(auth.currentUser.email)}</span></div>
+ <div class="card"><b>Naam badlein</b><input id="pn" value="${esc(d.name||'')}" placeholder="Naam"><button class="p" onclick="saveName()">Save</button></div>
+ <div class="card"><b>Exam countdown</b><input id="en" placeholder="Exam ka naam" value="${esc(ex?.name||'')}"><input id="ed" type="date" value="${esc(ex?.date||'')}"><div class="row"><button class="p" onclick="saveExam()">Save</button><button class="s" onclick="J.set('exam',null);route()">Remove</button></div></div>
+ <div class="card"><b>Daily goal (questions)</b><select id="gl" style="width:100%;margin:6px 0">${GOALS.map(o=>`<option value="${o}" ${o==g?"selected":""}>${o} questions</option>`).join("")}</select><button class="p" onclick="saveGoal()">Save</button></div>
+ ${isAdminUser()?'<div class="card"><b>Admin</b><div class="row"><a class="btnlink" href="#/admin">Batch Access</a></div></div>':''}<p id="pm" class="mu"></p>${contactHtml()}<div class="card"><b>Account delete</b><p class="mu">Aapka account, queries aur test records hat jaayenge.</p><button class="s" onclick="delAcc()">Delete account</button></div><button class="p" onclick="auth.signOut()">Logout</button>`)},
+};
+
+async function saveName(){const n=document.getElementById('pn').value.trim();if(!n)return;
+ try{await db.doc('students/'+auth.currentUser.uid).set({name:n},{merge:true});document.getElementById('pm').textContent='Naam save ho gaya / Name saved';route()}catch(e){document.getElementById('pm').textContent='Save nahi hua: '+e.message}}
+function saveExam(){const n=document.getElementById('en').value.trim(),d=document.getElementById('ed').value;if(!n||!d){document.getElementById('pm').textContent='Exam ka naam aur date dono bharein';return}J.set('exam',{name:n,date:d});route()}
+function saveGoal(){const n=+document.getElementById('gl').value;if(n>0){J.set('goal',n);route()}}
+
+async function sendQ(){const t=document.getElementById('qt2').value.trim();if(!t)return;
+ if(t.split(/\s+/).length>100){alert('Ek doubt me 100 words tak hi likh sakte hain');return}
+ if(t.length>1000){alert('Doubt bahut lamba hai (1000 characters tak)');return}
+ const u=auth.currentUser;const d=await db.doc('students/'+u.uid).get().then(x=>x.data()||{}).catch(()=>({}));
+ try{await db.collection('queries').add({uid:u.uid,studentName:d.name||'',studentEmail:u.email,text:t,reply:'',status:'open',createdAt:firebase.firestore.FieldValue.serverTimestamp(),repliedAt:null});route()}
+ catch(e){alert('Doubt nahi bheja ja saka: '+e.message)}}
+
+function saveAttempt(t,id,marks,total,answers){
+ if(!id||!auth.currentUser)return;
+ const tt=Math.max(0,Math.round(total)),sc=Math.min(tt,Math.max(0,Math.round(marks)));
+ db.collection('mockTestAttempts').add({studentEmail:auth.currentUser.email,mockTestId:id,mockTestTitle:t.title,score:sc,total:tt,answers,submittedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+ const secs=Math.max(0,Math.round((Date.now()-(window.T&&T.start||Date.now()))/1000));
+ db.collection('mockScores').doc(id).collection('scores').doc(auth.currentUser.uid).set({score:+marks,timeSec:secs,at:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+}
+
+function bm(prefix,i,btn){const q=(QS[prefix]||[])[i];if(!q)return;let sv=J.get('bookmarks',[]);
+ if(sv.some(x=>x.text===q.text)){sv=sv.filter(x=>x.text!==q.text);btn.textContent='☆ Save'}
+ else{sv.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||''});btn.textContent='★ Saved'}
+ J.set('bookmarks',sv.slice(0,300))}
+function rmBm(i){const sv=J.get('bookmarks',[]);sv.splice(i,1);J.set('bookmarks',sv);route()}
+async function checkBell(){try{const s=await db.collection('notifications').orderBy('sentAt','desc').limit(1).get();const x=s.docs[0]&&s.docs[0].data();const t=x&&x.sentAt&&x.sentAt.toMillis?x.sentAt.toMillis():0;const b=document.getElementById('bell');if(b)b.classList.toggle('dot',t>J.get('notifSeen',0))}catch(e){}}
+async function delAcc(){if(!confirm('Aapka account aur saara data hat jayega. Pakka?'))return;const u=auth.currentUser,id=u.uid,em=u.email;
+ try{
+  const qs=await db.collection('queries').where('uid','==',id).get();
+  const at=await db.collection('mockTestAttempts').where('studentEmail','==',em).get();
+  await Promise.all([...qs.docs,...at.docs].map(d=>d.ref.delete()));
+  await db.doc('students/'+id).delete().catch(()=>{});
+  await u.delete();
+  Object.keys(localStorage).filter(k=>k.startsWith('ysh_')||k.startsWith('code_')).forEach(k=>localStorage.removeItem(k));
+  alert('Account delete ho gaya');
+ }catch(e){alert(e.code=='auth/requires-recent-login'?'Security ke liye Logout karke dobara login karein, phir Delete karein.':'Delete nahi hua: '+e.message)}}
+
+function initTest(){const s=T;window.QS=window.QS||{};QS.mt=s.Q;s.ans=Array(s.Q.length).fill(null);s.left=s.t.durationMinutes?s.t.durationMinutes*60:0;
+ drawTest();updTimer();
+ timers.push(setInterval(()=>{if(T.done)return;if(T.t.durationMinutes){T.left--;updTimer();if(T.left<=0)submitTest()}else updTimer()},1000))}
+const fmtT=x=>`${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`;
+function updTimer(){const e=document.getElementById('mtime');if(!e)return;e.textContent='⏱ '+fmtT(T.t.durationMinutes?Math.max(0,T.left):Math.floor((Date.now()-T.start)/1000))}
+function drawTest(){const s=T,Q=s.Q,q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,ng=s.t.negativeMarks||0;
+ if(s.done)return;
+ const answered=s.ans.filter(a=>a!==null).length,sv=J.get('bookmarks',[]);
+ const opts=hi&&q.optionsHi?.length?q.optionsHi:q.options;
+ document.getElementById('mtest').innerHTML=`<div class="mtop"><span id="mtime" class="mtime"></span>
+ <button class="s" onclick="togglePal()" title="Questions"><span class="material-icons">grid_view</span></button>
+ <button class="s" onclick="toggleLang()">${hi?'English':'हिंदी'}</button>
+ <button class="p" onclick="confirmSubmit()">Submit</button></div>
+ <div class="row mu" style="justify-content:space-between"><span>Q ${s.i+1} / ${Q.length}</span><span>+${mp}${ng?' / −'+ng:''} · Answered ${answered}/${Q.length}</span></div>
+ ${s.pal?`<div class="pal"><b>Jump to question</b> <small class="mu">Green = answered</small><div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div></div>`:''}
+ <div class="q">${q.passage?`<div class="passage">${esc(qt(q,'passage',hi))}</div>`:''}
+ <div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1}</span><button class="s" onclick="bm('mt',${s.i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></div>
+ <div class="qtext">${esc(qt(q,'text',hi))}</div>
+ ${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}
+ </div>
+ <div class="mbar"><button class="s" onclick="stepQ(-1)" ${s.i==0?'disabled':''}>Previous</button><button class="s" onclick="clearAns()">Clear</button>${s.i<Q.length-1?'<button class="p" onclick="stepQ(1)">Next</button>':'<button class="p" onclick="confirmSubmit()">Submit</button>'}</div>`}
+function pickAns(j){T.ans[T.i]=j;drawTest()}
+function clearAns(){T.ans[T.i]=null;drawTest()}
+function stepQ(d){T.i=Math.min(Math.max(0,T.i+d),T.Q.length-1);drawTest();scrollTo(0,0)}
+function jumpTo(k){T.i=k;T.pal=false;drawTest();scrollTo(0,0)}
+function togglePal(){T.pal=!T.pal;drawTest()}
+function toggleLang(){lang=lang=='hi'?'en':'hi';T.hi=lang=='hi';drawTest()}
+function confirmSubmit(){if(T.done)return;const un=T.ans.filter(a=>a===null).length;if(confirm(un?`${un} questions abhi unanswered hain. Submit karein?`:'Test submit karein?'))submitTest()}
+function addMonthsEnd(base,m){const d=new Date(base);d.setMonth(d.getMonth()+m);d.setHours(23,59,59,999);return d}
+function admDefault(bid){return (window.ADM&&ADM[bid])||0}
+async function adminPage(){
+ if(!isAdminUser())return wrap(back+'<div class="card">Ye page sirf admin ke liye hai.</div>');
+ const [bs,reqs,grants]=await Promise.all([list(db.collection('batches')),list(db.collection('accessRequests')),list(db.collection('batchAccess').where('status','==','granted'))]);
+ const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:id;
+ window.ADM={};bs.forEach(b=>ADM[b.id]=b.validityMonths||0);
+ reqs.sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0));
+ grants.sort((a,b)=>String(a.studentEmail).toLowerCase().localeCompare(String(b.studentEmail).toLowerCase()));
+ const fmt=d=>d?d.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
+ const reqHtml=reqs.length?reqs.map(r=>`<div class="card"><b>${esc(r.studentName||'')}</b> <span class="mu">${esc(r.studentEmail)}</span><div>${esc(r.studentPhone||'')}</div><div>Batch: <b>${esc(r.batchTitle||bt(r.batchId))}</b></div><small class="mu">${r.requestedAt?.toDate?esc(r.requestedAt.toDate().toLocaleString('en-IN')):''}</small><div class="row"><button class="p" onclick="admGrant('${esc(r.studentEmail)}','${esc(r.batchId)}')">Grant access</button><button class="s" onclick="admDismiss('${esc(r.id)}')">Dismiss</button></div></div>`).join(''):'<p class="mu">Koi pending request nahi hai.</p>';
+ const batchOpts=bs.map(b=>`<option value="${esc(b.id)}">${esc(b.title)}</option>`).join('');
+ const grantHtml=grants.length?grants.map(g=>{const exp=g.expiresAt;const expired=exp&&exp.toDate()<=new Date();
+  return `<div class="card"><b>${esc(g.studentEmail)}</b><div>${esc(bt(g.batchId))}</div><div>Code: <b>${esc(g.accessCode||'')}</b></div><small class="mu">${exp?(expired?'Expired on ':'Valid till ')+fmt(exp):'Lifetime access'}</small><div class="row"><button class="s" onclick="admExtend('${esc(g.id)}')">Extend</button><button class="s" onclick="admLife('${esc(g.id)}')">Make lifetime</button><button class="s" onclick="admRevoke('${esc(g.id)}')">Revoke</button></div></div>`}).join(''):'<p class="mu">Abhi koi granted student nahi hai.</p>';
+ return wrap(`<h2 class="pageTitle">Batch Access / बैच एक्सेस</h2>
+ <div class="sec">Grant Permission: Pending requests</div>${reqHtml}
+ <div class="sec">Manual grant</div><div class="card"><input id="ge" type="email" placeholder="Student email"><select id="gb" style="width:100%;margin:6px 0">${batchOpts}</select><input id="gm" type="number" min="0" placeholder="Validity months (khali = batch default, 0 = lifetime)"><button class="p" onclick="admManual()">Grant access</button></div>
+ <div class="sec">Granted students (${grants.length})</div>${grantHtml}`)}
+async function admGrant(email,bid,months){
+ email=String(email).trim().toLowerCase();if(months===undefined||months===null)months=admDefault(bid);
+ const id=email+'_'+bid,code=String(100000+Math.floor(Math.random()*900000));
+ const exp=months>0?addMonthsEnd(new Date(),months):null;
+ try{
+  await db.collection('batchAccess').doc(id).set({studentEmail:email,batchId:bid,status:'granted',accessCode:code,grantedAt:firebase.firestore.FieldValue.serverTimestamp(),grantedBy:'admin',validityMonths:months,expiresAt:exp?firebase.firestore.Timestamp.fromDate(exp):null});
+  await db.collection('accessRequests').doc(id).delete().catch(()=>{});
+  alert('Access granted!\nAccess code: '+code+'\n'+(exp?'Valid till '+exp.toLocaleDateString('en-IN'):'Lifetime access')+'\n\nYe code student ko bhej dein.');
+  route();
+ }catch(e){alert('Grant nahi hua: '+e.message)}
+}
+function admManual(){const email=document.getElementById('ge').value.trim().toLowerCase(),bid=document.getElementById('gb').value,mv=document.getElementById('gm').value;
+ if(!email.includes('@')){alert('Sahi email daalein');return}
+ admGrant(email,bid,mv===''?admDefault(bid):Math.max(0,Math.floor(+mv)))}
+function admDismiss(id){if(!confirm('Ye request hata dein?'))return;db.collection('accessRequests').doc(id).delete().then(route).catch(e=>alert(e.message))}
+function admRevoke(id){if(!confirm('Is student ka access wapas le lein?'))return;db.collection('batchAccess').doc(id).set({status:'revoked'},{merge:true}).then(route).catch(e=>alert(e.message))}
+function admLife(id){db.collection('batchAccess').doc(id).set({expiresAt:null,validityMonths:0},{merge:true}).then(route).catch(e=>alert(e.message))}
+async function admExtend(id){const m=+prompt('Kitne mahine badhane hain?','1');if(!(m>0))return;
+ try{const ref=db.collection('batchAccess').doc(id);const snap=await ref.get();const cur=snap.data()?.expiresAt?.toDate?.();const base=cur&&cur>new Date()?cur:new Date();
+  const ne=addMonthsEnd(base,m);await ref.set({expiresAt:firebase.firestore.Timestamp.fromDate(ne)},{merge:true});alert('Naya expiry: '+ne.toLocaleDateString('en-IN'));route()}
+ catch(e){alert('Extend nahi hua: '+e.message)}}
+
+const FM_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function fmMonth(k){const p=String(k).split('-'),m=+p[1];return p.length==2&&m>=1&&m<=12?FM_MONTHS[m-1]+' '+p[0]:k}
+async function fmIndex(){const c=J.get('fmIndex',null);if(c&&Date.now()-c.at<432e5)return c.data;
+ try{const d=(await db.doc('freeMcqIndex/current').get()).data();if(!d)return c?c.data:null;const data={exams:d.exams||[],subjects:d.subjects||[],sets:(d.sets||[]).filter(s=>s&&s.id&&s.examId&&s.subjectId)};J.set('fmIndex',{at:Date.now(),data});return data}
+ catch(e){if(c)return c.data;throw e}}
+function fmGood(raw){return (raw||[]).filter(q=>q&&String(q.text||'').trim()&&Array.isArray(q.options)&&q.options.length==4&&q.correctIndex>=0&&q.correctIndex<=3)}
+async function fmSet(id){const c=J.get('fset_'+id,null);if(c&&c.Q&&c.Q.length)return c;
+ const d=(await db.doc('freeMcqSets/'+id).get()).data();const Q=fmGood(d&&d.questions);if(!Q.length)throw new Error('not available');
+ const set={Q,sources:(d.sources||[]).filter(x=>x&&x.title)};J.set('fset_'+id,set);
+ let ids=J.get('fsetIds',[]).filter(x=>x!==id);ids.push(id);while(ids.length>12){const o=ids.shift();try{localStorage.removeItem('ysh_fset_'+o)}catch(e){}}J.set('fsetIds',ids);return set}
+async function fmInfo(id){const box=document.getElementById('finfo');box.innerHTML='<p class="mu">Loading…</p>';
+ try{const s=await fmSet(id);box.innerHTML=`<div class="card"><b>About this set</b><p class="mu">${s.sources.length?'These questions are written from official PIB (Government of India) press releases. The source is credited in each explanation. Questions can contain mistakes, so please check important facts in your textbook.':'These questions are written by AI from the syllabus topics of this exam and checked for accuracy. No book or website text is copied. Questions can still contain mistakes, so please check important facts in your textbook.'}</p>${s.sources.map(x=>x.url?`<div><a href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.title)}</a></div>`:`<div>🔗 ${esc(x.title)}</div>`).join('')}</div>`}
+ catch(e){box.innerHTML='<p class="err">Details could not be loaded. Check your internet and try again.</p>'}}
+function initFq(){drawFq()}
+function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
+ if(s.done){const c=s.ans.filter((a,i)=>a!==null&&a==s.Q[i].correctIndex).length,t=s.Q.length;
+  el.innerHTML=`<div class="q" style="background:var(--gold);text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="javascript:history.back()">Done</a></div>`;return}
+ const q=s.Q[s.i],hi=s.hi,opts=hi&&q.optionsHi?.length==4?q.optionsHi:q.options,sv=J.get('bookmarks',[]),p=s.picked,ex=(hi&&q.explanationHi)||q.explanation;
+ el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span><button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button> <button class="s" onclick="bm('fq',${s.i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></span></div>
+ <div class="q">${q.passage?`<div class="passage">${esc(qt(q,'passage',hi))}</div>`:''}<div class="qtext">${esc(qt(q,'text',hi))}</div>
+ ${opts.map((o,j)=>`<div class="opt ${p!==null&&j==q.correctIndex?'okb':''} ${p===j&&j!=q.correctIndex?'nob':''}" onclick="fqPick(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}${p===j?(j==q.correctIndex?' ✓':' ✗'):''}</span></div>`).join('')}
+ ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${esc(ex)}</div></div>`:''}</div>
+ <div class="mbar"><span></span><button class="p" ${p===null?'disabled':''} onclick="fqNext()">${s.i==s.Q.length-1?'Finish':'Next'}</button></div>`}
+function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
+function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
+function fqNext(){const s=FQ;if(s.i<s.Q.length-1){s.i++;s.picked=null;drawFq();scrollTo(0,0);return}
+ s.done=true;const wrong=[];let answered=0,correct=0;
+ s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;answered++;if(a==q.correctIndex)correct++;else wrong.push(q)});
+ const d=J.get('fmDone',{});d[s.m.id]=correct+'/'+s.Q.length;J.set('fmDone',d);
+ addMistakes(wrong,s.subject,s.exam+' · '+fmMonth(s.m.monthKey));addGoal(answered);drawFq();scrollTo(0,0)}
+const GOALS=[25,35,50,75,100];
+function goalVal(){const v=J.get('goal',null);if(v==null)return 25;if(GOALS.includes(v))return v;return GOALS.reduce((b,o)=>Math.abs(o-v)<Math.abs(b-v)?o:b,GOALS[0])}
+
+function contactHtml(){const L=[['✈️','Telegram','#229ED9',cfg.telegramUrl],['💬','WhatsApp','#25D366',cfg.whatsappUrl],['📸','Instagram','#B5177F','https://www.instagram.com/yash_study_hub'],['f','Facebook','#1259B8','https://www.facebook.com/YashStudyHub'],['✉️','Mail','#FF9800','mailto:officialteamysh@gmail.com']];
+ return `<div class="sec" style="justify-content:center">Contact and Join Us</div><div class="socrow">${L.map(l=>`<a href="${esc(l[3])}" target="_blank" rel="noopener"><span class="sb" style="background:${l[2]}">${l[0]}</span><small>${l[1]}</small></a>`).join('')}</div>`}
+
+function submitTest(){if(!T||T.done)return;clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;
+ const mp=t.marksPerQuestion||1,ng=t.negativeMarks||0;let c=0,w=0,m=0;
+ Q.forEach((q,i)=>{const a=s.ans[i];if(a!==null){if(a==q.correctIndex){c++;m+=mp}else{w++;m-=ng}}});
+ const total=+(Q.length*mp).toFixed(2),marks=+m.toFixed(2),skipped=Q.length-c-w,sub=(t.subject||'').trim();
+ const h=J.get('history',[]);h.unshift({title:t.title,subject:sub,marks,maxMarks:total,correct:c,wrong:w,skipped,at:Date.now()});J.set('history',h.slice(0,60));
+ addMistakes(Q.filter((q,i)=>s.ans[i]!==null&&s.ans[i]!=q.correctIndex),sub,t.title);
+ addGoal(c+w);saveAttempt(t,s.id,marks,total,s.ans);
+ const review=Q.map((q,i)=>{const a=s.ans[i];const opts=hi&&q.optionsHi?.length?q.optionsHi:q.options;const ex=hi&&q.explanationHi||q.explanation;
+  return `<div class="q"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<small class="mu">Skipped</small>':''}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('');
+ document.getElementById('mtest').innerHTML=`<div class="q"><h2>Score: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
+ scrollTo(0,0)}
+
+function submitPractice(){const Q=window.PQ||[];grade(Q,'pz',1,0,false);document.getElementById('res').innerHTML='<div class="q">Practice complete.</div>'}
+function practiceMistakes(){const m=J.get('mistakes',[]).slice(0,10);window.PQ=m;location.hash='#/practice'}
+
+function submitQuiz(){const{day,Q}=window.QZ;const hi=lang=='hi';const r=grade(Q,'z',1,0,hi);
+ const done=J.get('quizDone',{});
+ if(!done[day]){done[day]={score:r.c,total:Q.length};J.set('quizDone',done);addGoal(r.c+r.w)}
+ document.getElementById('res').innerHTML=`<div class="q"><h2>Score: ${r.c} / ${Q.length}</h2>${done[day].score==r.c&&done[day].total==Q.length?'':'<p class="mu">Pehla prayas hi count hota hai.</p>'}</div>`;scrollTo(0,document.body.scrollHeight)}
+
+function initHome(){
+ const trk=document.getElementById('trk');
+ if(trk){const dots=[...document.querySelectorAll('.dots i')];const cur=()=>Math.round(trk.scrollLeft/trk.clientWidth);
+  trk.onscroll=()=>dots.forEach((d,k)=>d.classList.toggle('on',k==cur()));
+  trk.onclick=e=>{const im=e.target.closest('img');if(!im)return;if(im.dataset.b)location.hash='#/batch/'+im.dataset.b;else if(im.dataset.l)window.open(im.dataset.l,'_blank','noopener')};
+  if(dots.length>1)timers.push(setInterval(()=>trk.scrollTo({left:((cur()+1)%dots.length)*trk.clientWidth,behavior:'smooth'}),4000))}
+ const socs=[{t:'Official Telegram',s:'Instant updates & PDFs',c:'Join',col:'#229ED9',i:'✈️',u:cfg.telegramUrl},{t:'Official WhatsApp',s:'Fastest notifications',c:'Follow',col:'#25D366',i:'💬',u:cfg.whatsappUrl},{t:'Official YouTube',s:'Free live classes',c:'Sub',col:'#FF0000',i:'▶️',u:cfg.youtubeUrl},{t:'Official Instagram',s:'Daily updates & reels',c:'Follow',col:'#B5177F',i:'📸',u:'https://www.instagram.com/yash_study_hub'},{t:'Official Facebook',s:'Join our community',c:'Like',col:'#1259B8',i:'f',u:'https://www.facebook.com/YashStudyHub'}];
+ let k=0;const el=document.getElementById('soc');
+ const draw=()=>{const x=socs[k];el.href=x.u;el.target='_blank';el.rel='noopener';el.style.background=x.col+'1a';el.style.borderColor=x.col+'66';
+  el.innerHTML=`<span class="av" style="background:${x.col}">${x.i}</span><span class="t"><b>${esc(x.t)}</b><small>${esc(x.s)}</small></span><span class="cta" style="background:${x.col}">${x.c}</span>`};
+ draw();timers.push(setInterval(()=>{k=(k+1)%socs.length;draw()},3000));
+}
+
+function showNav(p){
+ const side=document.getElementById('side'),bn=document.getElementById('bn');
+ if(p===null){side.innerHTML='';side.style.display='none';bn.style.display='none';return}
+ side.style.display='';
+ const items=BN.map(b=>`<a href="#/${b[0]}" class="${p==b[0]?'on':''}"><span class="material-icons">${b[1]}</span>${b[2]}</a>`).join('');
+ side.innerHTML=`<div class="brand"><img src="logo.png" alt=""><div>${esc(cfg.appName)}<small>${esc(cfg.tagline)}</small></div></div>`+items;
+ bn.style.display='flex';bn.innerHTML=items;
+}
+
+async function route(){
+ clearT();
+ const[p,a,b]=(location.hash.slice(2)||'home').split('/');
+ if(!V[p]){location.hash='#/home';return}
+ app.innerHTML='<p class="mu" style="padding:16px">Loading…</p>';
+ showNav(p);
+ try{
+  const body=await V[p](a,b);
+  app.innerHTML=(p=='home'?'':topBar())+body;
+  if(p=='home')initHome();
+  checkBell();
+  if(p=='test')initTest();
+  if(p=='fmq')initFq();
+ }catch(e){app.innerHTML=topBar()+'<div class="wrap"><p class="err">Load nahi hua: '+esc(e.message)+'</p></div>'}
+ scrollTo(0,0)}
+
+window.addEventListener('hashchange',()=>auth.currentUser&&route());
+auth.onAuthStateChanged(async u=>{
+ if(!u){clearT();return loginView();}
+ try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim()}catch(e){}
+ if(!location.hash)location.hash='#/home';
+ route()});
+</script></body></html>
