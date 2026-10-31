@@ -279,16 +279,17 @@ async syllabus(){const ex=sylExam();
  +`<p class="mu">यह आम पैटर्न पर आधारित है। नए सिलेबस के लिए आधिकारिक अधिसूचना ज़रूर देखें।</p>`)},
 async fmcq(){const ix=await fmIndex();
  if(!ix||!ix.exams?.length||!ix.sets?.length)return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">Free MCQs are not ready yet. Please check again later.</p>`);
- return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every month: Current Affairs (from PIB), Static GK, General Science and General Studies (syllabus-based).</p><div class="grid">`+ix.exams.map(e=>tile('fmx/'+e.id,e.emoji||'📝',e.name,ix.sets.filter(s=>s.examId==e.id).length+' sets')).join('')+'</div>')},
+ return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every month: Static GK, General Science and General Studies (syllabus-based, Hindi + English), plus the English folder (Banking PO / Clerk pattern, easy to hard, a new set every week). Tap ⓘ on a set to see how it was made.</p><div class="grid">`+ix.exams.map(e=>{const n=ix.sets.filter(s=>s.examId==e.id).length;return e.id=='english'?tile('fms/english/english',e.emoji||'📖',e.name,'Banking PO / Clerk pattern · '+n+' sets'):tile('fmx/'+e.id,e.emoji||'📝',e.name,n+' sets')}).join('')+'</div>')},
 async fmx(eid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid);if(!e)return wrap(back+empty);
- return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div class="grid">`+(ix.subjects||[]).map(s=>tile('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length+' months')).join('')+'</div>')},
+ const su=(ix.subjects||[]).filter(s=>eid=='english'?s.id=='english':s.id!='english');
+ return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div class="grid">`+su.map(s=>tile('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length+' sets')).join('')+'</div>')},
 async fms(eid,sid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid),s=(ix?.subjects||[]).find(x=>x.id==sid);if(!e||!s)return wrap(back+empty);
- const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>b.monthKey.localeCompare(a.monthKey)),done=J.get('fmDone',{});
- return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'#2e7d32':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmMonth(m.monthKey))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}')" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):'<p class="mu">No set for this subject yet.</p>'))},
+ const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>fmStart(b).localeCompare(fmStart(a))),done=J.get('fmDone',{});
+ return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'#2e7d32':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmLabel(m))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}',${sid=='english'})" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):`<p class="mu">${sid=='english'?'The English set for this week is not ready yet. A new set of 25 English MCQs arrives automatically every Monday.':'No set for this subject yet.'}</p>`))},
 async fmq(sid){const ix=await fmIndex();const m=(ix?.sets||[]).find(x=>x.id==sid);if(!m)return wrap(back+empty);
  let set;try{set=await fmSet(sid)}catch(e){return wrap(back+'<p class="err">This set could not be opened. Check your internet and try again.</p>')}
- const e=ix.exams.find(x=>x.id==m.examId),s=ix.subjects.find(x=>x.id==m.subjectId);
- window.FQ={m,Q:set.Q,i:0,picked:null,ans:Array(set.Q.length).fill(null),hi:lang=='hi',done:false,title:(s?s.name:'')+' · '+fmMonth(m.monthKey),exam:e?e.name:'',subject:s?s.name:''};(window.QS=window.QS||{}).fq=set.Q;
+ fmRemember(m);const e=ix.exams.find(x=>x.id==m.examId),s=ix.subjects.find(x=>x.id==m.subjectId);
+ window.FQ={m,Q:set.Q,i:0,picked:null,ans:Array(set.Q.length).fill(null),hi:lang=='hi',done:false,title:(s?s.name:'')+' · '+fmLabel(m),exam:e?e.name:'',subject:s?s.name:''};(window.QS=window.QS||{}).fq=set.Q;
  return wrap(back+`<h2 class="pageTitle">${esc(FQ.title)}</h2><div id="fq"></div>`)},
 async home(){
  const [items,banners,st]=await Promise.all([
@@ -297,7 +298,7 @@ async home(){
   db.doc('students/'+auth.currentUser.uid).get().then(d=>d.data()||{}).catch(()=>({}))]);
  let vids=items.filter(v=>yid(v.youtubeLink)).slice(0,10);
  if(!vids.length)vids=await list(db.collection('videos').where('source','==','youtube_auto').limit(50)).then(a=>a.filter(v=>!v.hidden&&yid(v.youtubeLink)).sort((a,b)=>(b.publishedAt?.seconds||0)-(a.publishedAt?.seconds||0)).slice(0,10)).catch(()=>[]);
- const name=String(st.name||'').trim();
+ const name=String(st.name||'').trim();J.set('stuName',name);
  const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
  return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
  +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}"><span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
@@ -417,7 +418,7 @@ async profile(){const d=await db.doc('students/'+auth.currentUser.uid).get().the
 };
 
 async function saveName(){const n=document.getElementById('pn').value.trim();if(!n)return;
- try{await db.doc('students/'+auth.currentUser.uid).set({name:n},{merge:true});document.getElementById('pm').textContent='Naam save ho gaya / Name saved';route()}catch(e){document.getElementById('pm').textContent='Save nahi hua: '+e.message}}
+ try{await db.doc('students/'+auth.currentUser.uid).set({name:n},{merge:true});J.set('stuName',n);document.getElementById('pm').textContent='Naam save ho gaya / Name saved';route()}catch(e){document.getElementById('pm').textContent='Save nahi hua: '+e.message}}
 function saveExam(){const n=document.getElementById('en').value.trim(),d=document.getElementById('ed').value;if(!n||!d){document.getElementById('pm').textContent='Exam ka naam aur date dono bharein';return}J.set('exam',{name:n,date:d});route()}
 function saveGoal(){const n=+document.getElementById('gl').value;if(n>0){J.set('goal',n);route()}}
 
@@ -431,7 +432,8 @@ async function sendQ(){const t=document.getElementById('qt2').value.trim();if(!t
 function saveAttempt(t,id,marks,total,answers){
  if(!id||!auth.currentUser)return;
  const tt=Math.max(0,Math.round(total)),sc=Math.min(tt,Math.max(0,Math.round(marks)));
- db.collection('mockTestAttempts').add({studentEmail:auth.currentUser.email,mockTestId:id,mockTestTitle:t.title,score:sc,total:tt,answers,submittedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
+ const base={studentEmail:auth.currentUser.email,mockTestId:id,mockTestTitle:t.title,score:sc,total:tt,answers,submittedAt:firebase.firestore.FieldValue.serverTimestamp()},cut=x=>String(x||'').trim().slice(0,100),nm=cut(J.get('stuName','')),sj=cut(t.subject),fd=cut(t.folderId),full=Object.assign({},base,nm?{studentName:nm}:{},sj?{subject:sj}:{},fd?{folderId:fd}:{});
+ db.collection('mockTestAttempts').add(full).catch(()=>{if(full!==base&&Object.keys(full).length>Object.keys(base).length)db.collection('mockTestAttempts').add(base).catch(()=>{})});
  const secs=Math.max(0,Math.round((Date.now()-(window.T&&T.start||Date.now()))/1000));
  db.collection('mockScores').doc(id).collection('scores').doc(auth.currentUser.uid).set({score:+marks,timeSec:secs,at:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
 }
@@ -530,9 +532,21 @@ function fmGood(raw){return (raw||[]).filter(q=>q&&String(q.text||'').trim()&&Ar
 async function fmSet(id){const c=J.get('fset_'+id,null);if(c&&c.Q&&c.Q.length)return c;
  const d=(await db.doc('freeMcqSets/'+id).get()).data();const Q=fmGood(d&&d.questions);if(!Q.length)throw new Error('not available');
  const set={Q,sources:(d.sources||[]).filter(x=>x&&x.title)};J.set('fset_'+id,set);
- let ids=J.get('fsetIds',[]).filter(x=>x!==id);ids.push(id);while(ids.length>12){const o=ids.shift();try{localStorage.removeItem('ysh_fset_'+o)}catch(e){}}J.set('fsetIds',ids);return set}
-async function fmInfo(id){const box=document.getElementById('finfo');box.innerHTML='<p class="mu">Loading…</p>';
- try{const s=await fmSet(id);box.innerHTML=`<div class="card"><b>About this set</b><p class="mu">${s.sources.length?'These questions are written from official PIB (Government of India) press releases. The source is credited in each explanation. Questions can contain mistakes, so please check important facts in your textbook.':'These questions are written by AI from the syllabus topics of this exam and checked for accuracy. No book or website text is copied. Questions can still contain mistakes, so please check important facts in your textbook.'}</p>${s.sources.map(x=>x.url?`<div><a href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.title)}</a></div>`:`<div>🔗 ${esc(x.title)}</div>`).join('')}</div>`}
+ let ids=J.get('fsetIds',[]).filter(x=>x!==id);ids.push(id);while(ids.length>60){const o=ids.shift();try{localStorage.removeItem('ysh_fset_'+o)}catch(e){}}J.set('fsetIds',ids);return set}
+const FM_SH=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmStart=m=>m.periodStart||(m.monthKey+'-01');
+function fmLabel(m){const st=new Date(String(m.periodStart||'')+'T00:00:00');if(!m.periodStart||isNaN(st))return fmMonth(m.monthKey);
+ const en=new Date(st.getFullYear(),st.getMonth(),st.getDate()+6),a=st.getDate()+' '+FM_SH[st.getMonth()]+(st.getFullYear()!=en.getFullYear()?' '+st.getFullYear():''),r=a+' – '+en.getDate()+' '+FM_SH[en.getMonth()]+' '+en.getFullYear(),w=/W(\d+)$/.exec(m.weekKey||'');
+ return w?'Week '+(+w[1])+' · '+r:r}
+function fmRemember(m){const x=J.get('fmMeta',{});x[m.id]={id:m.id,examId:m.examId,subjectId:m.subjectId,monthKey:m.monthKey||'',weekKey:m.weekKey||'',periodStart:m.periodStart||'',count:m.count||0,source:m.source||''};J.set('fmMeta',x)}
+function fmWithCached(sets){try{const inIx=new Set(sets.map(s=>s.id)),ids=J.get('fsetIds',[]),meta=J.get('fmMeta',{}),d=new Date(),cut=dayKey(new Date(d.getFullYear(),d.getMonth()-3,d.getDate())),keep=[],extra=[];
+ ids.forEach(id=>{if(inIx.has(id)){keep.push(id);return}const m=meta[id];if(m&&m.examId&&m.subjectId&&m.subjectId!='ca'&&fmStart(m)>=cut&&localStorage.getItem('ysh_fset_'+id)){keep.push(id);extra.push(m)}else{try{localStorage.removeItem('ysh_fset_'+id)}catch(e){}delete meta[id]}});
+ if(keep.length!=ids.length){J.set('fsetIds',keep);J.set('fmMeta',meta)}return extra.length?sets.concat(extra):sets}catch(e){return sets}}
+async function fmIndex(){const x=await fmIndexRaw();if(!x)return x;const ex=[...(x.exams||[])],su=(x.subjects||[]).filter(s=>s.id!='ca');
+ if(!ex.some(e=>e.id=='english'))ex.push({id:'english',name:'English',emoji:'📖'});if(!su.some(s=>s.id=='english'))su.push({id:'english',name:'English',emoji:'📖'});
+ return Object.assign({},x,{exams:ex,subjects:su,sets:fmWithCached((x.sets||[]).filter(s=>s.subjectId!='ca'))})}
+async function fmInfo(id,en){const box=document.getElementById('finfo');box.innerHTML='<p class="mu">Loading…</p>';
+ try{const s=await fmSet(id);box.innerHTML=`<div class="card"><b>About this set</b><p class="mu">${s.sources.length?'These questions are written from official PIB (Government of India) press releases. The source is credited in each explanation. Questions can contain mistakes, so please check important facts in your textbook.':en?'These English questions follow the Banking PO / Clerk pattern (reading comprehension, cloze test, error spotting, fill in the blanks, para jumbles, sentence improvement) at easy, moderate and hard level (a new set every week). They are written by AI and checked twice for accuracy (grammar check and an independent re-solve). No book or website text is copied. Questions can still contain mistakes, so please confirm doubtful points in a grammar book.':'These questions are written by AI from the syllabus topics of this exam and checked three times for accuracy (fact-check, independent re-solve, Hindi-English match). No book or website text is copied. Questions can still contain mistakes, so please check important facts in your textbook.'}</p>${s.sources.map(x=>x.url?`<div><a href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.title)}</a></div>`:`<div>🔗 ${esc(x.title)}</div>`).join('')}</div>`}
  catch(e){box.innerHTML='<p class="err">Details could not be loaded. Check your internet and try again.</p>'}}
 function initFq(){drawFq()}
 function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
@@ -551,7 +565,7 @@ function fqNext(){const s=FQ;if(s.i<s.Q.length-1){s.i++;s.picked=null;drawFq();s
  s.done=true;const wrong=[];let answered=0,correct=0;
  s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;answered++;if(a==q.correctIndex)correct++;else wrong.push(q)});
  const d=J.get('fmDone',{});d[s.m.id]=correct+'/'+s.Q.length;J.set('fmDone',d);
- addMistakes(wrong,s.subject,s.exam+' · '+fmMonth(s.m.monthKey));addGoal(answered);drawFq();scrollTo(0,0)}
+ addMistakes(wrong,s.subject,s.exam+' · '+fmLabel(s.m));addGoal(answered);drawFq();scrollTo(0,0)}
 const GOALS=[25,35,50,75,100];
 function goalVal(){const v=J.get('goal',null);if(v==null)return 25;if(GOALS.includes(v))return v;return GOALS.reduce((b,o)=>Math.abs(o-v)<Math.abs(b-v)?o:b,GOALS[0])}
 
@@ -725,7 +739,6 @@ function smDraw(){const el=document.getElementById('smp');if(!el)return;
  <div class="row" style="justify-content:center"><button class="p" onclick="smReset();smCount()">Play again / फिर खेलें</button><button class="s" onclick="smShare()">Share score / स्कोर शेयर करें</button><button class="s" onclick="history.back()">Back to drills / ड्रिल पर वापस</button></div>`}
 function smShare(){const a=SM.correct+SM.wrong,acc=a?Math.round(SM.correct*100/a):0,i=SM.info;const txt=SM.rapid?`⚡ ${i.en}: ${SM.correct} correct in 60 seconds (${acc}% accuracy). Can you beat me?\nमैंने 60 सेकंड में ${SM.correct} सही किए। क्या आप मुझे हरा सकते हैं?`:`⚡ ${i.en}: ${SM.correct}/20 correct in ${SM.secs}s (${acc}% accuracy). Can you beat me?\nमैंने 20 में से ${SM.correct} सवाल ${SM.secs} सेकंड में सही किए। क्या आप मुझे हरा सकते हैं?`;
  if(navigator.share)navigator.share({text:txt}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>alert('Score copy ho gaya, ab kahin bhi paste karein.'),()=>alert(txt));else alert(txt)}
-async function fmIndex(){const x=await fmIndexRaw();return x?Object.assign({},x,{subjects:(x.subjects||[]).filter(s=>s.id!='ca'),sets:(x.sets||[]).filter(s=>s.subjectId!='ca')}):x}
 const notesAll=()=>J.get('notes',[]),notesSorted=()=>notesAll().slice().sort((a,b)=>(b.pin?1:0)-(a.pin?1:0)||b.at-a.at);
 function noteCard(n){const d=new Date(n.at).toLocaleDateString('en-IN',{day:'numeric',month:'short'});return `<div class="card nc" data-t="${esc((n.title+' '+n.body).toLowerCase())}"><div class="row" style="justify-content:space-between;margin:0"><b>${n.pin?'📌 ':''}${esc(n.title||'Untitled')}</b><small class="mu">${esc(d)}</small></div><div class="mu" style="white-space:pre-wrap;margin:6px 0">${esc(n.body.slice(0,240))}${n.body.length>240?'…':''}</div><div class="row"><a class="chip" href="#/note/${esc(n.id)}">Edit</a><button class="s" onclick="notePin('${esc(n.id)}')">${n.pin?'Unpin':'Pin'}</button><button class="s" onclick="noteShare('${esc(n.id)}')">Share</button><button class="s" onclick="noteDel('${esc(n.id)}')">Delete</button></div></div>`}
 function notesFilter(q){q=q.trim().toLowerCase();document.querySelectorAll('.nc').forEach(e=>{e.style.display=!q||e.dataset.t.includes(q)?'':'none'})}
