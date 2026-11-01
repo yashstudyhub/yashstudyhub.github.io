@@ -147,6 +147,14 @@ details.card summary{cursor:pointer;list-style:none}
 .rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--w,150px),1fr));gap:8px}
 .rcell{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:13px}
 .rcell b{color:var(--ac)}
+#toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:#111a44;color:#fff;padding:10px 18px;border-radius:22px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:99;font-weight:600;max-width:90vw;text-align:center}
+#toast.show{opacity:1}
+.xpc{display:flex;gap:10px;align-items:center;cursor:pointer}
+.xpl{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#ffff66,#ffff29);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#000;flex:none}
+.xpl small{font-size:8.5px;font-weight:700}.xpl b{font-size:18px;line-height:1}
+.modal{position:fixed;inset:0;background:#000a;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.mbox{background:#fff;border-radius:16px;padding:14px;max-width:420px;width:100%;max-height:92vh;overflow:auto;text-align:center}
+.mbox img{width:100%;border-radius:12px;margin:10px 0}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -181,17 +189,10 @@ const TILES=[['mocks','📝','Mock Tests'],['pdfs','📚','PDF Library'],['fmcq'
 const BN=[['home','home','Home'],['news','newspaper','News'],['pdfs','picture_as_pdf','PDFs'],['ca','account_balance','C.Affairs'],['profile','person','Profile']];
 
 // ---------- local study data (phone-saved, same idea as the app) ----------
-function touchStreak(){const st=J.get('streak',{last:'',count:0}),t=dayKey(),y=dayKey(new Date(Date.now()-DAY));
- if(st.last!==t){st.count=st.last===y?st.count+1:1;st.last=t;J.set('streak',st);if(st.count>J.get('maxStreak',0))J.set('maxStreak',st.count)}return st.count}
 function goalToday(){const g=J.get('goalDay',{day:'',n:0});return g.day===dayKey()?g.n:0}
-function addGoal(n){if(!n)return;lifeAdd('q',n);actAdd(n);const t=dayKey(),g=J.get('goalDay',{day:'',n:0});J.set('goalDay',{day:t,n:(g.day===t?g.n:0)+n})}
 function addMistakes(qs,subject,source){const m=J.get('mistakes',[]);qs.forEach(q=>{if(!m.some(x=>x.text===q.text))m.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||'',subject,source,at:Date.now()})});J.set('mistakes',m.slice(0,300))}
 function rmMistake(i){const m=J.get('mistakes',[]);m.splice(i,1);J.set('mistakes',m);route()}
 const examDays=()=>{const e=J.get('exam',null);if(!e)return null;const t0=new Date();t0.setHours(0,0,0,0);return Math.ceil((new Date(e.date+'T00:00:00')-t0)/DAY)};
-function studyCard(){const s=touchStreak(),g=goalVal(),gd=goalToday(),ex=J.get('exam',null),d=examDays();
- return `<div class="card study"><div><span class="material-icons" style="color:#e65100">local_fire_department</span> <b>${s} din ka streak</b></div>
- <div style="margin-top:8px">Aaj ka goal: <b>${gd} / ${g} Qs</b></div><div class="bar"><i style="width:${Math.min(100,gd/g*100)}%"></i></div>
- ${ex&&d!==null?`<div>📅 <b>${esc(ex.name)}</b> — ${d>=0?d+' din bache':'ho chuki hai'}</div>`:`<a href="#/profile">Exam date set karein →</a>`}</div>`}
 
 function loginView(mode='login'){
  showNav(null);
@@ -364,6 +365,9 @@ async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
  <div class="tile"><span class="e">${h.length}</span><span class="l">Tests</span></div><div class="tile"><span class="e">${avg}%</span><span class="l">Avg score</span></div><div class="tile"><span class="e">${acc}%</span><span class="l">Accuracy</span></div></div>
  <div class="sec">Recent tests (%)</div>`+(recent.length?recent.map(x=>`<div class="card"><div>${esc(x.title)}</div><div class="bar"><i style="width:${x.maxMarks?Math.max(0,x.marks/x.maxMarks*100):0}%"></i></div><small class="mu">${x.marks} / ${x.maxMarks}</small></div>`).join(''):empty)
  +`<div class="sec">Subject-wise accuracy</div>`+(Object.keys(subj).length?Object.entries(subj).map(([k,v])=>{const p=(v.c+v.w)?Math.round(v.c/(v.c+v.w)*100):0;return `<div class="card"><b>${esc(k)}</b> — ${p}%<div class="bar"><i style="width:${p}%"></i></div></div>`}).join(''):'<p class="mu">Abhi subject ka data nahi hai.</p>')
+ +(()=>{const w=Object.entries(subj).map(([k,v])=>({k,a:v.c+v.w,p:(v.c+v.w)?v.c/(v.c+v.w)*100:0})).filter(x=>x.a>=5).sort((a,b)=>a.p-b.p)[0];if(!w)return '';
+  const n=Math.min(10,m.filter(q=>{let x=String(q.subject||'').trim().toLowerCase();if(!x)x='general';return x==w.k.trim().toLowerCase()}).length);
+  return `<div class="card">💡 Weakest: <b>${esc(w.k)}</b> (${Math.round(w.p)}%). Practice this more.<br><span class="mu">सबसे कमज़ोर: ${esc(w.k)}। इसमें ज़्यादा अभ्यास करें।</span>${n?`<div class="row"><button class="p" onclick="fixWeak(decodeURIComponent('${encodeURIComponent(w.k)}'))">Fix my weakness: ${n} questions / मेरी कमज़ोरी सुधारो: ${n} सवाल</button></div><small class="mu">Correct answers are removed from your Mistake Notebook, and you earn +5 XP for each one you fix.<br>सही किए सवाल Mistake Notebook से हट जाते हैं, हर सुधारी गलती पर +5 XP।</small>`:''}</div>`})()
  +`<p class="mu">Mistakes saved: ${m.length}</p>`)},
 async news(c){const all=['banking','ssc','up_state','sports','technology','space','defence'];
  const n=await list(db.collection('newsItems').where('category','in',c?[c]:all).orderBy('pubDate','desc').limit(30));
@@ -551,7 +555,7 @@ async function fmInfo(id,en){const box=document.getElementById('finfo');box.inne
 function initFq(){drawFq()}
 function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
  if(s.done){const c=s.ans.filter((a,i)=>a!==null&&a==s.Q[i].correctIndex).length,t=s.Q.length;
-  el.innerHTML=`<div class="q" style="background:var(--gold);text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':'javascript:history.back()'}">Done</a></div>`;return}
+  el.innerHTML=`<div class="q" style="background:var(--gold);text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':s.mode=='fix'?'#/progress':'javascript:history.back()'}">Done</a><button class="s" onclick="ssQuiz()">Share Score Card / स्कोर कार्ड शेयर करें</button></div>`;return}
  const q=s.Q[s.i],hi=s.hi,opts=hi&&q.optionsHi?.length==4?q.optionsHi:q.options,sv=J.get('bookmarks',[]),p=s.picked,ex=(hi&&q.explanationHi)||q.explanation;
  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span><button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button> <button class="s" onclick="bm('fq',${s.i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></span></div>
  <div class="q">${q.passage?`<div class="passage">${esc(qt(q,'passage',hi))}</div>`:''}<div class="qtext">${esc(qt(q,'text',hi))}</div>
@@ -561,6 +565,7 @@ function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
 function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
 function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
 function fqNext(){const s=FQ;if(s.i<s.Q.length-1){s.i++;s.picked=null;drawFq();scrollTo(0,0);return}
+ if(s.mode=='fix'){s.done=true;fixRecord(s.Q,s.ans);drawFq();scrollTo(0,0);return}
  if(s.mode=='rev'||s.mode=='extra'){s.done=true;revRecord(s.Q,s.ans,s.mode=='rev');drawFq();scrollTo(0,0);return}
  s.done=true;const wrong=[];let answered=0,correct=0;
  s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;answered++;if(a==q.correctIndex)correct++;else wrong.push(q)});
@@ -573,7 +578,7 @@ function contactHtml(){const L=[['✈️','Telegram','#229ED9',cfg.telegramUrl],
  return `<div class="sec" style="justify-content:center">Contact and Join Us</div><div class="socrow">${L.map(l=>`<a href="${esc(l[3])}" target="_blank" rel="noopener"><span class="sb" style="background:${l[2]}">${l[0]}</span><small>${l[1]}</small></a>`).join('')}</div>`}
 
 function fmtSec(s){const m=Math.floor(s/60);if(s>0&&m==0)return '<1m';if(m<60)return m+'m';const h=Math.floor(m/60),r=m%60;return r?h+'h '+r+'m':h+'h'}
-function studyAdd(sec){if(sec<=0)return;const m=J.get('studySecs',{}),t=dayKey();m[t]=(m[t]||0)+sec;const old=dayKey(new Date(Date.now()-35*DAY));Object.keys(m).forEach(k=>{if(k<old)delete m[k]});J.set('studySecs',m);J.set('studyTotal',J.get('studyTotal',0)+sec)}
+function studyAdd(sec){if(sec<=0)return;xpFocus(sec);const m=J.get('studySecs',{}),t=dayKey();m[t]=(m[t]||0)+sec;const old=dayKey(new Date(Date.now()-35*DAY));Object.keys(m).forEach(k=>{if(k<old)delete m[k]});J.set('studySecs',m);J.set('studyTotal',J.get('studyTotal',0)+sec)}
 function studySess(){J.set('studySessions',J.get('studySessions',0)+1)}
 function toolsCards(){const known=J.get('cardsKnown',[]).length,ts=(J.get('studySecs',{}))[dayKey()]||0,mi=J.get('mistakes',[]).length,ex=sylExam(),sd=J.get('sylDone',{}),rvo=revOverview(),pl0=planBuild(),wk0=weeklyBuild(),bl=badgeList(),bu=bl.filter(b=>b.cur>=b.t).length,bsn=J.get('badgesSeen',[]),bn2=bl.filter(b=>b.cur>=b.t&&!bsn.includes(b.id)).length;
  const mk=(h,e,t,s)=>`<a class="stool" href="#/${h}"><span class="e">${e}</span><b>${t}</b><small>${s}</small></a>`;
@@ -585,7 +590,7 @@ function gyanCard(){const d=new Date(),ix=Math.floor((Date.UTC(d.getFullYear(),d
 function sylExam(){const id=J.get('sylExam','');return DATA.syl.find(e=>e.id==id)||null}
 function sylCount(ex,done){let n=0,t=0;ex.subjects.forEach(s=>s.topics.forEach(x=>{t++;if(done[x.id])n++}));return [n,t]}
 function sylPick(id){J.set('sylExam',id);route()}
-function sylTick(id,on){const d=J.get('sylDone',{});if(on)d[id]=dayKey();else delete d[id];J.set('sylDone',d);const ex=sylExam();if(!ex)return;const[n,t]=sylCount(ex,d),pc=Math.round(n/t*100);
+function sylTick(id,on){const d=J.get('sylDone',{});if(on){if(!d[id])xpAdd(3);d[id]=dayKey()}else delete d[id];J.set('sylDone',d);const ex=sylExam();if(!ex)return;const[n,t]=sylCount(ex,d),pc=Math.round(n/t*100);
  const b=document.getElementById('sylBar'),p=document.getElementById('sylPct');if(b)b.style.width=pc+'%';if(p)p.textContent=n+' / '+t+' topics · '+pc+'%';
  ex.subjects.forEach(s=>{const e=document.getElementById('ss_'+s.id);if(e)e.textContent=s.topics.filter(x=>d[x.id]).length+'/'+s.topics.length})}
 function sylReset(){const ex=sylExam();if(!ex||!confirm('Reset progress? / प्रोग्रेस रीसेट करें?\nAll ticks of '+ex.en+' will be cleared.'))return;const d=J.get('sylDone',{});ex.subjects.forEach(s=>s.topics.forEach(x=>delete d[x.id]));J.set('sylDone',d);route()}
@@ -597,7 +602,7 @@ function fcDraw(){const el=document.getElementById('fc');if(!el)return;const kn=
  let body;if(!c)body=`<div class="card" style="text-align:center">${all.length?'You learned every card here!<br>आपने यहाँ के सारे कार्ड याद कर लिए!':'No cards here.<br>यहाँ कोई कार्ड नहीं है।'}${all.length?`<div class="row" style="justify-content:center"><button class="p" onclick="fcAgain()">Start again / फिर से शुरू करें</button></div>`:''}</div>`;
  else body=`<div class="mu" style="margin:8px 0">Learned / याद: ${k} of ${all.length} · Left in deck / बाकी: ${FC.deck.length}</div><div class="fcard" onclick="FC.flip=!FC.flip;fcDraw()"><small class="mu">${FC.flip?'ANSWER / उत्तर':'QUESTION / प्रश्न'}</small><div class="fq">${esc(FC.flip?c.a:c.q)}</div><div class="mu">${esc(FC.flip?c.ah:c.qh)}</div><small class="mu">Tap to flip</small></div><div class="row" style="justify-content:center"><button class="s" onclick="fcAns(false)">Again / फिर दिखाओ</button><button class="p" onclick="fcAns(true)">Got it / याद है</button></div>`;
  el.innerHTML=chips+body}
-function fcAns(ok){const c=FC.deck.shift();if(!c)return;if(ok){const kn=J.get('cardsKnown',[]);if(!kn.includes(c.id))kn.push(c.id);J.set('cardsKnown',kn)}else FC.deck.push(c);FC.flip=false;fcDraw()}
+function fcAns(ok){const c=FC.deck.shift();if(!c)return;if(ok){const kn=J.get('cardsKnown',[]);if(!kn.includes(c.id)){kn.push(c.id);xpAdd(2)}J.set('cardsKnown',kn)}else FC.deck.push(c);FC.flip=false;fcDraw()}
 function fcAgain(){const kn=J.get('cardsKnown',[]).filter(id=>{const c=DATA.cards.find(x=>x.id==id);return c&&FC.cat!='all'&&c.cat!=FC.cat});J.set('cardsKnown',FC.cat=='all'?[]:kn);FC.only=false;fcBuild()}
 const TM_LEN=()=>TM.mode=='focus'?TM.fmin*60:TM.mode=='short'?300:900;
 function tmInit(){window.TM={mode:'focus',fmin:J.get('tmFocus',25),cycle:0,running:false,left:0,endAt:0,mark:0};TM.left=TM_LEN();tmDraw();timers.push(setInterval(()=>{if(!TM.running)return;const l=Math.max(0,Math.round((TM.endAt-Date.now())/1000));TM.left=l;if(l<=0)tmDone();else{const e=document.getElementById('tmv');if(e)e.textContent=fmtT(l)}},500))}
@@ -625,16 +630,15 @@ function revStart(extra){const t=dayKey();let it=revItems();if(extra)it.sort(()=
 function revRecord(Q,ans,scheduled){const cur=revItems(),by={},out={};cur.forEach(e=>{by[e.q.text]=e;if(e.has)out[e.q.text]=[e.box,e.due,e.q.at]});let answered=0,mast=0;const rm=[];
  Q.forEach((q,i)=>{const g=ans[i];if(g===null||g===undefined)return;answered++;if(!scheduled)return;const it=by[q.text];if(!it)return;
   if(g==q.correctIndex){const nx=it.box+1;if(nx>=REV_INT.length){mast++;rm.push(q.text);delete out[q.text]}else out[q.text]=[nx,revInDays(REV_INT[nx]),it.q.at]}else out[q.text]=[0,revInDays(REV_INT[0]),it.q.at]});
- J.set('revSched',out);if(mast)J.set('revMastered',J.get('revMastered',0)+mast);if(rm.length)J.set('mistakes',J.get('mistakes',[]).filter(m=>!rm.includes(m.text)));if(answered)addGoal(answered)}
+ J.set('revSched',out);if(mast){J.set('revMastered',J.get('revMastered',0)+mast);xpAdd(mast*5)}if(rm.length)J.set('mistakes',J.get('mistakes',[]).filter(m=>!rm.includes(m.text)));if(answered)addGoal(answered)}
 function lifeAdd(k,n){const l=J.get('life',{});l[k]=(l[k]||0)+n;J.set('life',l)}
 function lifeTest(c,w,marks,max){lifeAdd('tests',1);if(c+w>0){const p=max>0?marks/max*100:0;if(p>=80)lifeAdd('high',1);if(p>=100)lifeAdd('perfect',1)}}
-function streakNow(){const s=J.get('streak',{last:'',count:0});return (s.last==dayKey()||s.last==dayKey(new Date(Date.now()-DAY)))?s.count:0}
 function badgeList(){const l=J.get('life',{}),ms=Math.max(J.get('maxStreak',0),streakNow()),fm=Math.floor(J.get('studyTotal',0)/60),cards=Math.min(J.get('cardsKnown',[]).length,DATA.cards.length),syl=Object.keys(J.get('sylDone',{})).length,sr=J.get('speedRounds',0),mst=J.get('revMastered',0),q=l.q||0;
  const B=(id,e,title,th,d,dh,cur,t)=>({id,e,title,th,d,dh,cur,t});
  return [B('first','🌱','First Step','पहला कदम','Finish your first test or quiz','पहला टेस्ट या क्विज़ पूरा करें',l.tests||0,1),
- B('streak3','🔥','3-Day Streak','3 दिन की स्ट्रीक','Open the app 3 days in a row','लगातार 3 दिन ऐप खोलें',ms,3),
- B('streak7','⚡','7-Day Streak','7 दिन की स्ट्रीक','Open the app 7 days in a row','लगातार 7 दिन ऐप खोलें',ms,7),
- B('streak30','👑','30-Day Streak','30 दिन की स्ट्रीक','Open the app 30 days in a row','लगातार 30 दिन ऐप खोलें',ms,30),
+ B('streak3','🔥','3-Day Streak','3 दिन की स्ट्रीक','Finish your daily goal 3 days in a row','लगातार 3 दिन रोज़ का लक्ष्य पूरा करें',ms,3),
+ B('streak7','⚡','7-Day Streak','7 दिन की स्ट्रीक','Finish your daily goal 7 days in a row','लगातार 7 दिन रोज़ का लक्ष्य पूरा करें',ms,7),
+ B('streak30','👑','30-Day Streak','30 दिन की स्ट्रीक','Finish your daily goal 30 days in a row','लगातार 30 दिन रोज़ का लक्ष्य पूरा करें',ms,30),
  B('q100','🎯','100 Questions','100 सवाल','Answer 100 questions','100 सवाल हल करें',q,100),
  B('q500','🚀','500 Questions','500 सवाल','Answer 500 questions','500 सवाल हल करें',q,500),
  B('q1000','🏆','1000 Questions','1000 सवाल','Answer 1000 questions','1000 सवाल हल करें',q,1000),
@@ -728,7 +732,7 @@ function smFinish(){if(SM.fin||SM.phase=='result')return;SM.fin=true;clearT();co
  const mode=SM.rapid?'r60':'q20',best=J.get('smBest',{}),key=SM.info.id+'_'+mode,old=best[key];
  if(SM.correct>0&&(!old||SM.correct>old[0]||(SM.correct==old[0]&&secs<old[1]))){best[key]=[SM.correct,secs];J.set('smBest',best);SM.newBest=true}
  const t=dayKey(),dd=J.get('speedDays',{}),dc=J.get('speedCorr',{}),old35=dayKey(new Date(Date.now()-35*DAY));dd[t]=(dd[t]||0)+1;dc[t]=(dc[t]||0)+SM.correct;[dd,dc].forEach(m=>Object.keys(m).forEach(k=>{if(k<old35)delete m[k]}));J.set('speedDays',dd);J.set('speedCorr',dc);J.set('speedRounds',J.get('speedRounds',0)+1);
- const g=Math.floor(ans/5);if(g>0)addGoal(g);SM.secs=secs;SM.phase='result';smDraw()}
+ xpAdd(5);const g=Math.floor(ans/5);if(g>0)addGoal(g);SM.secs=secs;SM.phase='result';smDraw()}
 function smDraw(){const el=document.getElementById('smp');if(!el)return;
  if(SM.phase=='count'){el.innerHTML=`<div style="text-align:center;padding:30px 0"><div class="mu">Get ready / तैयार हो जाओ</div><div style="font-size:96px;font-weight:800;color:var(--ac)">${SM.count}</div><div class="mu">${SM.rapid?'Solve as many as you can in 60 seconds<br>60 सेकंड में जितने हो सकें हल करो':'Solve 20 questions as fast as you can<br>20 सवाल जितनी तेज़ी से हो सके हल करो'}</div></div>`;return}
  if(SM.phase=='play'){const a=SM.correct+SM.wrong;el.innerHTML=`<div class="row" style="justify-content:space-between"><span><span class="chip" style="border-color:#1b8a3a;color:#1b8a3a">✓ ${SM.correct}</span> <span class="chip" style="border-color:#d22;color:#d22">✗ ${SM.wrong}</span></span><b id="smtime" style="font-size:24px;color:var(--ac)"></b></div><div class="bar"><i id="smbar" style="width:100%"></i></div>${SM.rapid?'':`<small class="mu">Q ${Math.min(a+1,20)} / 20</small>`}
@@ -776,16 +780,77 @@ async function doRestore(){const m=document.getElementById('bm'),u=auth.currentU
   const o=JSON.parse(d.webBackup);let n=0;Object.keys(o).forEach(k=>{if(k.startsWith('ysh_')||k.startsWith('code_')){try{localStorage.setItem(k,o[k]);n++}catch(e){}}});J.set('lastBackup',Date.now());m.textContent='Restored ✓ / वापस आ गया ✓';setTimeout(route,900)}catch(e){m.textContent='Restore nahi hua: '+e.message}}
 function moreCard(){const mk=(h,e,t,s)=>`<a class="stool" href="#/${h}"><span class="e">${e}</span><b>${t}</b><small>${esc(s)}</small></a>`,nn=notesAll().length,lb=J.get('lastBackup',0);
  return `<div class="card"><b>🧰 More Tools / और टूल्स</b><div class="stgrid">${mk('notes','📝','My Notes',nn?nn+' notes':'Write quick notes')}${mk('days','📅','Important Days',impTile())}${mk('backup','☁️','Cloud Backup',lb?'Last: '+new Date(lb).toLocaleDateString('en-IN',{day:'numeric',month:'short'}):'Save your progress')}</div></div>`}
+const XP_TITLE=l=>l>=20?'Legend / लीजेंड':l>=12?'Champion / चैंपियन':l>=7?'Achiever / विजेता':l>=3?'Learner / जिज्ञासु':'Beginner / शुरुआती';
+const xpAt=l=>l<=1?0:50*(l-1)*l;
+function xpLevel(x){let l=1;while(xpAt(l+1)<=x){l++;if(l>200)break}return l}
+function xpInfo(){const t=J.get('xpTotal',0),lv=xpLevel(t),st=xpAt(lv),nx=xpAt(lv+1),d=J.get('xpDay',{day:'',n:0});return {total:t,level:lv,into:t-st,need:nx-st,today:d.day==dayKey()?d.n:0,title:XP_TITLE(lv)}}
+let xpPend=0,xpPendLv=0,xpTimer=null;
+function toast(t,ms){try{let e=document.getElementById('toast');if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e)}e.textContent=t;e.className='show';clearTimeout(window._tt);window._tt=setTimeout(()=>{e.className=''},ms||2200)}catch(x){}}
+function xpToast(){const x=xpPend,l=xpPendLv;xpPend=0;xpPendLv=0;if(x<=0)return;toast(l>0?`⭐ +${x} XP  •  🎉 Level ${l}! / लेवल ${l}!`:`⭐ +${x} XP`,l>0?3000:2000)}
+function xpAdd(n){if(!(n>0))return;const b=J.get('xpTotal',0),a=b+n;J.set('xpTotal',a);const t=dayKey(),d=J.get('xpDay',{day:'',n:0});J.set('xpDay',{day:t,n:(d.day==t?d.n:0)+n});xpPend+=n;if(xpLevel(a)>xpLevel(b))xpPendLv=xpLevel(a);clearTimeout(xpTimer);xpTimer=setTimeout(xpToast,1200)}
+function xpFocus(sec){if(!(sec>0))return;const sum=J.get('xpFocusRem',0)+sec,m=Math.floor(sum/60);J.set('xpFocusRem',sum%60);if(m>0)xpAdd(m)}
+function xpHow(){alert('How to earn XP / XP कैसे मिलता है\n\n❓ Each question answered / हर सवाल: +2\n📝 Finish a Mock Test / मॉक टेस्ट पूरा: +20 (80%+ → +30)\n📰 Daily Quiz / डेली क्विज़: +15\n🎯 Daily goal done / रोज़ का लक्ष्य पूरा: +25\n🔥 Streak day / स्ट्रीक का दिन: +11 … +40\n⏱️ Study Timer / स्टडी टाइमर: +1 / min\n🔁 Fix a mistake / गलती सुधारी: +5\n⚡ Speed Maths round / राउंड: +5\n🃏 New flashcard learned / नया कार्ड: +2\n📚 Syllabus topic done / टॉपिक पूरा: +3\n\nLevel 2 = 100 XP, Level 3 = 300 XP, Level 4 = 600 XP ... The more you study, the higher you go!\nलेवल 2 = 100 XP, लेवल 3 = 300 XP, लेवल 4 = 600 XP ... जितना पढ़ेंगे, उतना ऊपर जाएँगे!')}
+function xpCard(){const i=xpInfo();return `<div class="card xpc" onclick="xpHow()"><div class="xpl"><small>LVL</small><b>${i.level}</b></div><div style="flex:1;min-width:0"><div class="row" style="justify-content:space-between;margin:0"><b>⭐ ${esc(i.title)}</b><b style="color:var(--ac)">${i.into} / ${i.need} XP</b></div><div class="bar"><i style="width:${Math.min(100,i.into/i.need*100)}%"></i></div><small class="mu">Today +${i.today} XP • ${i.need-i.into} XP to Level ${i.level+1}<br>आज +${i.today} XP • लेवल ${i.level+1} के लिए ${i.need-i.into} XP</small></div></div>`}
+const dkAdd=(k,n)=>{const p=k.split('-');return dayKey(new Date(+p[0],+p[1]-1,+p[2]+n))};
+const dayGap=(a,b)=>{const x=a.split('-'),y=b.split('-');return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/DAY)};
+const SX=()=>J.get('streakX',{fr:0,gift:false,credit:''});
+function settleStreak(){const st=J.get('streak',{last:'',count:0}),x=SX();if(!st.last||st.count<=0)return 0;const gap=dayGap(st.last,dayKey());if(gap<=1)return 0;const miss=gap-1;
+ if(miss<=x.fr){x.fr-=miss;st.last=dkAdd(dayKey(),-1);J.set('streakX',x);J.set('streak',st);return miss}
+ st.count=0;J.set('streak',st);return 0}
+function readStreak(){const st=J.get('streak',{last:'',count:0}),x=SX();if(!st.last||st.count<=0)return {days:0,doneToday:false,fr:x.fr};const gap=dayGap(st.last,dayKey());if(!(gap<=1||(gap-1)<=x.fr))return {days:0,doneToday:false,fr:x.fr};return {days:st.count,doneToday:gap==0,fr:x.fr}}
+function touchStreak(){const x=SX();if(!x.gift){x.gift=true;if(x.fr<2)x.fr++;J.set('streakX',x)}const used=settleStreak(),s=readStreak();s.used=used;if(used>0)toast('❄️ Streak Freeze saved your streak! / स्ट्रीक फ्रीज़ ने आपकी स्ट्रीक बचा ली!',3000);return s}
+function streakNow(){return readStreak().days}
+function creditStreak(){const t=dayKey(),x=SX();if(x.credit==t)return;x.credit=t;J.set('streakX',x);settleStreak();const st=J.get('streak',{last:'',count:0});if(st.last==t)return;const b=st.count,days=(b>0&&st.last==dkAdd(t,-1))?b+1:1;st.count=days;st.last=t;J.set('streak',st);if(days>J.get('maxStreak',0))J.set('maxStreak',days);
+ if(days%7==0){const y=SX();if(y.fr<2){y.fr++;J.set('streakX',y)}}xpAdd(10+Math.min(days,30))}
+function streakInfo(){alert('How the streak works / स्ट्रीक कैसे चलती है\n\n🔥 Finish your daily goal every day → streak +1.\n❄️ Missed a day? A Streak Freeze saves your streak automatically.\n🎁 Every 7 days you earn 1 Streak Freeze (keep up to 2).\n\n🔥 रोज़ का लक्ष्य पूरा करें → स्ट्रीक +1।\n❄️ एक दिन छूट गया? स्ट्रीक फ्रीज़ अपने आप स्ट्रीक बचा लेता है।\n🎁 हर 7 दिन पर 1 स्ट्रीक फ्रीज़ मिलता है (ज़्यादा से ज़्यादा 2)।')}
+function addGoal(n){if(!n)return;lifeAdd('q',n);actAdd(n);const t=dayKey(),g=J.get('goalDay',{day:'',n:0}),done=g.day===t?g.n:0;J.set('goalDay',{day:t,n:done+n});xpAdd(n*2);
+ if(done+n>=goalVal()){if(J.get('goalBonusDay','')!=t){J.set('goalBonusDay',t);xpAdd(25)}creditStreak()}}
+function studyCard(){const s=touchStreak(),g=goalVal(),gd=goalToday(),ex=J.get('exam',null),d=examDays(),wk=Math.floor(s.days/7),fill=s.days==0?0:(s.days%7==0?7:s.days%7),just=s.doneToday&&s.days>0&&s.days%7==0,risk=s.days>0&&!s.doneToday;
+ const t1=s.days==0?'Start your streak! / स्ट्रीक शुरू करें!':just?`${s.days}-day streak complete! 🎉 / ${s.days} दिन की स्ट्रीक पूरी!`:`${s.days}-day streak / ${s.days} दिन की स्ट्रीक`;
+ const t2=s.days==0?'Finish your daily goal to start. / शुरू करने के लिए रोज़ का लक्ष्य पूरा करें':s.doneToday?'Today’s goal done ✓ / आज का लक्ष्य पूरा ✓':'Finish today’s goal to keep your streak! / स्ट्रीक बचाने के लिए आज का लक्ष्य पूरा करें';
+ return xpCard()+`<div class="card study"><div class="row" style="justify-content:space-between;margin:0"><b onclick="streakInfo()" style="cursor:pointer"><span class="material-icons" style="color:#e65100">local_fire_department</span> ${t1} <span class="mu">ⓘ</span></b><span>${wk?'🏆 x'+wk+' ':''}❄️ ${s.fr} · ${fill}/7</span></div><div class="${risk?'err':'mu'}" style="margin:4px 0">${t2}</div>
+ <div style="margin-top:8px">Today’s goal / आज का लक्ष्य: <b>${gd} / ${g} Qs</b></div><div class="bar"><i style="width:${Math.min(100,gd/g*100)}%"></i></div>
+ ${ex&&d!==null?`<div>📅 <b>${esc(ex.name)}</b> — ${d>=0?d+' din bache':'ho chuki hai'}</div>`:`<a href="#/profile">Exam date set karein →</a>`}</div>`}
+function rrect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath()}
+function fitTxt(c,t,mw,px,wt){let p=px;do{c.font=`${wt||'700'} ${p}px Poppins,system-ui,sans-serif`;p-=2}while(c.measureText(t).width>mw&&p>20);return t}
+function scoreShare(d){const s=readStreak(),lv=xpInfo().level,ls=[];if(d.rank)ls.push(d.rank);if(s.days>0)ls.push('🔥 '+s.days+'-day streak');ls.push('⭐ Level '+lv);
+ const W=1020,H=1280,cv=document.createElement('canvas');cv.width=W;cv.height=H;const c=cv.getContext('2d');
+ const draw=lg=>{const g=c.createLinearGradient(0,0,W,H);g.addColorStop(0,'#081136');g.addColorStop(1,'#1B2A7A');c.fillStyle=g;c.fillRect(0,0,W,H);
+  c.strokeStyle='#FFFF29';c.lineWidth=6;rrect(c,30,30,W-60,H-60,40);c.stroke();c.textAlign='left';
+  if(lg){c.save();rrect(c,60,64,100,100,24);c.clip();c.fillStyle='#fff';c.fillRect(60,64,100,100);c.drawImage(lg,60,64,100,100);c.restore()}
+  c.fillStyle='#FFFF29';c.font='700 54px Poppins,system-ui,sans-serif';c.fillText('Yash Study Hub',184,128);c.textAlign='center';
+  c.fillStyle='#fff';c.fillText(fitTxt(c,d.title,W-140,46),W/2,290);
+  c.fillStyle='#FFFF29';c.fillText(fitTxt(c,d.big,W-140,190,'800'),W/2,520);
+  c.fillStyle='#B4BBEA';c.font='500 44px Poppins,system-ui,sans-serif';c.fillText(d.bigLabel,W/2,590);
+  d.stats.forEach((x,i)=>{const bx=60+i*310;c.fillStyle='rgba(255,255,255,0.10)';rrect(c,bx,650,280,170,28);c.fill();c.fillStyle='#fff';c.font='700 58px Poppins,system-ui,sans-serif';c.fillText(String(x[1]),bx+140,735);c.fillStyle='#B4BBEA';c.font='500 32px Poppins,system-ui,sans-serif';c.fillText(x[0],bx+140,788)});
+  c.fillStyle='#fff';c.font='600 44px Poppins,system-ui,sans-serif';ls.forEach((l,i)=>c.fillText(l,W/2,900+i*66));
+  c.fillStyle='#FFFF29';c.font='700 56px Poppins,system-ui,sans-serif';c.fillText('Can you beat me? 💪',W/2,1110);c.fillStyle='#fff';c.font='500 38px Poppins,system-ui,sans-serif';c.fillText('क्या आप मुझे हरा सकते हैं?',W/2,1170);
+  c.fillStyle='#B4BBEA';c.font='500 32px Poppins,system-ui,sans-serif';c.fillText('📲 Download Yash Study Hub',W/2,1226);
+  ssShow(cv,d)};
+ const im=new Image();im.onload=()=>draw(im);im.onerror=()=>draw(null);im.src='logo.png'}
+function ssShow(cv,d){const old=document.getElementById('ssm');if(old)old.remove();const m=document.createElement('div');m.id='ssm';m.className='modal';
+ m.innerHTML=`<div class="mbox"><b>Share your score / अपना स्कोर शेयर करें</b><img src="${cv.toDataURL('image/png')}" alt=""><div class="row" style="justify-content:center"><button class="p" id="ssb">Share Score Card / स्कोर कार्ड शेयर करें</button><button class="s" onclick="document.getElementById('ssm').remove()">Close</button></div></div>`;document.body.appendChild(m);
+ document.getElementById('ssb').onclick=()=>{const txt=`🏆 I scored ${d.big} in ${d.title}!  / मैंने ${d.title} में ${d.big} स्कोर किया!\n\nCan you beat me? 💪 / क्या आप मुझे हरा सकते हैं?\n\n📲 ${location.origin+location.pathname}`;
+  cv.toBlob(b=>{if(!b){alert(txt);return}const f=new File([b],'score_card.png',{type:'image/png'});
+   if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],text:txt}).catch(()=>{});
+   else{const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='score_card.png';document.body.appendChild(a);a.click();a.remove();if(navigator.clipboard)navigator.clipboard.writeText(txt).catch(()=>{});alert('Score card download ho gaya. Text copy ho gaya, ab kahin bhi paste karein.')}},'image/png')}}
+async function ssRank(id){try{const sn=await db.collection('mockScores').doc(id).collection('scores').limit(300).get(),me=auth.currentUser.uid,rows=sn.docs.map(x=>({u:x.id,s:x.data().score||0,t:x.data().timeSec||0})).sort((a,b)=>b.s-a.s||a.t-b.t),i=rows.findIndex(r=>r.u==me);return i>=0?`🏆 Rank #${i+1} of ${rows.length}`:''}catch(e){return ''}}
+async function ssMock(){const r=window.MR;if(!r)return;const att=r.c+r.w,acc=att?(r.c/att*100).toFixed(1):'0.0',rk=r.id?await ssRank(r.id):'';scoreShare({title:r.title,big:r.marks+' / '+r.total,bigLabel:'Marks',stats:[['Accuracy',acc+'%'],['Correct',r.c],['Wrong',r.w]],rank:rk})}
+function ssQuiz(){const s=window.FQ;if(!s)return;let c=0,w=0;s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null||a===undefined)return;a==q.correctIndex?c++:w++});const t=s.Q.length;scoreShare({title:s.title,big:c+' / '+t,bigLabel:'Correct answers',stats:[['Accuracy',(t?Math.round(c/t*100):0)+'%'],['Correct',c],['Wrong',w]]})}
+function ssDaily(){const r=window.QR;if(!r)return;scoreShare({title:'Daily Quiz',big:r.c+' / '+r.t,bigLabel:'Correct answers',stats:[['Accuracy',(r.t?Math.round(r.c/r.t*100):0)+'%'],['Correct',r.c],['Wrong',r.w]]})}
+function fixWeak(sub){const key=String(sub).trim().toLowerCase(),it=J.get('mistakes',[]).filter(m=>{let x=String(m.subject||'').trim().toLowerCase();if(!x)x='general';return x==key}).slice(0,10);if(!it.length)return;
+ (window.QS=window.QS||{}).fq=it;window.FQ={m:null,Q:it,i:0,picked:null,ans:Array(it.length).fill(null),hi:lang=='hi',done:false,title:'Fix: '+sub,mode:'fix'};location.hash='#/revq'}
+function fixRecord(Q,ans){let a=0,f=0;const rm=[];Q.forEach((q,i)=>{const g=ans[i];if(g===null||g===undefined)return;a++;if(g==q.correctIndex){rm.push(q.text);f++}});if(rm.length)J.set('mistakes',J.get('mistakes',[]).filter(m=>!rm.includes(m.text)));addGoal(a);if(f>0)xpAdd(f*5)}
 function submitTest(){if(!T||T.done)return;clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;
  const mp=t.marksPerQuestion||1,ng=t.negativeMarks||0;let c=0,w=0,m=0;
  Q.forEach((q,i)=>{const a=s.ans[i];if(a!==null){if(a==q.correctIndex){c++;m+=mp}else{w++;m-=ng}}});
  const total=+(Q.length*mp).toFixed(2),marks=+m.toFixed(2),skipped=Q.length-c-w,sub=(t.subject||'').trim();
  const h=J.get('history',[]);h.unshift({title:t.title,subject:sub,marks,maxMarks:total,correct:c,wrong:w,skipped,at:Date.now()});J.set('history',h.slice(0,60));
  addMistakes(Q.filter((q,i)=>s.ans[i]!==null&&s.ans[i]!=q.correctIndex),sub,t.title);
- addGoal(c+w);lifeTest(c,w,marks,total);saveAttempt(t,s.id,marks,total,s.ans);
+ addGoal(c+w);if(c+w>0)xpAdd((total>0?marks/total*100:0)>=80?30:20);lifeTest(c,w,marks,total);saveAttempt(t,s.id,marks,total,s.ans);window.MR={title:t.title,id:s.id,marks,total,c,w};
  const review=Q.map((q,i)=>{const a=s.ans[i];const opts=hi&&q.optionsHi?.length?q.optionsHi:q.options;const ex=hi&&q.explanationHi||q.explanation;
   return `<div class="q"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<small class="mu">Skipped</small>':''}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('');
- document.getElementById('mtest').innerHTML=`<div class="q"><h2>Score: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
+ document.getElementById('mtest').innerHTML=`<div class="q"><h2>Score: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<div class="row"><button class="p" onclick="ssMock()">Share Score Card / स्कोर कार्ड शेयर करें</button></div><h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
  scrollTo(0,0)}
 
 function submitPractice(){const Q=window.PQ||[];grade(Q,'pz',1,0,false);document.getElementById('res').innerHTML='<div class="q">Practice complete.</div>'}
@@ -793,8 +858,8 @@ function practiceMistakes(){const m=J.get('mistakes',[]).slice(0,10);window.PQ=m
 
 function submitQuiz(){const{day,Q}=window.QZ;const hi=lang=='hi';const r=grade(Q,'z',1,0,hi);
  const done=J.get('quizDone',{});
- if(!done[day]){done[day]={score:r.c,total:Q.length};J.set('quizDone',done);addGoal(r.c+r.w);lifeTest(r.c,r.w,r.c,Q.length);const h=J.get('history',[]);h.unshift({title:'Daily Quiz',subject:'Daily Quiz',marks:r.c,maxMarks:Q.length,correct:r.c,wrong:r.w,skipped:Q.length-r.c-r.w,at:Date.now()});J.set('history',h.slice(0,60));addMistakes(Q.filter((q,i)=>r.ans[i]!==null&&r.ans[i]!=q.correctIndex),'Daily Quiz','Daily Quiz')}
- document.getElementById('res').innerHTML=`<div class="q"><h2>Score: ${r.c} / ${Q.length}</h2>${done[day].score==r.c&&done[day].total==Q.length?'':'<p class="mu">Pehla prayas hi count hota hai.</p>'}</div>`;scrollTo(0,document.body.scrollHeight)}
+ if(!done[day]){done[day]={score:r.c,total:Q.length};J.set('quizDone',done);addGoal(r.c+r.w);if(r.c+r.w>0)xpAdd(15);lifeTest(r.c,r.w,r.c,Q.length);const h=J.get('history',[]);h.unshift({title:'Daily Quiz',subject:'Daily Quiz',marks:r.c,maxMarks:Q.length,correct:r.c,wrong:r.w,skipped:Q.length-r.c-r.w,at:Date.now()});J.set('history',h.slice(0,60));addMistakes(Q.filter((q,i)=>r.ans[i]!==null&&r.ans[i]!=q.correctIndex),'Daily Quiz','Daily Quiz')}
+ document.getElementById('res').innerHTML=`<div class="q"><h2>Score: ${r.c} / ${Q.length}</h2>${done[day].score==r.c&&done[day].total==Q.length?'':'<p class="mu">Pehla prayas hi count hota hai.</p>'}</div><button class="s" onclick="ssDaily()">Share Score Card / स्कोर कार्ड शेयर करें</button>`;window.QR={c:r.c,w:r.w,t:Q.length};scrollTo(0,document.body.scrollHeight)}
 
 function initHome(){
  const trk=document.getElementById('trk');
