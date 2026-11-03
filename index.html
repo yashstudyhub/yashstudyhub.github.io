@@ -155,6 +155,7 @@ details.card summary{cursor:pointer;list-style:none}
 .modal{position:fixed;inset:0;background:#000a;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .mbox{background:#fff;border-radius:16px;padding:14px;max-width:420px;width:100%;max-height:92vh;overflow:auto;text-align:center}
 .mbox img{width:100%;border-radius:12px;margin:10px 0}
+.tile{position:relative}.rdot{position:absolute;top:8px;right:10px;width:10px;height:10px;border-radius:50%;background:#e53935;border:2px solid #fff}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -185,61 +186,27 @@ const back='<p><a href="javascript:history.back()">← Back</a></p>';
 const empty='<p class="mu">Abhi kuch nahi hai / अभी कुछ नहीं है।</p>';
 const topBar=()=>`<div class="topbar"><img src="logo.png" alt=""><div class="nm"><b>${esc(cfg.appName)}</b><small>${esc(cfg.tagline)}</small></div><a id="bell" class="bell material-icons" href="#/notifications" title="Notifications">notifications</a></div>`;
 const wrap=h=>`<div class="wrap">${h}</div>`;
-const TILES=[['mocks','📝','Mock Tests'],['pdfs','📚','PDF Library'],['fmcq','✅','Free MCQs'],['batches','🎓','Paid Batches'],['mycourse','📖','My Course'],['queries','💬','Queries'],['quiz','🧠','Daily Quiz'],['notebook','📓','Notebook'],['progress','📊','Progress']];
+const TILES=[['mocks','📝','Mock Tests'],['pdfs','📚','PDF Library'],['fmcq','✅','Free MCQs'],['batches','🎓','Paid Batches'],['mycourse','📖','My Course'],['queries','💬','Queries'],['quiz','🧠','Daily Quiz'],['revision','🔁','Smart Revision'],['progress','📊','Progress']];
 const BN=[['home','home','Home'],['news','newspaper','News'],['pdfs','picture_as_pdf','PDFs'],['ca','account_balance','C.Affairs'],['profile','person','Profile']];
 
 // ---------- local study data (phone-saved, same idea as the app) ----------
 function goalToday(){const g=J.get('goalDay',{day:'',n:0});return g.day===dayKey()?g.n:0}
 function addMistakes(qs,subject,source){const m=J.get('mistakes',[]);qs.forEach(q=>{if(!m.some(x=>x.text===q.text))m.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||'',subject,source,at:Date.now()})});J.set('mistakes',m.slice(0,300))}
-function rmMistake(i){const m=J.get('mistakes',[]);m.splice(i,1);J.set('mistakes',m);route()}
 const examDays=()=>{const e=J.get('exam',null);if(!e)return null;const t0=new Date();t0.setHours(0,0,0,0);return Math.ceil((new Date(e.date+'T00:00:00')-t0)/DAY)};
 
 function loginView(mode='login'){
  showNav(null);
- app.innerHTML=`<div class="box"><h2>${mode=='signup'?'Sign Up':'Login'}</h2>${mode=='signup'?'<input id="n" type="text" maxlength="100" placeholder="Full Name / पूरा नाम">':''}<input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><p class="err" id="m"></p>
+ app.innerHTML=`<div class="box"><h2>${mode=='signup'?'Sign Up':'Login'}</h2><input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><p class="err" id="m"></p>
  <button class="p" id="go">${mode=='signup'?'Create account':'Login'}</button>
  <p><a href="javascript:void 0" id="sw">${mode=='signup'?'Already have account? Login':'New here? Sign up'}</a> · <a href="javascript:void 0" id="fp">Forgot password</a></p></div>`;
  const v=id=>document.getElementById(id).value.trim(),m=t=>document.getElementById('m').textContent=t;
  document.getElementById('sw').onclick=()=>loginView(mode=='signup'?'login':'signup');
  document.getElementById('fp').onclick=()=>auth.sendPasswordResetEmail(v('e')).then(()=>m('Reset email bhej diya / ईमेल भेजा गया'),e=>m(e.message));
- document.getElementById('go').onclick=()=>{
-  if(mode=='signup'){
-   const nm=v('n');
-   if(!nm){m('Apna poora naam daalein / अपना पूरा नाम डालें');return}
-   // SIGNUP_BUSY: signup poora hone tak login-time wali ensureStudentDoc() ruki rahe (dono ek saath na likhein).
-   window.SIGNUP_BUSY=true;
-   return auth.createUserWithEmailAndPassword(v('e'),document.getElementById('p').value)
-    .then(async c=>{await recordWebSignup(c.user,nm);window.SIGNUP_BUSY=false;route()})
-    .catch(e=>{window.SIGNUP_BUSY=false;m(e.message)});
-  }
-  return auth.signInWithEmailAndPassword(v('e'),document.getElementById('p').value).catch(e=>m(e.message));
- };
-}
-
-// ===== Signup sync: Web par bana har naya student App ke Admin Panel > Stats mein dikhe =====
-// App bhi students/{uid} likhta hai. source='web' => "From Web" count; createdAt => "New signups".
-// Stats ke liye fail hone par signup kabhi nahi rukta.
-async function recordWebSignup(user,name){
- try{
-  const ref=db.doc('students/'+user.uid);
-  if((await ref.get()).exists)return;
-  const nm=String(name||user.displayName||'').trim().slice(0,100);
-  await ref.set({name:nm,email:user.email||'',state:'',district:'',gender:'',qualification:'',profileComplete:false,source:'web',createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
-  if(nm)J.set('stuName',nm);
- }catch(e){console.warn('Signup stats write failed',e)}
-}
-// Website par pehle se bane purane students: login par ek baar students/{uid} bana do taaki Stats ke
-// "Total" aur "From Web" mein ginti ho (date nahi hoti, isliye "New signups" mein nahi aate).
-async function ensureStudentDoc(user){
- try{
-  const ref=db.doc('students/'+user.uid);
-  if((await ref.get()).exists)return;
-  await ref.set({name:String(user.displayName||'').trim().slice(0,100),email:user.email||'',state:'',district:'',gender:'',qualification:'',profileComplete:false,source:'web'},{merge:true});
- }catch(e){}
+ document.getElementById('go').onclick=()=>(mode=='signup'?auth.createUserWithEmailAndPassword(v('e'),document.getElementById('p').value).then(c=>{try{db.doc('students/'+c.user.uid).set({source:'web',createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(()=>{})}catch(e){}return c}):auth.signInWithEmailAndPassword(v('e'),document.getElementById('p').value)).catch(e=>m(e.message));
 }
 
 const qt=(q,k,hi)=>(hi&&q[k+'Hi'])||q[k];
-function qHtml(Q,prefix,hi){window.QS=window.QS||{};QS[prefix]=Q;const sv=J.get('bookmarks',[]);return Q.map((q,i)=>`<div class="q">${q.passage?`<p class="mu">${esc(qt(q,'passage',hi))}</p>`:''}<b>${i+1}. ${esc(qt(q,'text',hi))}</b>`+(hi&&q.optionsHi?.length?q.optionsHi:q.options).map((o,j)=>`<label><input type="radio" name="${prefix}${i}" value="${j}">${esc(o)}</label>`).join('')+`<div id="${prefix}x${i}"></div><button class="s" style="margin-top:6px" onclick="bm('${prefix}',${i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></div>`).join('')}
+function qHtml(Q,prefix,hi){window.QS=window.QS||{};QS[prefix]=Q;const sv=J.get('bookmarks',[]);return Q.map((q,i)=>`<div class="q">${q.passage?`<p class="mu">${esc(qt(q,'passage',hi))}</p>`:''}<b>${i+1}. ${esc(qt(q,'text',hi))}</b>`+(hi&&q.optionsHi?.length?q.optionsHi:q.options).map((o,j)=>`<label><input type="radio" name="${prefix}${i}" value="${j}">${esc(o)}</label>`).join('')+`<div id="${prefix}x${i}"></div></div>`).join('')}
 function grade(Q,prefix,mp,ng,hi){let s=0,c=0,w=0;const ans=[];
  Q.forEach((q,i)=>{const r=document.querySelector(`input[name=${prefix}${i}]:checked`),a=r?+r.value:null;ans.push(a);
   document.querySelectorAll(`input[name=${prefix}${i}]`).forEach(e=>{e.disabled=true;const p=e.parentElement;if(+e.value==q.correctIndex)p.classList.add('ok');else if(+e.value==a)p.classList.add('no')});
@@ -260,6 +227,8 @@ const IMPDAYS=[[1,1,"world","Global Family Day","वैश्विक परि
 const ADMIN_EMAIL='yashpcmishra@gmail.com';
 const isAdminUser=()=>!!(auth.currentUser&&String(auth.currentUser.email).toLowerCase()==ADMIN_EMAIL&&auth.currentUser.emailVerified);
 const V={admin:()=>adminPage(),
+async revmock(){const tp=window.RMK;if(!tp||!tp.items.length)return wrap(back+'<p class="mu">Open <a href="#/revision">Smart Revision</a> to start.</p>');const Q=tp.items,t={title:'Revision Mock: '+tp.name,questions:Q,durationMinutes:Q.length<5?5:Q.length,marksPerQuestion:1,negativeMarks:0,subject:tp.name};
+ window.T={t,Q,id:'',start:Date.now(),ans:[],i:0,pal:false,done:false,hi:lang=='hi',rev:true};return wrap(back+`<h2 class="pageTitle">${esc(t.title)}</h2><div id="mtest"></div>`)},
 async notes(){const L=notesSorted();return wrap(back+`<h2 class="pageTitle">My Notes / मेरे नोट्स</h2><div class="row"><input id="nq" placeholder="Search notes / नोट्स खोजें" oninput="notesFilter(this.value)" style="flex:1;min-width:160px;margin:0"><a class="btnlink" href="#/note/new" style="margin:0">+ New note</a></div>`+(L.length?'<div id="nl">'+L.map(noteCard).join('')+'</div>':'<div class="card">No notes yet. Tap “New note”.<br><span class="mu">अभी कोई नोट नहीं। “New note” दबाएँ।</span></div>')+`<p class="mu">Notes are saved on this browser (max 200). / नोट्स इसी ब्राउज़र में सेव होते हैं (अधिकतम 200)।</p>`)},
 async note(id){const n=id=='new'?{id:'',title:'',body:''}:notesAll().find(x=>x.id==id);if(!n)return wrap(back+empty);
  return wrap(back+`<h2 class="pageTitle">${id=='new'?'New note / नया नोट':'Edit note / नोट बदलें'}</h2><input id="nt" maxlength="80" placeholder="Title / शीर्षक" value="${esc(n.title)}"><textarea id="nb" rows="12" maxlength="5000" placeholder="Write your note / अपना नोट लिखें">${esc(n.body)}</textarea><div class="row"><button class="p" onclick="noteSave('${esc(id)}')">Save / सेव करें</button></div>`)},
@@ -283,10 +252,10 @@ async weekly(){const r=weeklyBuild(),mx=Math.max(1,...r.qpd),dn=['Mon','Tue','We
  return wrap(back+`<h2 class="pageTitle">Weekly Report</h2><div class="card" style="text-align:center"><div class="mu">${esc(r.range)}</div><div style="font-size:48px;font-weight:800;color:var(--ac)">${r.score}/100</div><div style="font-size:20px">${r.emoji} ${esc(r.title)} / ${esc(r.titleHi)}</div><small class="mu">Weekly score = active days + study time + questions + tests<br>साप्ताहिक स्कोर = सक्रिय दिन + पढ़ाई का समय + सवाल + टेस्ट</small></div>
  <div class="card"><b>✅ Active days: ${r.activeDays}/7 / सक्रिय दिन</b><div class="row">${r.active.map((a,i)=>`<span style="width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:11px;${a?'background:var(--gold);font-weight:700':'background:var(--card2)'}">${dn[(r.dates[i].getDay()+6)%7].slice(0,2)}</span>`).join('')}</div></div>
  <div class="card"><b>🎯 Questions per day / रोज़ के सवाल</b><div class="bars">${r.qpd.map((n,i)=>`<div class="bc"><small>${n||''}</small><i style="height:${Math.max(4,n/mx*80)}px"></i><small>${dn[(r.dates[i].getDay()+6)%7]}</small></div>`).join('')}</div></div>
- <div class="grid">${box('Study time / पढ़ाई',fmtSec(r.focusSec),delta(r.focusSec,r.prevFocus))}${box('Questions / सवाल',r.questions,delta(r.questions,r.prevQ))}${box('Tests & quizzes / टेस्ट',r.tests,r.tests?`<small>Avg score ${Math.round(r.avgScore)}% · Accuracy ${Math.round(r.accuracy)}%</small>`:'<small class="mu">No test yet / अभी कोई टेस्ट नहीं</small>')}${box('Syllabus topics / टॉपिक',r.topics,'<small class="mu">Done this week / इस हफ़्ते पूरे</small>')}${box('Speed Maths / स्पीड मैथ्स',r.speedRounds,`<small class="mu">rounds${r.speedRounds?' · '+r.speedCorrect+' correct / सही':' / राउंड'}</small>`)}${box('Streak / स्ट्रीक',r.streak,'<small class="mu">days in a row / लगातार दिन</small>')}</div>`
+ <div class="grid">${box('Questions / सवाल',r.questions,delta(r.questions,r.prevQ))}${box('Tests & quizzes / टेस्ट',r.tests,r.tests?`<small>Avg score ${Math.round(r.avgScore)}% · Accuracy ${Math.round(r.accuracy)}%</small>`:'<small class="mu">No test yet / अभी कोई टेस्ट नहीं</small>')}${box('Syllabus topics / टॉपिक',r.topics,'<small class="mu">Done this week / इस हफ़्ते पूरे</small>')}${box('Speed Maths / स्पीड मैथ्स',r.speedRounds,`<small class="mu">rounds${r.speedRounds?' · '+r.speedCorrect+' correct / सही':' / राउंड'}</small>`)}${box('Streak / स्ट्रीक',r.streak,'<small class="mu">days in a row / लगातार दिन</small>')}</div>`
  +(r.strong?`<div class="card"><b>📊 Subjects this week / इस हफ़्ते के विषय</b><div>💪 Strongest / सबसे मज़बूत: ${esc(r.strong)}</div><div>🎯 Needs work / सुधार चाहिए: ${esc(r.weak)}</div></div>`:'')
  +`<div class="card"><b>💡 Next week tips / अगले हफ़्ते के सुझाव</b>${r.tips.map(t=>`<p>${esc(t[0])}<br><span class="mu">${esc(t[1])}</span></p>`).join('')}</div><div class="row"><button class="p" onclick="weeklyShare()">Share report / रिपोर्ट शेयर करें</button></div><p class="mu">Report covers the last 7 days and is made on this browser.<br>रिपोर्ट पिछले 7 दिनों की है और इसी ब्राउज़र में बनती है।</p>`)},
-async plan(){const p=planBuild(),left=p.total-p.doneCount,go={quiz:'quiz',revision:'revision',goal:'fmcq',focus:'timer',syllabus:'syllabus',speed:'speed'};
+async plan(){const p=planBuild(),left=p.total-p.doneCount,go={quiz:'quiz',revision:'revision',goal:'fmcq',syllabus:'syllabus',speed:'speed'};
  return wrap(back+`<h2 class="pageTitle">Today’s Plan / आज का प्लान</h2><div class="card"><div class="row" style="justify-content:space-between"><b style="font-size:22px">${p.doneCount}/${p.total}</b><span>🔥 ${streakNow()} day streak / दिन</span></div><div class="bar"><i style="width:${p.total?p.doneCount/p.total*100:0}%"></i></div>${p.daysLeft>=0?`<div>📅 ${p.daysLeft} days to ${esc(p.examName)}</div>`:''}<div class="mu">${p.doneCount>=p.total?'All done for today! 🎉 / आज का सब पूरा!':`${left} more to go — you are doing well!<br>बस ${left} और बाकी — बढ़िया चल रहा है!`}</div></div>`
  +p.tasks.map(t=>`<a class="card" href="#/${go[t.id]}" style="${t.done?'border-color:#1b8a3a;background:#e6f6ea':''}"><div class="row" style="justify-content:space-between"><b>${t.e} ${esc(t.t)} / ${esc(t.th)}</b><span style="font-size:20px">${t.done?'✅':'⬜'}</span></div><small class="mu">${esc(t.s)}<br>${esc(t.sh)}</small></a>`).join('')
  +`<p class="mu">Tasks tick automatically as you study. The plan resets every day.<br>पढ़ाई करते ही टास्क अपने आप टिक हो जाते हैं। प्लान रोज़ नया बनता है।</p>`)},
@@ -296,7 +265,7 @@ async revision(){const o=revOverview(),nl=d=>{const n=Math.round((new Date(d+'T0
  return wrap(back+`<h2 class="pageTitle">Smart Revision</h2><div class="card" style="text-align:center"><div style="font-size:44px;font-weight:800;color:var(--ac)">${o.due}</div>${o.due?'questions ready for revision today<br>आज revision के लिए सवाल तैयार हैं':'Today’s revision is done! / आज का revision पूरा हुआ!<br><span class="mu">Next: '+nl(o.next)+'</span>'}
  <div class="row" style="justify-content:center">${o.due?`<button class="p" onclick="revStart(false)">Start revision (${ready}) / शुरू करें</button>`:''}<button class="s" onclick="revStart(true)">Extra practice (10 random) / एक्स्ट्रा प्रैक्टिस</button></div></div>
  <div class="card"><b>Your revision steps / आपके revision स्टेप</b>${o.per.map((n,i)=>`<div class="row" style="justify-content:space-between"><span>Step ${i+1} • ${REV_INT[i]}-day gap / ${REV_INT[i]} दिन का अंतराल</span><b>${n} Qs / सवाल</b></div>`).join('')}<div class="mu">Mastered so far: ${o.mastered} / अब तक पक्के: ${o.mastered}</div></div>
- <div class="card mu">💡 How it works: every wrong question comes back after 1, 3, 7 and 15 days. Answer correctly and it moves to the next step; answer wrong and it starts again tomorrow. After 4 correct revisions it is mastered and leaves your notebook.<br>कैसे काम करता है: हर गलत सवाल 1, 3, 7 और 15 दिन बाद दोबारा आता है। सही किया तो अगले स्टेप पर, गलत किया तो कल फिर से। 4 बार सही होने पर सवाल पक्का हो जाता है और नोटबुक से हट जाता है।<br><small>Saved only on this browser. / यह डेटा केवल इस ब्राउज़र में है।</small></div>`)},
+ ${revTopicsHtml()}<div class="card mu">💡 How it works: every wrong question comes back after 1, 3, 7 and 15 days. Answer correctly and it moves to the next step; answer wrong and it starts again tomorrow. After 4 correct revisions it is mastered and leaves your revision list.<br>कैसे काम करता है: हर गलत सवाल 1, 3, 7 और 15 दिन बाद दोबारा आता है। सही किया तो अगले स्टेप पर, गलत किया तो कल फिर से। 4 बार सही होने पर सवाल पक्का हो जाता है और रिवीज़न लिस्ट से हट जाता है।<br><small>Saved only on this browser. / यह डेटा केवल इस ब्राउज़र में है।</small></div>`)},
 revq:async()=>{if(!window.FQ||!FQ.mode)return wrap(back+'<p class="mu">Open <a href="#/revision">Smart Revision</a> to start.</p>');return wrap(back+`<h2 class="pageTitle">${esc(FQ.title)}</h2><div id="fq"></div>`)},
 async badges(){const L=badgeList(),u=L.filter(b=>b.cur>=b.t).length,seen=J.get('badgesSeen',[]),lf=J.get('life',{});window.BDG={L,u};
  const html=wrap(back+`<h2 class="pageTitle">Badges</h2><div class="card" style="text-align:center"><div style="font-size:40px;font-weight:800;color:var(--ac)">${u} / ${L.length}</div>Badges unlocked / बैज खुले<br><b>Level: ${badgeLevel(u)}</b><div class="row" style="justify-content:center"><button class="s" onclick="badgeShare()">Share my progress / प्रोग्रेस शेयर करें</button></div></div>
@@ -304,7 +273,6 @@ async badges(){const L=badgeList(),u=L.filter(b=>b.cur>=b.t).length,seen=J.get('
  J.set('badgesSeen',L.filter(b=>b.cur>=b.t).map(b=>b.id));return html},
 soon:async(n)=>wrap(back+`<h2 class="pageTitle">Coming soon</h2><div class="card">Ye feature abhi website par nahi hai, App me use karein.<br><span class="mu">This feature is not on the website yet. Please use the App.</span></div>`),
 flash:async()=>wrap(back+`<h2 class="pageTitle">Flashcards</h2><div id="fc"></div>`),
-timer:async()=>wrap(back+`<h2 class="pageTitle">Study Timer</h2><div id="tm"></div>`),
 async syllabus(){const ex=sylExam();
  if(!ex)return wrap(back+`<h2 class="pageTitle">Syllabus Tracker</h2><p class="mu">Choose your exam / अपनी परीक्षा चुनें</p><div class="grid">`+DATA.syl.map(e=>`<a class="card" href="javascript:void 0" onclick="sylPick('${e.id}')"><div class="i">${e.emoji}</div><b>${esc(e.en)}</b><small>${e.subjects.reduce((a,s)=>a+s.topics.length,0)} topics</small></a>`).join('')+`</div><p class="mu">यह आम पैटर्न पर आधारित है। नए सिलेबस के लिए आधिकारिक अधिसूचना ज़रूर देखें।</p>`);
  const done=J.get('sylDone',{}),[n,t]=sylCount(ex,done),pc=Math.round(n/t*100);
@@ -313,13 +281,13 @@ async syllabus(){const ex=sylExam();
  +`<p class="mu">यह आम पैटर्न पर आधारित है। नए सिलेबस के लिए आधिकारिक अधिसूचना ज़रूर देखें।</p>`)},
 async fmcq(){const ix=await fmIndex();
  if(!ix||!ix.exams?.length||!ix.sets?.length)return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">Free MCQs are not ready yet. Please check again later.</p>`);
- return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every month: Static GK, General Science and General Studies (syllabus-based, Hindi + English), plus the English folder (Banking PO / Clerk pattern, easy to hard, a new set every week). Tap ⓘ on a set to see how it was made.</p><div class="grid">`+ix.exams.map(e=>{const n=ix.sets.filter(s=>s.examId==e.id).length;return e.id=='english'?tile('fms/english/english',e.emoji||'📖',e.name,'Banking PO / Clerk pattern · '+n+' sets'):tile('fmx/'+e.id,e.emoji||'📝',e.name,n+' sets')}).join('')+'</div>')},
+ return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every week (Monday): Static GK, General Science and General Studies (syllabus-based, Hindi + English), plus the English folder (Banking PO / Clerk pattern, easy to hard). Sets older than 2 months are removed automatically. Tap ⓘ on a set to see how it was made.</p><div class="grid">`+ix.exams.map(e=>{const n=ix.sets.filter(s=>s.examId==e.id).length;return e.id=='english'?tile('fms/english/english',e.emoji||'📖',e.name,'Banking PO / Clerk pattern · '+n+' sets'):tile('fmx/'+e.id,e.emoji||'📝',e.name,n+' sets')}).join('')+'</div>')},
 async fmx(eid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid);if(!e)return wrap(back+empty);
  const su=(ix.subjects||[]).filter(s=>eid=='english'?s.id=='english':s.id!='english');
  return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div class="grid">`+su.map(s=>tile('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length+' sets')).join('')+'</div>')},
 async fms(eid,sid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid),s=(ix?.subjects||[]).find(x=>x.id==sid);if(!e||!s)return wrap(back+empty);
  const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>fmStart(b).localeCompare(fmStart(a))),done=J.get('fmDone',{});
- return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'#2e7d32':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmLabel(m))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}',${sid=='english'})" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):`<p class="mu">${sid=='english'?'The English set for this week is not ready yet. A new set of 25 English MCQs arrives automatically every Monday.':'No set for this subject yet.'}</p>`))},
+ return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'#2e7d32':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmLabel(m))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}',${sid=='english'})" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):`<p class="mu">${sid=='english'?'The English set for this week is not ready yet. A new set of 25 English MCQs arrives automatically every Monday.':'No set for this subject yet. A new set of 25 MCQs arrives automatically every Monday.'}</p>`))},
 async fmq(sid){const ix=await fmIndex();const m=(ix?.sets||[]).find(x=>x.id==sid);if(!m)return wrap(back+empty);
  let set;try{set=await fmSet(sid)}catch(e){return wrap(back+'<p class="err">This set could not be opened. Check your internet and try again.</p>')}
  fmRemember(m);const e=ix.exams.find(x=>x.id==m.examId),s=ix.subjects.find(x=>x.id==m.subjectId);
@@ -335,7 +303,7 @@ async home(){
  const name=String(st.name||'').trim();J.set('stuName',name);
  const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
  return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
- +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}"><span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
+ +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}">${t[0]=='revision'&&revOverview().due>0?'<i class="rdot"></i>':''}<span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
  +`<div id="soc" class="soc"></div>`+studyCard()+toolsCards()+moreCard()+gyanCard()
  +`<div class="sec">YouTube Videos <a href="${esc(cfg.youtubeUrl)}" target="_blank" rel="noopener">Channel</a></div>`
  +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>')
@@ -384,11 +352,6 @@ async quiz(day){
  return wrap(`<h2 class="pageTitle">Daily Quiz / रोज़ का क्विज़</h2><div class="days">${days.map(x=>`<a class="${x==d?'on':''}" href="#/quiz/${x}">${x.slice(5)}</a>`).join('')}</div>`
  +(done?`<div class="card">✅ Pehla prayas: <b>${done.score} / ${done.total}</b> (score isi ka count hota hai)</div>`:'')
  +(Q.length?`<p class="mu">${Q.length} questions · PIB Current Affairs</p>`+qHtml(Q,'z',lang=='hi')+`<button class="p" onclick="submitQuiz()">Submit</button><div id="res"></div>`:'<p class="mu">Is din ka quiz abhi nahi hai.</p>'))},
-async saved(){const sv=J.get('bookmarks',[]);return wrap(back+`<h2 class="pageTitle">Saved questions / सेव किए सवाल</h2>`+(sv.length?sv.map((x,i)=>`<div class="q"><b>${esc(x.text)}</b>${x.options.map((o,j)=>`<div class="card" style="${j==x.correctIndex?'border-color:#1b8a3a':''}">${j==x.correctIndex?'✅ ':''}${esc(o)}</div>`).join('')}${x.explanation?`<p class="mu">💡 ${esc(x.explanation)}</p>`:''}<button class="s" onclick="rmBm(${i})">Remove</button></div>`).join(''):empty))},
-async notebook(){const m=J.get('mistakes',[]);
- return wrap(`<h2 class="pageTitle">Mistake Notebook</h2><p><a href="#/saved">⭐ Saved questions</a></p>`+(m.length?`<div class="row"><button class="p" onclick="practiceMistakes()">Practice (${Math.min(10,m.length)})</button></div>`+m.map((x,i)=>`<div class="q"><b>${esc(x.text)}</b>${x.options.map((o,j)=>`<div class="card" style="${j==x.correctIndex?'border-color:#1b8a3a':''}">${j==x.correctIndex?'✅ ':''}${esc(o)}</div>`).join('')}${x.explanation?`<p class="mu">💡 ${esc(x.explanation)}</p>`:''}<small class="mu">${esc(x.subject||'')} ${esc(x.source||'')}</small><div><button class="s" onclick="rmMistake(${i})">Remove</button></div></div>`).join(''):empty))},
-async practice(){const Q=window.PQ||[];if(!Q.length)return wrap(back+empty);
- return wrap(back+`<h2 class="pageTitle">Mistake Practice</h2>`+qHtml(Q,'pz',false)+`<button class="p" onclick="submitPractice()">Submit</button><div id="res"></div>`)},
 async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
  const sm=h.reduce((a,x)=>a+x.marks,0),sx=h.reduce((a,x)=>a+x.maxMarks,0),sc=h.reduce((a,x)=>a+x.correct,0),sw=h.reduce((a,x)=>a+x.wrong,0);
  const avg=sx?Math.round(sm/sx*100):0,acc=(sc+sw)?Math.round(sc/(sc+sw)*100):0;
@@ -398,10 +361,7 @@ async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
  <div class="tile"><span class="e">${h.length}</span><span class="l">Tests</span></div><div class="tile"><span class="e">${avg}%</span><span class="l">Avg score</span></div><div class="tile"><span class="e">${acc}%</span><span class="l">Accuracy</span></div></div>
  <div class="sec">Recent tests (%)</div>`+(recent.length?recent.map(x=>`<div class="card"><div>${esc(x.title)}</div><div class="bar"><i style="width:${x.maxMarks?Math.max(0,x.marks/x.maxMarks*100):0}%"></i></div><small class="mu">${x.marks} / ${x.maxMarks}</small></div>`).join(''):empty)
  +`<div class="sec">Subject-wise accuracy</div>`+(Object.keys(subj).length?Object.entries(subj).map(([k,v])=>{const p=(v.c+v.w)?Math.round(v.c/(v.c+v.w)*100):0;return `<div class="card"><b>${esc(k)}</b> — ${p}%<div class="bar"><i style="width:${p}%"></i></div></div>`}).join(''):'<p class="mu">Abhi subject ka data nahi hai.</p>')
- +(()=>{const w=Object.entries(subj).map(([k,v])=>({k,a:v.c+v.w,p:(v.c+v.w)?v.c/(v.c+v.w)*100:0})).filter(x=>x.a>=5).sort((a,b)=>a.p-b.p)[0];if(!w)return '';
-  const n=Math.min(10,m.filter(q=>{let x=String(q.subject||'').trim().toLowerCase();if(!x)x='general';return x==w.k.trim().toLowerCase()}).length);
-  return `<div class="card">💡 Weakest: <b>${esc(w.k)}</b> (${Math.round(w.p)}%). Practice this more.<br><span class="mu">सबसे कमज़ोर: ${esc(w.k)}। इसमें ज़्यादा अभ्यास करें।</span>${n?`<div class="row"><button class="p" onclick="fixWeak(decodeURIComponent('${encodeURIComponent(w.k)}'))">Fix my weakness: ${n} questions / मेरी कमज़ोरी सुधारो: ${n} सवाल</button></div><small class="mu">Correct answers are removed from your Mistake Notebook, and you earn +5 XP for each one you fix.<br>सही किए सवाल Mistake Notebook से हट जाते हैं, हर सुधारी गलती पर +5 XP।</small>`:''}</div>`})()
- +`<p class="mu">Mistakes saved: ${m.length}</p>`)},
+ +(()=>{const w=Object.entries(subj).map(([k,v])=>({k,a:v.c+v.w,p:(v.c+v.w)?v.c/(v.c+v.w)*100:0})).filter(x=>x.a>=5).sort((a,b)=>a.p-b.p)[0];return w?`<div class="card">💡 Weakest: <b>${esc(w.k)}</b> (${Math.round(w.p)}%). Practice this more.<br><span class="mu">सबसे कमज़ोर: ${esc(w.k)}। इसमें ज़्यादा अभ्यास करें।</span></div>`:''})())},
 async news(c){const all=['banking','ssc','up_state','sports','technology','space','defence'];
  const n=await list(db.collection('newsItems').where('category','in',c?[c]:all).orderBy('pubDate','desc').limit(30));
  return wrap(`<h2 class="pageTitle">News</h2><p><a href="#/news">All</a>${all.map(x=>` · <a href="#/news/${x}">${x}</a>`).join('')}</p>`+(n.length?n.map(x=>`<a class="card" href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small class="mu">${esc(x.categoryLabel)}</small></a>`).join(''):empty))},
@@ -475,11 +435,6 @@ function saveAttempt(t,id,marks,total,answers){
  db.collection('mockScores').doc(id).collection('scores').doc(auth.currentUser.uid).set({score:+marks,timeSec:secs,at:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{});
 }
 
-function bm(prefix,i,btn){const q=(QS[prefix]||[])[i];if(!q)return;let sv=J.get('bookmarks',[]);
- if(sv.some(x=>x.text===q.text)){sv=sv.filter(x=>x.text!==q.text);btn.textContent='☆ Save'}
- else{sv.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||''});btn.textContent='★ Saved'}
- J.set('bookmarks',sv.slice(0,300))}
-function rmBm(i){const sv=J.get('bookmarks',[]);sv.splice(i,1);J.set('bookmarks',sv);route()}
 async function checkBell(){try{const s=await db.collection('notifications').orderBy('sentAt','desc').limit(1).get();const x=s.docs[0]&&s.docs[0].data();const t=x&&x.sentAt&&x.sentAt.toMillis?x.sentAt.toMillis():0;const b=document.getElementById('bell');if(b)b.classList.toggle('dot',t>J.get('notifSeen',0))}catch(e){}}
 async function delAcc(){if(!confirm('Aapka account aur saara data hat jayega. Pakka?'))return;const u=auth.currentUser,id=u.uid,em=u.email;
  try{
@@ -508,7 +463,7 @@ function drawTest(){const s=T,Q=s.Q,q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,
  <div class="row mu" style="justify-content:space-between"><span>Q ${s.i+1} / ${Q.length}</span><span>+${mp}${ng?' / −'+ng:''} · Answered ${answered}/${Q.length}</span></div>
  ${s.pal?`<div class="pal"><b>Jump to question</b> <small class="mu">Green = answered</small><div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div></div>`:''}
  <div class="q">${q.passage?`<div class="passage">${esc(qt(q,'passage',hi))}</div>`:''}
- <div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1}</span><button class="s" onclick="bm('mt',${s.i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></div>
+ <div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1}</span></div>
  <div class="qtext">${esc(qt(q,'text',hi))}</div>
  ${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}
  </div>
@@ -571,12 +526,13 @@ async function fmSet(id){const c=J.get('fset_'+id,null);if(c&&c.Q&&c.Q.length)re
  const set={Q,sources:(d.sources||[]).filter(x=>x&&x.title)};J.set('fset_'+id,set);
  let ids=J.get('fsetIds',[]).filter(x=>x!==id);ids.push(id);while(ids.length>60){const o=ids.shift();try{localStorage.removeItem('ysh_fset_'+o)}catch(e){}}J.set('fsetIds',ids);return set}
 const FM_SH=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const fmStart=m=>m.periodStart||(m.monthKey+'-01');
-function fmLabel(m){const st=new Date(String(m.periodStart||'')+'T00:00:00');if(!m.periodStart||isNaN(st))return fmMonth(m.monthKey);
- const en=new Date(st.getFullYear(),st.getMonth(),st.getDate()+6),a=st.getDate()+' '+FM_SH[st.getMonth()]+(st.getFullYear()!=en.getFullYear()?' '+st.getFullYear():''),r=a+' – '+en.getDate()+' '+FM_SH[en.getMonth()]+' '+en.getFullYear(),w=/W(\d+)$/.exec(m.weekKey||'');
+const fmIdStart=id=>{const w=/(\d{4})-W(\d{2})$/.exec(id||'');if(w){const j=new Date(Date.UTC(+w[1],0,4)),dw=(j.getUTCDay()+6)%7,m1=new Date(j.getTime()-dw*DAY),d=new Date(m1.getTime()+(+w[2]-1)*7*DAY);return d.toISOString().slice(0,10)}const m=/(\d{4})-(\d{2})$/.exec(id||'');return m?m[1]+'-'+m[2]+'-01':''};
+const fmStart=m=>m.periodStart||fmIdStart(m.id)||(m.monthKey+'-01');
+function fmLabel(m){const wk=/-W\d{2}$/.test(m.id||'')||m.weekKey,ps=m.periodStart||(wk?fmIdStart(m.id):''),st=new Date(ps+'T00:00:00');if(!ps||isNaN(st))return fmMonth(m.monthKey);
+ const en=new Date(st.getFullYear(),st.getMonth(),st.getDate()+6),a=st.getDate()+' '+FM_SH[st.getMonth()]+(st.getFullYear()!=en.getFullYear()?' '+st.getFullYear():''),r=a+' – '+en.getDate()+' '+FM_SH[en.getMonth()]+' '+en.getFullYear(),w=/W(\d+)$/.exec(m.weekKey||m.id||'');
  return w?'Week '+(+w[1])+' · '+r:r}
 function fmRemember(m){const x=J.get('fmMeta',{});x[m.id]={id:m.id,examId:m.examId,subjectId:m.subjectId,monthKey:m.monthKey||'',weekKey:m.weekKey||'',periodStart:m.periodStart||'',count:m.count||0,source:m.source||''};J.set('fmMeta',x)}
-function fmWithCached(sets){try{const inIx=new Set(sets.map(s=>s.id)),ids=J.get('fsetIds',[]),meta=J.get('fmMeta',{}),d=new Date(),cut=dayKey(new Date(d.getFullYear(),d.getMonth()-3,d.getDate())),keep=[],extra=[];
+function fmWithCached(sets){try{const inIx=new Set(sets.map(s=>s.id)),ids=J.get('fsetIds',[]),meta=J.get('fmMeta',{}),d=new Date(),fo=new Date(d.getFullYear(),d.getMonth()-2,1),ld=new Date(fo.getFullYear(),fo.getMonth()+1,0).getDate(),cut=dayKey(new Date(fo.getFullYear(),fo.getMonth(),Math.min(d.getDate(),ld))),keep=[],extra=[];
  ids.forEach(id=>{if(inIx.has(id)){keep.push(id);return}const m=meta[id];if(m&&m.examId&&m.subjectId&&m.subjectId!='ca'&&fmStart(m)>=cut&&localStorage.getItem('ysh_fset_'+id)){keep.push(id);extra.push(m)}else{try{localStorage.removeItem('ysh_fset_'+id)}catch(e){}delete meta[id]}});
  if(keep.length!=ids.length){J.set('fsetIds',keep);J.set('fmMeta',meta)}return extra.length?sets.concat(extra):sets}catch(e){return sets}}
 async function fmIndex(){const x=await fmIndexRaw();if(!x)return x;const ex=[...(x.exams||[])],su=(x.subjects||[]).filter(s=>s.id!='ca');
@@ -588,9 +544,9 @@ async function fmInfo(id,en){const box=document.getElementById('finfo');box.inne
 function initFq(){drawFq()}
 function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
  if(s.done){const c=s.ans.filter((a,i)=>a!==null&&a==s.Q[i].correctIndex).length,t=s.Q.length;
-  el.innerHTML=`<div class="q" style="background:var(--gold);text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':s.mode=='fix'?'#/progress':'javascript:history.back()'}">Done</a><button class="s" onclick="ssQuiz()">Share Score Card / स्कोर कार्ड शेयर करें</button></div>`;return}
+  el.innerHTML=`<div class="q" style="background:var(--gold);text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':'javascript:history.back()'}">Done</a><button class="s" onclick="ssQuiz()">Share Score Card / स्कोर कार्ड शेयर करें</button></div>`;return}
  const q=s.Q[s.i],hi=s.hi,opts=hi&&q.optionsHi?.length==4?q.optionsHi:q.options,sv=J.get('bookmarks',[]),p=s.picked,ex=(hi&&q.explanationHi)||q.explanation;
- el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span><button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button> <button class="s" onclick="bm('fq',${s.i},this)">${sv.some(x=>x.text===q.text)?'★ Saved':'☆ Save'}</button></span></div>
+ el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span><button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button></span></div>
  <div class="q">${q.passage?`<div class="passage">${esc(qt(q,'passage',hi))}</div>`:''}<div class="qtext">${esc(qt(q,'text',hi))}</div>
  ${opts.map((o,j)=>`<div class="opt ${p!==null&&j==q.correctIndex?'okb':''} ${p===j&&j!=q.correctIndex?'nob':''}" onclick="fqPick(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}${p===j?(j==q.correctIndex?' ✓':' ✗'):''}</span></div>`).join('')}
  ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${esc(ex)}</div></div>`:''}</div>
@@ -598,7 +554,6 @@ function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
 function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
 function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
 function fqNext(){const s=FQ;if(s.i<s.Q.length-1){s.i++;s.picked=null;drawFq();scrollTo(0,0);return}
- if(s.mode=='fix'){s.done=true;fixRecord(s.Q,s.ans);drawFq();scrollTo(0,0);return}
  if(s.mode=='rev'||s.mode=='extra'){s.done=true;revRecord(s.Q,s.ans,s.mode=='rev');drawFq();scrollTo(0,0);return}
  s.done=true;const wrong=[];let answered=0,correct=0;
  s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;answered++;if(a==q.correctIndex)correct++;else wrong.push(q)});
@@ -616,7 +571,7 @@ function studySess(){J.set('studySessions',J.get('studySessions',0)+1)}
 function toolsCards(){const known=J.get('cardsKnown',[]).length,ts=(J.get('studySecs',{}))[dayKey()]||0,mi=J.get('mistakes',[]).length,ex=sylExam(),sd=J.get('sylDone',{}),rvo=revOverview(),pl0=planBuild(),wk0=weeklyBuild(),bl=badgeList(),bu=bl.filter(b=>b.cur>=b.t).length,bsn=J.get('badgesSeen',[]),bn2=bl.filter(b=>b.cur>=b.t&&!bsn.includes(b.id)).length;
  const mk=(h,e,t,s)=>`<a class="stool" href="#/${h}"><span class="e">${e}</span><b>${t}</b><small>${s}</small></a>`;
  let sl='Pick your exam';if(ex){const c=sylCount(ex,sd);sl=Math.round(c[0]/c[1]*100)+'% done'}
- return `<div class="card"><b>🛠️ Study Tools / स्टडी टूल्स</b><div class="stgrid">${mk('revision','🔁','Smart Revision',rvo.total==0?'No mistakes yet':rvo.due==0?'All done today ✓':rvo.due+' due today')}${mk('timer','⏱️','Study Timer','Today: '+fmtSec(ts))}${mk('flash','🗂️','Flashcards',known+' learned')}${mk('badges','🏅','Badges',bu+'/'+bl.length+(bn2?' · '+bn2+' new':''))}</div></div>
+ return `<div class="card"><b>🛠️ Study Tools / स्टडी टूल्स</b><div class="stgrid">${mk('flash','🗂️','Flashcards',known+' learned')}${mk('badges','🏅','Badges',bu+'/'+bl.length+(bn2?' · '+bn2+' new':''))}</div></div>
  <div class="card"><b>🚀 Smart Study / स्मार्ट स्टडी</b><div class="stgrid">${mk('plan','📅','Today\'s Plan',pl0.doneCount>=pl0.total?'All done ✓':'Plan for today')}${mk('speed','⚡','Speed Maths','Today: '+speedToday()+' rounds')}${mk('syllabus','📚','Syllabus',sl)}${mk('weekly','📈','Weekly Report','Score '+wk0.score+' '+wk0.emoji)}</div></div>`}
 function gyanCard(){const d=new Date(),ix=Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(2024,0,1))/DAY),w=DATA.words,f=DATA.facts,W=w[((ix%w.length)+w.length)%w.length],F=f[((ix%f.length)+f.length)%f.length];
  return `<div class="card gyan"><b>📖 Word of the Day / आज का शब्द</b><div class="gw">${esc(W.word)}</div><div><b>${esc(W.hi)}</b></div><div class="mu">${esc(W.en)}</div><div class="mu"><i>${esc(W.example)}</i></div><hr><b>💡 Aaj ka Gyaan</b><p>${esc(F.en)}</p><p class="mu">${esc(F.hi)}</p></div>`}
@@ -660,10 +615,15 @@ function revItems(){const sch=J.get('revSched',{});return J.get('mistakes',[]).m
 function revOverview(){const t=dayKey(),it=revItems(),per=[0,0,0,0];let due=0,next=null;it.forEach(e=>{per[e.box]++;if(e.due<=t)due++;else if(!next||e.due<next)next=e.due});return {due,total:it.length,per,next,mastered:J.get('revMastered',0)}}
 function revStart(extra){const t=dayKey();let it=revItems();if(extra)it.sort(()=>Math.random()-.5);else it=it.filter(e=>e.due<=t).sort((a,b)=>a.due<b.due?-1:a.due>b.due?1:a.box-b.box);
  const Q=it.slice(0,10).map(e=>e.q);if(!Q.length)return;(window.QS=window.QS||{}).fq=Q;window.FQ={m:null,Q,i:0,picked:null,ans:Array(Q.length).fill(null),hi:lang=='hi',done:false,title:extra?'Extra practice / एक्स्ट्रा प्रैक्टिस':'Revision / रिवीज़न',mode:extra?'extra':'rev'};location.hash='#/revq'}
-function revRecord(Q,ans,scheduled){const cur=revItems(),by={},out={};cur.forEach(e=>{by[e.q.text]=e;if(e.has)out[e.q.text]=[e.box,e.due,e.q.at]});let answered=0,mast=0;const rm=[];
+function revRecord(Q,ans,scheduled,respect){const cur=revItems(),by={},out={};cur.forEach(e=>{by[e.q.text]=e;if(e.has)out[e.q.text]=[e.box,e.due,e.q.at]});let answered=0,mast=0;const rm=[];
  Q.forEach((q,i)=>{const g=ans[i];if(g===null||g===undefined)return;answered++;if(!scheduled)return;const it=by[q.text];if(!it)return;
-  if(g==q.correctIndex){const nx=it.box+1;if(nx>=REV_INT.length){mast++;rm.push(q.text);delete out[q.text]}else out[q.text]=[nx,revInDays(REV_INT[nx]),it.q.at]}else out[q.text]=[0,revInDays(REV_INT[0]),it.q.at]});
+  if(g==q.correctIndex){if(respect&&it.due>dayKey())return;const nx=it.box+1;if(nx>=REV_INT.length){mast++;rm.push(q.text);delete out[q.text]}else out[q.text]=[nx,revInDays(REV_INT[nx]),it.q.at]}else out[q.text]=[0,revInDays(REV_INT[0]),it.q.at]});
  J.set('revSched',out);if(mast){J.set('revMastered',J.get('revMastered',0)+mast);xpAdd(mast*5)}if(rm.length)J.set('mistakes',J.get('mistakes',[]).filter(m=>!rm.includes(m.text)));if(answered)addGoal(answered)}
+function revMockTopics(){const done=J.get('revMockDone',{}),t=dayKey(),g={};revItems().filter(e=>done[e.q.text]!==e.q.at).forEach(e=>{const name=String(e.q.subject||'').trim()||'General',k=name.toLowerCase();(g[k]=g[k]||{name,items:[]}).items.push(e)});
+ return Object.values(g).map(x=>{x.items.sort((a,b)=>a.due<b.due?-1:a.due>b.due?1:a.box-b.box);return {name:x.name,items:x.items.map(e=>e.q),due:x.items.filter(e=>e.due<=t).length,count:x.items.length}}).sort((a,b)=>b.count-a.count)}
+function revMockDone(Q){const d=J.get('revMockDone',{});Q.forEach(q=>{d[q.text]=q.at});const live={};J.get('mistakes',[]).forEach(m=>{live[m.text]=m.at});Object.keys(d).forEach(k=>{if(live[k]!==d[k])delete d[k]});J.set('revMockDone',d)}
+function revMockStart(name){const k=String(name).toLowerCase(),tp=revMockTopics().find(x=>x.name.toLowerCase()==k);if(!tp||!tp.items.length)return;window.RMK=tp;location.hash='#/revmock'}
+function revTopicsHtml(){const T=revMockTopics();if(!T.length)return '';return `<h3 style="margin:18px 0 4px">Topic-wise Mock / टॉपिक वाइज़ मॉक</h3><p class="mu" style="font-size:12px">All your wrong questions of a topic as one timed mock test (MCQs).<br>किसी टॉपिक के सारे गलत सवाल एक टाइमर वाले मॉक टेस्ट (MCQ) में।</p>`+T.map(t=>`<div class="card"><div class="row" style="justify-content:space-between;margin:0"><div style="min-width:0"><b>${esc(t.name)}</b><br><small class="mu">${t.count} Qs / सवाल • ${t.count<5?5:t.count} min / मिनट${t.due?' • '+t.due+' due / बाकी':''}</small></div><button class="p" onclick="revMockStart(decodeURIComponent('${encodeURIComponent(t.name).replace(/'/g,'%27')}'))">Start Mock</button></div></div>`).join('')}
 function lifeAdd(k,n){const l=J.get('life',{});l[k]=(l[k]||0)+n;J.set('life',l)}
 function lifeTest(c,w,marks,max){lifeAdd('tests',1);if(c+w>0){const p=max>0?marks/max*100:0;if(p>=80)lifeAdd('high',1);if(p>=100)lifeAdd('perfect',1)}}
 function badgeList(){const l=J.get('life',{}),ms=Math.max(J.get('maxStreak',0),streakNow()),fm=Math.floor(J.get('studyTotal',0)/60),cards=Math.min(J.get('cardsKnown',[]).length,DATA.cards.length),syl=Object.keys(J.get('sylDone',{})).length,sr=J.get('speedRounds',0),mst=J.get('revMastered',0),q=l.q||0;
@@ -677,8 +637,6 @@ function badgeList(){const l=J.get('life',{}),ms=Math.max(J.get('maxStreak',0),s
  B('q1000','🏆','1000 Questions','1000 सवाल','Answer 1000 questions','1000 सवाल हल करें',q,1000),
  B('high80','🏅','Top Scorer','टॉप स्कोरर','Score 80% or more in a test','किसी टेस्ट में 80% या ज़्यादा लाएँ',l.high||0,1),
  B('perfect','💯','Perfect Score','परफेक्ट स्कोर','Score 100% in a test','किसी टेस्ट में 100% लाएँ',l.perfect||0,1),
- B('focus1h','⏱️','Focus Starter','फोकस शुरुआत','Study 1 hour with the Study Timer (minutes)','स्टडी टाइमर से 1 घंटा पढ़ें (मिनट)',fm,60),
- B('focus10h','🧘','Deep Focus','डीप फोकस','Study 10 hours with the Study Timer (minutes)','स्टडी टाइमर से 10 घंटे पढ़ें (मिनट)',fm,600),
  B('rev10','🔁','Revision Hero','रिवीज़न हीरो','Master 10 mistakes with Smart Revision','Smart Revision से 10 गलतियाँ पक्की करें',mst,10),
  B('cards20','🃏','Flashcard Starter','फ्लैशकार्ड शुरुआत','Learn 20 flashcards','20 फ्लैशकार्ड याद करें',cards,20),
  B('cards60','🧠','Flashcard Pro','फ्लैशकार्ड प्रो','Learn 60 flashcards','60 फ्लैशकार्ड याद करें',cards,60),
@@ -687,7 +645,7 @@ function badgeList(){const l=J.get('life',{}),ms=Math.max(J.get('maxStreak',0),s
  B('syl10','📚','Syllabus Starter','सिलेबस शुरुआत','Complete 10 topics in Syllabus Tracker','सिलेबस ट्रैकर में 10 टॉपिक पूरे करें',syl,10),
  B('syl50','🎓','Syllabus Master','सिलेबस मास्टर','Complete 50 topics in Syllabus Tracker','सिलेबस ट्रैकर में 50 टॉपिक पूरे करें',syl,50)]}
 function badgeLevel(u){return u>=16?'Legend / लीजेंड':u>=11?'Champion / चैंपियन':u>=6?'Achiever / विजेता':u>=2?'Learner / जिज्ञासु':'Beginner / शुरुआती'}
-function badgeShare(){const l=J.get('life',{}),{L,u}=window.BDG||{L:badgeList(),u:0};const txt=`🏅 My progress on Yash Study Hub / मेरी प्रोग्रेस\n🔥 Best streak: ${Math.max(J.get('maxStreak',0),streakNow())} days\n🎯 Questions solved: ${l.q||0}\n📝 Tests & quizzes: ${l.tests||0}\n⏱️ Study time: ${fmtSec(J.get('studyTotal',0))}\n🏅 Badges: ${u}/${L.length} (${badgeLevel(u)})`;
+function badgeShare(){const l=J.get('life',{}),{L,u}=window.BDG||{L:badgeList(),u:0};const txt=`🏅 My progress on Yash Study Hub / मेरी प्रोग्रेस\n🔥 Best streak: ${Math.max(J.get('maxStreak',0),streakNow())} days\n🎯 Questions solved: ${l.q||0}\n📝 Tests & quizzes: ${l.tests||0}\n🏅 Badges: ${u}/${L.length} (${badgeLevel(u)})`;
  if(navigator.share)navigator.share({text:txt}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>alert('Progress copy ho gayi, ab kahin bhi paste karein.'),()=>alert(txt));else alert(txt)}
 function speedToday(){return (J.get('speedDays',{}))[dayKey()]||0}
 function sylNext(ex,done){for(const s of ex.subjects)for(const t of s.topics)if(!done[t.id])return {s,t};return null}
@@ -696,7 +654,6 @@ function planBuild(){const td=dayKey(),qd=!!(J.get('quizDone',{}))[td],rv=revOve
  A('quiz','🧠','Daily Quiz','डेली क्विज़',qd?'Completed ✓':"Play today's current affairs quiz",qd?'पूरा ✓':'आज का करेंट अफेयर्स क्विज़ खेलें',qd);
  if(rv.total>0)A('revision','🔁','Smart Revision','स्मार्ट रिवीज़न',rv.due>0?rv.due+' questions due today':'All revised ✓',rv.due>0?'आज '+rv.due+' सवाल बाकी':'सब हो गया ✓',rv.due==0);
  A('goal','🎯','Daily Goal: '+gt+' questions','डेली गोल: '+gt+' सवाल',gd+' / '+gt+' done (Mock tests or Free MCQs)',gd+' / '+gt+' पूरे (मॉक टेस्ट या फ्री MCQ)',gd>=gt);
- A('focus','⏱️','Focus Time: '+fmn+' min','फोकस टाइम: '+fmn+' मिनट','Studied '+fmtSec(fs)+' today (Study Timer)','आज '+fmtSec(fs)+' पढ़ाई की (स्टडी टाइमर)',fs>=fmn*60);
  if(!ex)A('syllabus','📚','Pick your exam syllabus','अपना सिलेबस चुनें','Track topics and get a weekly plan','टॉपिक ट्रैक करें और हफ़्ते की योजना पाएँ',false);
  else{const n=sylNext(ex,dm);if(!n)A('syllabus','📚','Syllabus complete','सिलेबस पूरा','Great work! Now revise and take mock tests','शानदार! अब रिवीज़न और मॉक टेस्ट दें',true);
   else A('syllabus','📚','Finish 1 syllabus topic','सिलेबस का 1 टॉपिक पूरा करें',st>=1?'Topics done today: '+st+' ✓':'Next: '+n.t.en+' ('+n.s.en+')',st>=1?'आज पूरे किए टॉपिक: '+st+' ✓':'अगला: '+n.t.hi+' ('+n.s.hi+')',st>=1)}
@@ -711,11 +668,10 @@ function weeklyBuild(){const now=new Date(),dates=[...Array(7)].map((_,i)=>new D
  const avgScore=tests?pct/tests:-1,accuracy=att?cor/att*100:-1;let strong=null,weak=null;
  const rk=Object.entries(by).filter(([,v])=>v.a>=10).sort((a,b)=>a[1].c/a[1].a-b[1].c/b[1].a);if(rk.length>=2&&rk[0][1].c/rk[0][1].a<rk[rk.length-1][1].c/rk[rk.length-1][1].a){weak=rk[0][0];strong=rk[rk.length-1][0]}
  const topicDays=new Set(Object.values(dm).filter(d=>days.includes(d))),topics=Object.values(dm).filter(d=>days.includes(d)).length,speedRounds=sum(days.map(d=>sd[d]||0)),speedCorrect=sum(days.map(d=>sc[d]||0));
- const active=days.map((d,i)=>qpd[i]>0||fpd[i]>0||testDays.has(d)||topicDays.has(d)||(sd[d]||0)>0),activeDays=active.filter(Boolean).length,streak=streakNow(),goal=goalVal();
- const fp=Math.min(1,focusSec/(7*3600)),qp=Math.min(1,questions/(7*goal)),tp=Math.min(1,tests/2),score=Math.max(0,Math.min(100,Math.round(activeDays/7*40+fp*25+qp*25+tp*10)));
+ const active=days.map((d,i)=>qpd[i]>0||testDays.has(d)||topicDays.has(d)||(sd[d]||0)>0),activeDays=active.filter(Boolean).length,streak=streakNow(),goal=goalVal();
+ const qp=Math.min(1,questions/(7*goal)),tp=Math.min(1,tests/2),score=Math.max(0,Math.min(100,Math.round(activeDays/7*50+qp*35+tp*15)));
  const [emoji,title,titleHi]=score>=85?['🏆','Topper','टॉपर']:score>=65?['⭐','Rising Star','उभरता सितारा']:score>=40?['💪','On Track','सही राह पर']:score>0?['🚀','Getting Started','शुरुआत हो गई']:['🌱','Fresh Start','नई शुरुआत'];
  const tips=[];if(activeDays<4)tips.push(['Study at least 5 days a week to build a habit.','आदत बनाने के लिए हफ़्ते में कम से कम 5 दिन पढ़ें।']);
- if(focusSec<7*45*60)tips.push(['Aim for 1 hour of Study Timer focus every day.','रोज़ स्टडी टाइमर से 1 घंटा फोकस करने का लक्ष्य रखें।']);
  if(tests==0)tips.push(['Take at least one mock test or quiz to measure yourself.','खुद को परखने के लिए कम से कम 1 मॉक टेस्ट या क्विज़ दें।']);
  if(weak)tips.push([`Revise ${weak} — your lowest accuracy this week.`,`${weak} दोहराएँ — इस हफ़्ते सबसे कम सटीकता।`]);
  if(topics==0)tips.push(['Tick syllabus topics to track your preparation.','तैयारी ट्रैक करने के लिए सिलेबस टॉपिक टिक करें।']);
@@ -723,7 +679,7 @@ function weeklyBuild(){const now=new Date(),dates=[...Array(7)].map((_,i)=>new D
  if(!tips.length)tips.push(['Excellent consistency! Keep the streak alive.','शानदार निरंतरता! स्ट्रीक बनाए रखें।']);
  const f=d=>d.getDate()+' '+MON[d.getMonth()];
  return {dates,qpd,fpd,active,questions,prevQ,focusSec,prevFocus,tests,avgScore,accuracy,strong,weak,topics,speedRounds,speedCorrect,streak,score,emoji,title,titleHi,tips:tips.slice(0,3),activeDays,range:f(dates[0])+' – '+f(dates[6])}}
-function weeklyShare(){const r=window.WKR||weeklyBuild();const txt=`📈 My weekly report on Yash Study Hub / मेरी साप्ताहिक रिपोर्ट\n📅 ${r.range}\n⭐ Weekly score: ${r.score}/100 (${r.title})\n✅ Active days: ${r.activeDays}/7\n⏱️ Study time: ${fmtSec(r.focusSec)}\n🎯 Questions: ${r.questions}\n${r.tests?`📝 Tests & quizzes: ${r.tests} (avg ${Math.round(r.avgScore)}%)`:'📝 Tests & quizzes: 0'}\n📚 Syllabus topics done: ${r.topics}\n⚡ Speed Maths rounds: ${r.speedRounds}\n🔥 Streak: ${r.streak} days`;
+function weeklyShare(){const r=window.WKR||weeklyBuild();const txt=`📈 My weekly report on Yash Study Hub / मेरी साप्ताहिक रिपोर्ट\n📅 ${r.range}\n⭐ Weekly score: ${r.score}/100 (${r.title})\n✅ Active days: ${r.activeDays}/7\n🎯 Questions: ${r.questions}\n${r.tests?`📝 Tests & quizzes: ${r.tests} (avg ${Math.round(r.avgScore)}%)`:'📝 Tests & quizzes: 0'}\n📚 Syllabus topics done: ${r.topics}\n⚡ Speed Maths rounds: ${r.speedRounds}\n🔥 Streak: ${r.streak} days`;
  if(navigator.share)navigator.share({text:txt}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(txt).then(()=>alert('Report copy ho gayi, ab kahin bhi paste karein.'),()=>alert(txt));else alert(txt)}
 const SM_DRILLS=[{id:'mix',e:'🎲',en:'Mix All',hi:'सब मिलाकर',hint:'Every drill, random'},{id:'squares',e:'²',en:'Squares',hi:'वर्ग',hint:'11² to 50²'},{id:'cubes',e:'³',en:'Cubes',hi:'घन',hint:'2³ to 25³'},{id:'tables',e:'✖️',en:'Tables',hi:'पहाड़े',hint:'11 to 30 tables'},{id:'roots',e:'√',en:'Roots',hi:'वर्गमूल / घनमूल',hint:'Square & cube roots'},{id:'fractions',e:'➗',en:'Fraction ↔ %',hi:'भिन्न ↔ प्रतिशत',hint:'3/8 = 37.5%'},{id:'percent',e:'％',en:'Percentage',hi:'प्रतिशत',hint:'35% of 240'},{id:'quick',e:'⚡',en:'Quick Calc',hi:'तेज़ गणना',hint:'Add, subtract, multiply'},{id:'bodmas',e:'🧮',en:'BODMAS',hi:'सरलीकरण',hint:'Simplify fast'},{id:'series',e:'🔢',en:'Number Series',hi:'संख्या श्रेणी',hint:'Find the next number'}];
 const rnd=n=>Math.floor(Math.random()*n),shuf=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
@@ -822,7 +778,7 @@ function toast(t,ms){try{let e=document.getElementById('toast');if(!e){e=documen
 function xpToast(){const x=xpPend,l=xpPendLv;xpPend=0;xpPendLv=0;if(x<=0)return;toast(l>0?`⭐ +${x} XP  •  🎉 Level ${l}! / लेवल ${l}!`:`⭐ +${x} XP`,l>0?3000:2000)}
 function xpAdd(n){if(!(n>0))return;const b=J.get('xpTotal',0),a=b+n;J.set('xpTotal',a);const t=dayKey(),d=J.get('xpDay',{day:'',n:0});J.set('xpDay',{day:t,n:(d.day==t?d.n:0)+n});xpPend+=n;if(xpLevel(a)>xpLevel(b))xpPendLv=xpLevel(a);clearTimeout(xpTimer);xpTimer=setTimeout(xpToast,1200)}
 function xpFocus(sec){if(!(sec>0))return;const sum=J.get('xpFocusRem',0)+sec,m=Math.floor(sum/60);J.set('xpFocusRem',sum%60);if(m>0)xpAdd(m)}
-function xpHow(){alert('How to earn XP / XP कैसे मिलता है\n\n❓ Each question answered / हर सवाल: +2\n📝 Finish a Mock Test / मॉक टेस्ट पूरा: +20 (80%+ → +30)\n📰 Daily Quiz / डेली क्विज़: +15\n🎯 Daily goal done / रोज़ का लक्ष्य पूरा: +25\n🔥 Streak day / स्ट्रीक का दिन: +11 … +40\n⏱️ Study Timer / स्टडी टाइमर: +1 / min\n🔁 Fix a mistake / गलती सुधारी: +5\n⚡ Speed Maths round / राउंड: +5\n🃏 New flashcard learned / नया कार्ड: +2\n📚 Syllabus topic done / टॉपिक पूरा: +3\n\nLevel 2 = 100 XP, Level 3 = 300 XP, Level 4 = 600 XP ... The more you study, the higher you go!\nलेवल 2 = 100 XP, लेवल 3 = 300 XP, लेवल 4 = 600 XP ... जितना पढ़ेंगे, उतना ऊपर जाएँगे!')}
+function xpHow(){alert('How to earn XP / XP कैसे मिलता है\n\n❓ Each question answered / हर सवाल: +2\n📝 Finish a Mock Test / मॉक टेस्ट पूरा: +20 (80%+ → +30)\n📰 Daily Quiz / डेली क्विज़: +15\n🎯 Daily goal done / रोज़ का लक्ष्य पूरा: +25\n🔥 Streak day / स्ट्रीक का दिन: +11 … +40\n🔁 Fix a mistake / गलती सुधारी: +5\n⚡ Speed Maths round / राउंड: +5\n🃏 New flashcard learned / नया कार्ड: +2\n📚 Syllabus topic done / टॉपिक पूरा: +3\n\nLevel 2 = 100 XP, Level 3 = 300 XP, Level 4 = 600 XP ... The more you study, the higher you go!\nलेवल 2 = 100 XP, लेवल 3 = 300 XP, लेवल 4 = 600 XP ... जितना पढ़ेंगे, उतना ऊपर जाएँगे!')}
 function xpCard(){const i=xpInfo();return `<div class="card xpc" onclick="xpHow()"><div class="xpl"><small>LVL</small><b>${i.level}</b></div><div style="flex:1;min-width:0"><div class="row" style="justify-content:space-between;margin:0"><b>⭐ ${esc(i.title)}</b><b style="color:var(--ac)">${i.into} / ${i.need} XP</b></div><div class="bar"><i style="width:${Math.min(100,i.into/i.need*100)}%"></i></div><small class="mu">Today +${i.today} XP • ${i.need-i.into} XP to Level ${i.level+1}<br>आज +${i.today} XP • लेवल ${i.level+1} के लिए ${i.need-i.into} XP</small></div></div>`}
 const dkAdd=(k,n)=>{const p=k.split('-');return dayKey(new Date(+p[0],+p[1]-1,+p[2]+n))};
 const dayGap=(a,b)=>{const x=a.split('-'),y=b.split('-');return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/DAY)};
@@ -871,23 +827,18 @@ async function ssRank(id){try{const sn=await db.collection('mockScores').doc(id)
 async function ssMock(){const r=window.MR;if(!r)return;const att=r.c+r.w,acc=att?(r.c/att*100).toFixed(1):'0.0',rk=r.id?await ssRank(r.id):'';scoreShare({title:r.title,big:r.marks+' / '+r.total,bigLabel:'Marks',stats:[['Accuracy',acc+'%'],['Correct',r.c],['Wrong',r.w]],rank:rk})}
 function ssQuiz(){const s=window.FQ;if(!s)return;let c=0,w=0;s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null||a===undefined)return;a==q.correctIndex?c++:w++});const t=s.Q.length;scoreShare({title:s.title,big:c+' / '+t,bigLabel:'Correct answers',stats:[['Accuracy',(t?Math.round(c/t*100):0)+'%'],['Correct',c],['Wrong',w]]})}
 function ssDaily(){const r=window.QR;if(!r)return;scoreShare({title:'Daily Quiz',big:r.c+' / '+r.t,bigLabel:'Correct answers',stats:[['Accuracy',(r.t?Math.round(r.c/r.t*100):0)+'%'],['Correct',r.c],['Wrong',r.w]]})}
-function fixWeak(sub){const key=String(sub).trim().toLowerCase(),it=J.get('mistakes',[]).filter(m=>{let x=String(m.subject||'').trim().toLowerCase();if(!x)x='general';return x==key}).slice(0,10);if(!it.length)return;
- (window.QS=window.QS||{}).fq=it;window.FQ={m:null,Q:it,i:0,picked:null,ans:Array(it.length).fill(null),hi:lang=='hi',done:false,title:'Fix: '+sub,mode:'fix'};location.hash='#/revq'}
-function fixRecord(Q,ans){let a=0,f=0;const rm=[];Q.forEach((q,i)=>{const g=ans[i];if(g===null||g===undefined)return;a++;if(g==q.correctIndex){rm.push(q.text);f++}});if(rm.length)J.set('mistakes',J.get('mistakes',[]).filter(m=>!rm.includes(m.text)));addGoal(a);if(f>0)xpAdd(f*5)}
 function submitTest(){if(!T||T.done)return;clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;
  const mp=t.marksPerQuestion||1,ng=t.negativeMarks||0;let c=0,w=0,m=0;
  Q.forEach((q,i)=>{const a=s.ans[i];if(a!==null){if(a==q.correctIndex){c++;m+=mp}else{w++;m-=ng}}});
  const total=+(Q.length*mp).toFixed(2),marks=+m.toFixed(2),skipped=Q.length-c-w,sub=(t.subject||'').trim();
  const h=J.get('history',[]);h.unshift({title:t.title,subject:sub,marks,maxMarks:total,correct:c,wrong:w,skipped,at:Date.now()});J.set('history',h.slice(0,60));
- addMistakes(Q.filter((q,i)=>s.ans[i]!==null&&s.ans[i]!=q.correctIndex),sub,t.title);
- addGoal(c+w);if(c+w>0)xpAdd((total>0?marks/total*100:0)>=80?30:20);lifeTest(c,w,marks,total);saveAttempt(t,s.id,marks,total,s.ans);window.MR={title:t.title,id:s.id,marks,total,c,w};
+ if(s.rev){revRecord(Q.slice(),s.ans,true,true);revMockDone(Q);window.MR={title:t.title,id:'',marks,total,c,w}}else{addMistakes(Q.filter((q,i)=>s.ans[i]!==null&&s.ans[i]!=q.correctIndex),sub,t.title);
+ addGoal(c+w);if(c+w>0)xpAdd((total>0?marks/total*100:0)>=80?30:20);lifeTest(c,w,marks,total);saveAttempt(t,s.id,marks,total,s.ans);window.MR={title:t.title,id:s.id,marks,total,c,w}}
  const review=Q.map((q,i)=>{const a=s.ans[i];const opts=hi&&q.optionsHi?.length?q.optionsHi:q.options;const ex=hi&&q.explanationHi||q.explanation;
   return `<div class="q"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<small class="mu">Skipped</small>':''}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('');
- document.getElementById('mtest').innerHTML=`<div class="q"><h2>Score: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<div class="row"><button class="p" onclick="ssMock()">Share Score Card / स्कोर कार्ड शेयर करें</button></div><h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
+ document.getElementById('mtest').innerHTML=`<div class="q"><h2>${s.rev?'Marks':'Score'}: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}${s.rev?'<p class="mu">Revision Mock: right answers move up your revision steps, wrong ones come back tomorrow.<br>रिवीज़न मॉक: सही जवाब अगले स्टेप पर जाते हैं, गलत कल फिर आएँगे।</p>':''}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<div class="row"><button class="p" onclick="ssMock()">Share Score Card / स्कोर कार्ड शेयर करें</button></div><h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
  scrollTo(0,0)}
 
-function submitPractice(){const Q=window.PQ||[];grade(Q,'pz',1,0,false);document.getElementById('res').innerHTML='<div class="q">Practice complete.</div>'}
-function practiceMistakes(){const m=J.get('mistakes',[]).slice(0,10);window.PQ=m;location.hash='#/practice'}
 
 function submitQuiz(){const{day,Q}=window.QZ;const hi=lang=='hi';const r=grade(Q,'z',1,0,hi);
  const done=J.get('quizDone',{});
@@ -928,10 +879,9 @@ async function route(){
   app.innerHTML=(p=='home'?'':topBar())+body;
   if(p=='home')initHome();
   checkBell();
-  if(p=='test')initTest();
+  if(p=='test'||p=='revmock')initTest();
   if(p=='fmq'||p=='revq')initFq();
   if(p=='flash')fcInit();
-  if(p=='timer')tmInit();
   if(p=='speedplay')smInit();
   if(p=='days')idDraw();
   if(p=='reckoner')rrDraw();
@@ -942,7 +892,6 @@ window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();return loginView();}
  try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim()}catch(e){}
- if(!window.SIGNUP_BUSY)ensureStudentDoc(u);
  if(!location.hash)location.hash='#/home';
  route()});
 </script></body></html>
