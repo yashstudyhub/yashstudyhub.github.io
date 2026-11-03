@@ -196,13 +196,46 @@ const examDays=()=>{const e=J.get('exam',null);if(!e)return null;const t0=new Da
 
 function loginView(mode='login'){
  showNav(null);
- app.innerHTML=`<div class="box"><h2>${mode=='signup'?'Sign Up':'Login'}</h2><input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><p class="err" id="m"></p>
+ app.innerHTML=`<div class="box"><h2>${mode=='signup'?'Sign Up':'Login'}</h2>${mode=='signup'?'<input id="n" type="text" maxlength="100" placeholder="Full Name / पूरा नाम">':''}<input id="e" type="email" placeholder="Email"><input id="p" type="password" placeholder="Password"><p class="err" id="m"></p>
  <button class="p" id="go">${mode=='signup'?'Create account':'Login'}</button>
  <p><a href="javascript:void 0" id="sw">${mode=='signup'?'Already have account? Login':'New here? Sign up'}</a> · <a href="javascript:void 0" id="fp">Forgot password</a></p></div>`;
  const v=id=>document.getElementById(id).value.trim(),m=t=>document.getElementById('m').textContent=t;
  document.getElementById('sw').onclick=()=>loginView(mode=='signup'?'login':'signup');
  document.getElementById('fp').onclick=()=>auth.sendPasswordResetEmail(v('e')).then(()=>m('Reset email bhej diya / ईमेल भेजा गया'),e=>m(e.message));
- document.getElementById('go').onclick=()=>(mode=='signup'?auth.createUserWithEmailAndPassword(v('e'),document.getElementById('p').value):auth.signInWithEmailAndPassword(v('e'),document.getElementById('p').value)).catch(e=>m(e.message));
+ document.getElementById('go').onclick=()=>{
+  if(mode=='signup'){
+   const nm=v('n');
+   if(!nm){m('Apna poora naam daalein / अपना पूरा नाम डालें');return}
+   // SIGNUP_BUSY: signup poora hone tak login-time wali ensureStudentDoc() ruki rahe (dono ek saath na likhein).
+   window.SIGNUP_BUSY=true;
+   return auth.createUserWithEmailAndPassword(v('e'),document.getElementById('p').value)
+    .then(async c=>{await recordWebSignup(c.user,nm);window.SIGNUP_BUSY=false;route()})
+    .catch(e=>{window.SIGNUP_BUSY=false;m(e.message)});
+  }
+  return auth.signInWithEmailAndPassword(v('e'),document.getElementById('p').value).catch(e=>m(e.message));
+ };
+}
+
+// ===== Signup sync: Web par bana har naya student App ke Admin Panel > Stats mein dikhe =====
+// App bhi students/{uid} likhta hai. source='web' => "From Web" count; createdAt => "New signups".
+// Stats ke liye fail hone par signup kabhi nahi rukta.
+async function recordWebSignup(user,name){
+ try{
+  const ref=db.doc('students/'+user.uid);
+  if((await ref.get()).exists)return;
+  const nm=String(name||user.displayName||'').trim().slice(0,100);
+  await ref.set({name:nm,email:user.email||'',state:'',district:'',gender:'',qualification:'',profileComplete:false,source:'web',createdAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  if(nm)J.set('stuName',nm);
+ }catch(e){console.warn('Signup stats write failed',e)}
+}
+// Website par pehle se bane purane students: login par ek baar students/{uid} bana do taaki Stats ke
+// "Total" aur "From Web" mein ginti ho (date nahi hoti, isliye "New signups" mein nahi aate).
+async function ensureStudentDoc(user){
+ try{
+  const ref=db.doc('students/'+user.uid);
+  if((await ref.get()).exists)return;
+  await ref.set({name:String(user.displayName||'').trim().slice(0,100),email:user.email||'',state:'',district:'',gender:'',qualification:'',profileComplete:false,source:'web'},{merge:true});
+ }catch(e){}
 }
 
 const qt=(q,k,hi)=>(hi&&q[k+'Hi'])||q[k];
@@ -909,6 +942,7 @@ window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();return loginView();}
  try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim()}catch(e){}
+ if(!window.SIGNUP_BUSY)ensureStudentDoc(u);
  if(!location.hash)location.hash='#/home';
  route()});
 </script></body></html>
