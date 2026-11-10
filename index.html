@@ -156,6 +156,39 @@ details.card summary{cursor:pointer;list-style:none}
 .mbox{background:#fff;border-radius:16px;padding:14px;max-width:420px;width:100%;max-height:92vh;overflow:auto;text-align:center}
 .mbox img{width:100%;border-radius:12px;margin:10px 0}
 .tile{position:relative}.rdot{position:absolute;top:8px;right:10px;width:10px;height:10px;border-radius:50%;background:#e53935;border:2px solid #fff}
+
+/* ---- App-style mock test ---- */
+.mtop{background:var(--navy);color:#fff;position:sticky;top:0;z-index:5}
+.mtop .mtime{color:#ffff29}.mtop .mtime.low{color:#ff5252;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.55}}
+.mtop button.s{background:transparent;color:#fff;border-color:#ffffff55}
+.mtop button.p{padding:8px 14px}
+.opt{background:var(--card2);border-color:#0b124044}
+.opt.sel{background:#fff8d6;border:2px solid var(--ac)}
+.opt.sel .badge{background:var(--gold);border-color:var(--ac);color:#000}
+.pn{width:42px;height:42px;padding:0;border-radius:10px;font-weight:700;background:var(--card2)}
+.pn.ans{background:#2e7d32;color:#fff;border-color:#2e7d32}.pn.cur{border:2px solid var(--ac)}
+.pgrid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+.st{background:var(--card2);border-radius:12px;padding:10px 6px;text-align:center}.st small{display:block;color:var(--mu);font-size:11px}.st b{font-size:18px}
+.bigm{text-align:center;background:linear-gradient(135deg,#000066,#1a1aa6);color:#fff;border-radius:16px;padding:18px;margin:10px 0}.bigm b{font-size:34px;color:#ffff29}.bigm small{display:block;opacity:.8}
+.qtext,.rep{white-space:pre-line}
+.cr{display:flex;gap:12px;align-items:center;margin:6px 0}
+.ylab{font-size:12px;font-weight:700;margin-top:4px}
+
+/* ---- nav tap fix: no blue tap overlay / selection on navy bars ---- */
+html{-webkit-tap-highlight-color:transparent}
+nav.bn,nav.bn *,.side,.side *{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+nav.bn a,.side a{outline:none;transition:background .15s ease,color .15s ease;border-radius:12px}
+nav.bn a,nav.bn a:visited,nav.bn a:focus,nav.bn a:active{color:#b4bbea}
+nav.bn a.on,nav.bn a.on:visited,nav.bn a.on:focus,nav.bn a.on:active{color:var(--yel)}
+nav.bn a:active{background:rgba(255,255,255,.14)}
+nav.bn a.on{background:rgba(255,255,255,.10)}
+nav.bn a::selection,nav.bn a *::selection,.side a::selection,.side a *::selection{background:transparent;color:inherit}
+.side a,.side a:visited,.side a:focus,.side a:active{color:#fff}
+.side a.on,.side a.on:visited,.side a.on:focus,.side a.on:active{color:var(--yel)}
+.side a:active{background:rgba(255,255,255,.2)}
+a,button,.tile,.stool,.card,.chip,.opt,.badge,.pn{-webkit-tap-highlight-color:transparent}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -193,6 +226,369 @@ const BN=[['home','home','Home'],['news','newspaper','News'],['pdfs','picture_as
 function goalToday(){const g=J.get('goalDay',{day:'',n:0});return g.day===dayKey()?g.n:0}
 function addMistakes(qs,subject,source){const m=J.get('mistakes',[]);qs.forEach(q=>{if(!m.some(x=>x.text===q.text))m.unshift({text:q.text,textHi:q.textHi||'',options:q.options||[],optionsHi:q.optionsHi||[],correctIndex:q.correctIndex,explanation:q.explanation||'',explanationHi:q.explanationHi||'',subject,source,at:Date.now()})});J.set('mistakes',m.slice(0,300))}
 const examDays=()=>{const e=J.get('exam',null);if(!e)return null;const t0=new Date();t0.setHours(0,0,0,0);return Math.ceil((new Date(e.date+'T00:00:00')-t0)/DAY)};
+
+
+// ---------- App-style extra tools: Score Journal, Typing Test, Age Calculator, Study Timer ----------
+const SJ=()=>J.get('scoreJournal',[]);
+function sjAdd(){const n=document.getElementById('sjn').value.trim(),s=parseFloat(document.getElementById('sjs').value),tt=parseFloat(document.getElementById('sjt').value),d=document.getElementById('sjd').value,x=document.getElementById('sjx').value.trim();
+ if(!n||isNaN(s)||isNaN(tt)||tt<=0){toast('Naam, score aur total sahi bharo / नाम, स्कोर, टोटल भरें');return}
+ const L=SJ();L.unshift({id:String(Date.now()),n,s,t:tt,d:d?new Date(d+'T12:00:00').getTime():Date.now(),x});J.set('scoreJournal',L.slice(0,200));xpAdd(5);route()}
+function sjDel(id){if(!confirm('Delete? / हटाएँ?'))return;J.set('scoreJournal',SJ().filter(e=>e.id!=id));route()}
+const TYP=['Success comes to those who work hard every single day and never give up on their dreams.','Reading newspapers daily improves vocabulary, speed and general knowledge for every competitive exam.','Practice makes a man perfect, so solve a few mock tests regularly and learn from every mistake.','India is a land of many languages, cultures and traditions, yet all of us live together in unity.','Time management is the key to clearing any exam; plan your day and stick to your study schedule.'];
+function tyInit(){window.TY={txt:TYP[rnd(TYP.length)],t0:0,done:false,dur:60};tyDraw()}
+function tyDraw(){const el=document.getElementById('ty');if(!el)return;const S=TY,best=J.get('typBest',0);
+ el.innerHTML=`<div class="card"><p style="font-size:17px;line-height:1.7;letter-spacing:.2px" id="tyt">${[...S.txt].map((c,i)=>`<span id="c${i}">${esc(c)}</span>`).join('')}</p><textarea id="tyi" rows="3" placeholder="Yahan type karo / यहाँ टाइप करें" autocomplete="off" autocapitalize="off" spellcheck="false" ${S.done?'disabled':''} oninput="tyKey()"></textarea><div class="row"><b id="tys">${S.done?'':'Start typing…'}</b><button class="s" onclick="tyInit()">🔄 New text</button></div><p class="mu">Best: ${best} WPM</p></div>`;
+ if(!S.done)document.getElementById('tyi').focus()}
+function tyKey(){const S=TY,v=document.getElementById('tyi').value;if(!S.t0)S.t0=Date.now();let ok=0;[...S.txt].forEach((c,i)=>{const e=document.getElementById('c'+i);if(!e)return;e.style.cssText=i<v.length?(v[i]==c?'color:#0a8f3c':'color:#fff;background:#d22;border-radius:3px'):''});for(let i=0;i<v.length;i++)if(v[i]==S.txt[i])ok++;
+ const mins=Math.max((Date.now()-S.t0)/6e4,1/60),wpm=Math.round(ok/5/mins),acc=v.length?Math.round(ok*100/v.length):100;document.getElementById('tys').textContent=wpm+' WPM · '+acc+'%';
+ if(v.length>=S.txt.length){S.done=true;const b=J.get('typBest',0),nb=wpm>b;if(nb)J.set('typBest',wpm);xpAdd(Math.max(5,Math.min(20,Math.round(wpm/3))));document.getElementById('tyi').disabled=true;document.getElementById('tys').innerHTML=`✅ ${wpm} WPM · ${acc}% accuracy ${nb?'🏆 New best!':''}`}}
+function ageCalc(){const v=document.getElementById('ab').value;if(!v){document.getElementById('ar').innerHTML='';return}const b=new Date(v+'T00:00:00'),ref=document.getElementById('at').value?new Date(document.getElementById('at').value+'T00:00:00'):new Date();ref.setHours(0,0,0,0);
+ if(b>ref){document.getElementById('ar').innerHTML='<p class="err">Birth date future me hai / जन्मतिथि भविष्य में है</p>';return}
+ let y=ref.getFullYear()-b.getFullYear(),m=ref.getMonth()-b.getMonth(),d=ref.getDate()-b.getDate();if(d<0){m--;d+=new Date(ref.getFullYear(),ref.getMonth(),0).getDate()}if(m<0){y--;m+=12}
+ const days=Math.round((ref-b)/DAY),nx=new Date(ref.getFullYear(),b.getMonth(),b.getDate());if(nx<ref)nx.setFullYear(ref.getFullYear()+1);const left=Math.round((nx-ref)/DAY);
+ document.getElementById('ar').innerHTML=`<div class="card"><div class="tmv" style="font-size:34px">${y}y ${m}m ${d}d</div><p class="mu">Total ${days.toLocaleString('en-IN')} days · ${Math.floor(days/7).toLocaleString('en-IN')} weeks</p><p>🎂 Next birthday in <b>${left}</b> days</p></div>`}
+const boostCard=()=>{const sj=SJ().length,ts=(J.get('studySecs',{}))[dayKey()]||0,mk=(h,e,t,s)=>`<a class="stool" href="#/${h}"><span class="e">${e}</span><b>${t}</b><small>${esc(s)}</small></a>`;
+ return `<div class="card"><b>🎯 Exam Boost / एग्ज़ाम बूस्ट</b><div class="stgrid">${mk('timer','⏱️','Study Timer',ts?'Today: '+fmtSec(ts):'Pomodoro focus')}${mk('typing','⌨️','Typing Test',J.get('typBest',0)?'Best '+J.get('typBest',0)+' WPM':'Speed + accuracy')}${mk('journal','📓','Score Journal',sj?sj+' tests':'Log your scores')}${mk('age','🎂','Age Calculator','Exact age / उम्र')}${mk('calc','🧮','Calculators',(CALCS.length+1)+' tools · Marks · GST')}${mk('omr','🎯','OMR Practice','Timed answer sheet')}${mk('reasoning','🧩','Reasoning Drill',(J.get('rdSess',{n:0}).n||0)+' drills done')}${mk('tracker','🗓️','Exam Tracker',(()=>{const s=xtSummary();return s.near?s.near.n+': '+(s.near.d==0?'Today':s.near.d+'d'):s.count?s.count+' exams':'Track form & exam dates'})())}${mk('gk','⚡','GK Flash Quiz',J.get('gkBest',null)?'Best '+J.get('gkBest',null).p+'%':'10 quick MCQs')}${mk('checklist','✅','Exam Checklist',ckCount()[0]+' / '+ckCount()[1]+' ready')}</div></div>`};
+
+// ---------- Calculators (38 tools, ported from the App) + OMR Practice ----------
+const _fmt=v=>{if(!isFinite(v))return '--';const r=Math.round(v*100)/100;if(r===Math.round(r))return String(Math.round(r));let s=r.toFixed(2);if(s.endsWith('0'))s=s.slice(0,-1);return s};
+const _isInt=v=>isFinite(v)&&v===Math.round(v);
+const _isLeap=y=>(y%4==0&&y%100!=0)||y%400==0;
+const _dayEn=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],_dayHi=['सोमवार','मंगलवार','बुधवार','गुरुवार','शुक्रवार','शनिवार','रविवार'];
+const _mkDate=(y,m,d)=>{if(!_isInt(y)||!_isInt(m)||!_isInt(d)||y<1||y>9999||m<1||m>12||d<1||d>31)return null;const t=new Date(Date.UTC(2000,m-1,d));t.setUTCFullYear(y);return t.getUTCFullYear()==y&&t.getUTCMonth()==m-1&&t.getUTCDate()==d?t:null};
+class _In{constructor(m){this.m=m}n(k){return this.m[k][0]}l(k){return this.m[k]}}
+
+const CALCS=[["Percentage / प्रतिशत", "％", "X% of a number", "किसी संख्या का X%", "Answer = X × Number ÷ 100\nउत्तर = X × संख्या ÷ 100", [["p", "Percentage (X %)", "e.g. 15", null, false], ["b", "Number", "e.g. 640", null, false]], i=> [
+        ['Answer / उत्तर', _fmt(i.n('p') * i.n('b') / 100)],
+      ]], ["Percentage / प्रतिशत", "🔢", "What % is A of B?", "A, B का कितने % है?", "Percentage = (A ÷ B) × 100\nप्रतिशत = (A ÷ B) × 100", [["a", "A (part)", "e.g. 45", null, false], ["b", "B (total)", "e.g. 180", null, false]], i=> i.n('b') == 0
+          ? null
+          : [
+              ['Percentage / प्रतिशत', `${_fmt(i.n('a') / i.n('b') * 100)}%`],
+            ]], ["Percentage / प्रतिशत", "📈", "% Increase / Decrease", "% वृद्धि / कमी", "Change % = (New − Old) ÷ Old × 100\nबदलाव % = (नया − पुराना) ÷ पुराना × 100", [["o", "Old value", "e.g. 800", null, false], ["n", "New value", "e.g. 920", null, false]], i=>{
+        if (i.n('o') == 0) return null;
+        let d = i.n('n') - i.n('o');
+        let pct = d / i.n('o') * 100;
+        return [
+          ['Change / बदलाव', _fmt(d)],
+          [pct >= 0 ? 'Increase % / वृद्धि %' : 'Decrease % / कमी %', `${_fmt(pct.abs())}%`],
+        ];
+      }], ["Profit, Loss & Discount / लाभ, हानि और छूट", "💹", "Profit & Loss %", "लाभ और हानि %", "Profit % = (SP − CP) ÷ CP × 100\nलाभ % = (विक्रय − क्रय) ÷ क्रय × 100", [["cp", "Cost Price (CP)", "e.g. 500", null, false], ["sp", "Selling Price (SP)", "e.g. 575", null, false]], i=>{
+        if (i.n('cp') <= 0) return null;
+        let d = i.n('sp') - i.n('cp');
+        let pct = d / i.n('cp') * 100;
+        let profit = d >= 0;
+        return [
+          [profit ? 'Profit / लाभ' : 'Loss / हानि', _fmt(d.abs())],
+          [profit ? 'Profit % / लाभ %' : 'Loss % / हानि %', `${_fmt(pct.abs())}%`],
+        ];
+      }], ["Profit, Loss & Discount / लाभ, हानि और छूट", "🏷️", "Discount (single / successive)", "छूट (एकल / क्रमागत)", "Net discount % = d1 + d2 − (d1 × d2) ÷ 100\nSP = Marked Price × (100 − net discount) ÷ 100", [["mp", "Marked Price", "e.g. 2000", null, false], ["d1", "Discount 1 (%)", "e.g. 20", null, false], ["d2", "Discount 2 (%) - optional", "leave empty if none", "0", false]], i=>{
+        let net = i.n('d1') + i.n('d2') - i.n('d1') * i.n('d2') / 100;
+        let price = i.n('mp') * (100 - net) / 100;
+        return [
+          ['Selling Price / विक्रय मूल्य', _fmt(price)],
+          ['You save / बचत', _fmt(i.n('mp') - price)],
+          ['Net discount / कुल छूट', `${_fmt(net)}%`],
+        ];
+      }], ["Interest & EMI / ब्याज और EMI", "🏦", "Simple Interest", "साधारण ब्याज", "SI = P × R × T ÷ 100\nAmount = P + SI", [["p", "Principal (P)", "e.g. 10000", null, false], ["r", "Rate per year (R %)", "e.g. 8", null, false], ["t", "Time in years (T)", "e.g. 3", null, false]], i=>{
+        let si = i.n('p') * i.n('r') * i.n('t') / 100;
+        return [
+          ['Simple Interest / साधारण ब्याज', _fmt(si)],
+          ['Amount / मिश्रधन', _fmt(i.n('p') + si)],
+        ];
+      }], ["Interest & EMI / ब्याज और EMI", "📊", "Compound Interest", "चक्रवृद्धि ब्याज", "Amount = P × (1 + R ÷ (100 × n))^(n × T)\nCI = Amount − P      (n = times compounded per year)", [["p", "Principal (P)", "e.g. 10000", null, false], ["r", "Rate per year (R %)", "e.g. 10", null, false], ["t", "Time in years (T)", "e.g. 2", null, false], ["n", "Compounded per year (n)", "1 = yearly, 2 = half-yearly, 4 = quarterly", "1", false]], i=>{
+        let n = i.n('n');
+        if (n <= 0) return null;
+        let amt = i.n('p') * Math.pow(1 + i.n('r') / (100 * n), n * i.n('t'));
+        let si = i.n('p') * i.n('r') * i.n('t') / 100;
+        return [
+          ['Compound Interest / चक्रवृद्धि ब्याज', _fmt(amt - i.n('p'))],
+          ['Amount / मिश्रधन', _fmt(amt)],
+          ['CI − SI difference / अंतर', _fmt(amt - i.n('p') - si)],
+        ];
+      }], ["Interest & EMI / ब्याज और EMI", "🏠", "Loan EMI", "लोन EMI", "EMI = P × r × (1+r)^n ÷ ((1+r)^n − 1)\nr = yearly rate ÷ 12 ÷ 100,  n = months", [["p", "Loan amount (P)", "e.g. 500000", null, false], ["r", "Interest rate per year (%)", "e.g. 9", null, false], ["y", "Time in years", "e.g. 5", null, false]], i=>{
+        let n = i.n('y') * 12;
+        if (n <= 0) return null;
+        let r = i.n('r') / 12 / 100;
+        let emi;
+        if (r == 0) {
+          emi = i.n('p') / n;
+        } else {
+          let g = Math.pow(1 + r, n).toDouble();
+          emi = i.n('p') * r * g / (g - 1);
+        }
+        let total = emi * n;
+        return [
+          ['Monthly EMI / मासिक EMI', _fmt(emi)],
+          ['Total payable / कुल भुगतान', _fmt(total)],
+          ['Total interest / कुल ब्याज', _fmt(total - i.n('p'))],
+        ];
+      }], ["Average & Ratio / औसत और अनुपात", "📐", "Average", "औसत", "Average = Sum of all numbers ÷ How many numbers\nऔसत = सभी संख्याओं का योग ÷ संख्याओं की गिनती", [["x", "Numbers (separate with comma or space)", "e.g. 12, 18, 25, 30", null, true]], i=>{
+        let v = i.l('x');
+        if (v.length==0) return null;
+        let sum = v.reduce((a,b)=>a+b,0);
+        return [
+          ['Average / औसत', _fmt(sum / v.length)],
+          ['Sum / योग', _fmt(sum)],
+          ['Count / गिनती', `${v.length}`],
+          ['Highest / सबसे बड़ी', _fmt(v.reduce((a,b)=>Math.max(a,b)))],
+          ['Lowest / सबसे छोटी', _fmt(v.reduce((a,b)=>Math.min(a,b)))],
+        ];
+      }], ["Average & Ratio / औसत और अनुपात", "⚖️", "Ratio split", "अनुपात में बाँटना", "Share of a part = Total × (its ratio) ÷ (sum of ratios)\nहिस्सा = कुल × (उसका अनुपात) ÷ (अनुपातों का योग)", [["t", "Total amount", "e.g. 12000", null, false], ["r", "Ratio (separate with comma or space)", "e.g. 2, 3, 5", null, true]], i=>{const r=i.l('r');if(r.length<2||r.length>10||r.some(e=>e<0))return null;const s=r.reduce((a,b)=>a+b,0);if(s<=0)return null;return r.map((x,k)=>[`Part ${k+1} / हिस्सा ${k+1}  (${_fmt(x)})`,_fmt(i.n('t')*x/s)])}], ["Time, Work & Speed / समय, कार्य और चाल", "👷", "Time & Work (two people)", "समय और कार्य (दो व्यक्ति)", "Together = (A × B) ÷ (A + B) days\nसाथ में = (A × B) ÷ (A + B) दिन", [["a", "A alone takes (days)", "e.g. 12", null, false], ["b", "B alone takes (days)", "e.g. 18", null, false]], i=>{
+        if (i.n('a') <= 0 || i.n('b') <= 0) return null;
+        let t = i.n('a') * i.n('b') / (i.n('a') + i.n('b'));
+        return [
+          ['Together take / साथ में समय', `${_fmt(t)} days / दिन`],
+          ['Work done in 1 day / 1 दिन का काम', `${_fmt((1 / i.n('a') + 1 / i.n('b')) * 100)}%`],
+        ];
+      }], ["Time, Work & Speed / समय, कार्य और चाल", "🚆", "Speed, Distance, Time", "चाल, दूरी, समय", "Speed = Distance ÷ Time\nkm/h × 5/18 = m/s", [["d", "Distance (km)", "e.g. 150", null, false], ["t", "Time (hours)", "e.g. 2.5", null, false]], i=>{
+        if (i.n('t') <= 0) return null;
+        let kmph = i.n('d') / i.n('t');
+        return [
+          ['Speed / चाल', `${_fmt(kmph)} km/h`],
+          ['Speed in m/s', `${_fmt(kmph * 5 / 18)} m/s`],
+        ];
+      }], ["Time, Work & Speed / समय, कार्य और चाल", "🔁", "km/h ↔ m/s converter", "km/h ↔ m/s बदलें", "km/h → m/s : × 5/18\nm/s → km/h : × 18/5", [["v", "Speed value", "e.g. 72", null, false]], i=> [
+        ['If it is km/h → m/s', `${_fmt(i.n('v') * 5 / 18)} m/s`],
+        ['If it is m/s → km/h', `${_fmt(i.n('v') * 18 / 5)} km/h`],
+      ]], ["Exam Marks & Time / परीक्षा अंक और समय", "🎯", "Score with negative marking", "नेगेटिव मार्किंग के साथ स्कोर", "Score = (Correct × marks) − (Wrong × negative)\nSSC: +2 / −0.5  •  Bank prelims: +1 / −0.25  •  RRB NTPC: +1 / −0.33\n(Check the marking scheme of your own exam.)\nस्कोर = (सही × अंक) − (गलत × नेगेटिव)", [["q", "Total questions", "e.g. 100", null, false], ["c", "Correct answers", "e.g. 62", null, false], ["w", "Wrong answers", "e.g. 18", null, false], ["m", "Marks per correct answer", "SSC = 2, Bank = 1", "1", false], ["n", "Negative marks per wrong answer", "SSC = 0.5, Bank = 0.25", "0.25", false]], i=>{
+        let q = i.n('q'), c = i.n('c'), w = i.n('w'), m = i.n('m'), n = i.n('n');
+        if (q <= 0 || c < 0 || w < 0 || m <= 0 || n < 0 || c + w > q) return null;
+        let score = c * m - w * n;
+        let att = c + w;
+        return [
+          ['Your score / आपका स्कोर', _fmt(score)],
+          ['Out of / कुल अंक', _fmt(q * m)],
+          ['Percentage / प्रतिशत', `${_fmt(score / (q * m) * 100)}%`],
+          ['Accuracy / सटीकता', att == 0 ? '--' : `${_fmt(c / att * 100)}%`],
+          ['Attempted / किए गए', _fmt(att)],
+          ['Not attempted / छोड़े गए', _fmt(q - att)],
+        ];
+      }], ["Exam Marks & Time / परीक्षा अंक और समय", "🚧", "Cut-off gap", "कट-ऑफ से अंतर", "Gap = Your score − Cut-off\nगैप = आपका स्कोर − कट-ऑफ", [["s", "Your score", "e.g. 128.5", null, false], ["c", "Cut-off marks", "e.g. 135", null, false]], i=>{
+        if (i.n('c') <= 0) return null;
+        let d = i.n('s') - i.n('c');
+        return [
+          [d >= 0 ? 'Above the cut-off by / कट-ऑफ से ऊपर' : 'Short of the cut-off by / कट-ऑफ से कम', _fmt(d.abs())],
+          ['Your score as % of cut-off / कट-ऑफ का %', `${_fmt(i.n('s') / i.n('c') * 100)}%`],
+        ];
+      }], ["Exam Marks & Time / परीक्षा अंक और समय", "⏱️", "Time per question", "प्रति प्रश्न समय", "Time per question = (Total time − revision time) × 60 ÷ Questions\nप्रति प्रश्न समय = (कुल समय − दोहराने का समय) × 60 ÷ प्रश्न", [["q", "Number of questions", "e.g. 100", null, false], ["t", "Total time (minutes)", "e.g. 60", null, false], ["b", "Minutes kept for revision (optional)", "leave empty if none", "0", false]], i=>{
+        let use = i.n('t') - i.n('b');
+        if (i.n('q') <= 0 || use <= 0) return null;
+        return [
+          ['Per question / प्रति प्रश्न', `${_fmt(use * 60 / i.n('q'))} sec`],
+          ['Questions per minute / प्रश्न प्रति मिनट', _fmt(i.n('q') / use)],
+        ];
+      }], ["Banking & Money / बैंकिंग और पैसा", "🧾", "GST (add / remove)", "GST जोड़ें / हटाएँ", "GST = Amount × Rate ÷ 100\nPrice with GST = Amount × (100 + Rate) ÷ 100\nBase price from GST-inclusive = Amount × 100 ÷ (100 + Rate)", [["a", "Amount", "e.g. 2500", null, false], ["r", "GST rate (%)", "common: 5, 12, 18, 28", "18", false]], i=>{
+        let a = i.n('a'), r = i.n('r');
+        if (a < 0 || r < 0) return null;
+        let base = a * 100 / (100 + r);
+        return [
+          ['GST on this amount / इस राशि पर GST', _fmt(a * r / 100)],
+          ['Total with GST / GST सहित कुल', _fmt(a * (100 + r) / 100)],
+          ['If amount already has GST: base / GST-रहित मूल्य', _fmt(base)],
+          ['If amount already has GST: GST / उसमें GST', _fmt(a - base)],
+        ];
+      }], ["Banking & Money / बैंकिंग और पैसा", "💰", "FD maturity (quarterly)", "FD परिपक्वता (तिमाही)", "Amount = P × (1 + R ÷ 400)^(4 × T)\nBanks usually compound FD interest every quarter.\nबैंक आमतौर पर FD का ब्याज हर तिमाही जोड़ते हैं।", [["p", "Deposit amount (P)", "e.g. 100000", null, false], ["r", "Interest rate per year (%)", "e.g. 7", null, false], ["t", "Time in years (T)", "e.g. 3", null, false]], i=>{
+        if (i.n('p') <= 0 || i.n('r') < 0 || i.n('t') <= 0) return null;
+        let amt = i.n('p') * Math.pow(1 + i.n('r') / 400, 4 * i.n('t')).toDouble();
+        return [
+          ['Maturity amount / परिपक्वता राशि', _fmt(amt)],
+          ['Interest earned / कुल ब्याज', _fmt(amt - i.n('p'))],
+        ];
+      }], ["Banking & Money / बैंकिंग और पैसा", "🐖", "RD maturity (monthly deposit)", "RD परिपक्वता (मासिक जमा)", "Maturity = R × [(1 + i)^n − 1] ÷ [1 − (1 + i)^(−1/3)]\ni = rate ÷ 400,  n = months ÷ 3   (quarterly compounding)", [["p", "Monthly deposit (R)", "e.g. 2000", null, false], ["r", "Interest rate per year (%)", "e.g. 6.5", null, false], ["m", "Time in months", "e.g. 24", null, false]], i=>{
+        let p = i.n('p'), rate = i.n('r'), mo = i.n('m');
+        if (p <= 0 || rate < 0 || mo <= 0) return null;
+        let inv = p * mo;
+        let mat;
+        if (rate == 0) {
+          mat = inv;
+        } else {
+          let q = rate / 400;
+          let n = mo / 3;
+          mat = p * (Math.pow(1 + q, n).toDouble() - 1) / (1 - Math.pow(1 + q, -1 / 3).toDouble());
+        }
+        return [
+          ['Maturity amount / परिपक्वता राशि', _fmt(mat)],
+          ['Total deposited / कुल जमा', _fmt(inv)],
+          ['Interest earned / कुल ब्याज', _fmt(mat - inv)],
+        ];
+      }], ["Banking & Money / बैंकिंग और पैसा", "📌", "Marked price for target profit", "लक्ष्य लाभ के लिए अंकित मूल्य", "MP = CP × (100 + Profit%) ÷ (100 − Discount%)\nअंकित मूल्य = क्रय × (100 + लाभ%) ÷ (100 − छूट%)", [["cp", "Cost Price (CP)", "e.g. 800", null, false], ["p", "Profit you want (%)", "e.g. 20", null, false], ["d", "Discount you will give (%)", "e.g. 10", null, false]], i=>{
+        if (i.n('cp') <= 0 || i.n('d') < 0 || i.n('d') >= 100) return null;
+        return [
+          ['Marked Price / अंकित मूल्य', _fmt(i.n('cp') * (100 + i.n('p')) / (100 - i.n('d')))],
+          ['Selling Price / विक्रय मूल्य', _fmt(i.n('cp') * (100 + i.n('p')) / 100)],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🚗", "Average speed (same distance)", "औसत चाल (समान दूरी)", "Average speed = 2 × S1 × S2 ÷ (S1 + S2)\nऔसत चाल = 2 × S1 × S2 ÷ (S1 + S2)", [["a", "Speed one way (km/h)", "e.g. 40", null, false], ["b", "Speed on the way back (km/h)", "e.g. 60", null, false]], i=>{
+        if (i.n('a') <= 0 || i.n('b') <= 0) return null;
+        return [
+          ['Average speed / औसत चाल', `${_fmt(2 * i.n('a') * i.n('b') / (i.n('a') + i.n('b')))} km/h`],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🚂", "Train crossing time", "ट्रेन के पार करने का समय", "Time = (Length of train + Length of other) ÷ Relative speed\nOpposite: add the speeds.  Same direction: subtract the speeds.\nFor a pole / platform / standing person, keep the other speed 0.", [["l1", "Length of train (metres)", "e.g. 150", null, false], ["s1", "Speed of train (km/h)", "e.g. 72", null, false], ["l2", "Length of other train / platform (m)", "e.g. 100", "0", false], ["s2", "Speed of other train (km/h)", "0 for pole / platform", "0", false]], i=>{
+        let l1 = i.n('l1'), s1 = i.n('s1'), l2 = i.n('l2'), s2 = i.n('s2');
+        if (l1 <= 0 || s1 <= 0 || l2 < 0 || s2 < 0) return null;
+        let dist = l1 + l2;
+        return [
+          ['Opposite direction / उल्टी दिशा', `${_fmt(dist / ((s1 + s2) * 5 / 18))} sec`],
+          ['Same direction / एक ही दिशा', s1 > s2 ? `${_fmt(dist / ((s1 - s2) * 5 / 18))} sec` : '-- (never)'],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🚤", "Boat: downstream & upstream", "नाव: धारा के साथ और विरुद्ध", "Downstream = Boat + Stream\nUpstream = Boat − Stream\nनाव की चाल (शांत जल में) = B, धारा की चाल = S", [["b", "Boat speed in still water (km/h)", "e.g. 12", null, false], ["s", "Stream speed (km/h)", "e.g. 3", null, false]], i=>{
+        if (i.n('b') <= 0 || i.n('s') < 0) return null;
+        return [
+          ['Downstream / धारा के साथ', `${_fmt(i.n('b') + i.n('s'))} km/h`],
+          ['Upstream / धारा के विरुद्ध', `${_fmt(i.n('b') - i.n('s'))} km/h`],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🌊", "Boat & stream from down / up speed", "डाउन / अप चाल से नाव व धारा", "Boat speed = (Downstream + Upstream) ÷ 2\nStream speed = (Downstream − Upstream) ÷ 2", [["d", "Downstream speed (km/h)", "e.g. 15", null, false], ["u", "Upstream speed (km/h)", "e.g. 9", null, false]], i=>{
+        if (i.n('u') < 0 || i.n('d') < i.n('u')) return null;
+        return [
+          ['Boat in still water / शांत जल में नाव', `${_fmt((i.n('d') + i.n('u')) / 2)} km/h`],
+          ['Stream / धारा', `${_fmt((i.n('d') - i.n('u')) / 2)} km/h`],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🚰", "Pipes & Cisterns", "पाइप और टंकी", "Net work in 1 hour = 1/A + 1/B − 1/C\nTime to fill = 1 ÷ (net work in 1 hour)\nC is the emptying pipe (keep 0 if there is none).", [["a", "Pipe A fills alone in (hours)", "e.g. 12", null, false], ["b", "Pipe B fills alone in (hours)", "e.g. 15", null, false], ["c", "Pipe C empties alone in (hours)", "0 if there is no emptying pipe", "0", false]], i=>{
+        let a = i.n('a'), b = i.n('b'), c = i.n('c');
+        if (a <= 0 || b <= 0 || c < 0) return null;
+        let rate = 1 / a + 1 / b - (c > 0 ? 1 / c : 0);
+        if (rate <= 0) {
+          return [
+            ['Result / नतीजा', 'Never fills / कभी नहीं भरेगा'],
+          ];
+        }
+        return [
+          ['Time to fill / भरने का समय', `${_fmt(1 / rate)} hours / घंटे`],
+        ];
+      }], ["More Speed & Work / और चाल व कार्य", "🧪", "Mixture (Alligation)", "मिश्रण (एलिगेशन)", "Cheaper : Dearer = (Dearer − Mean) : (Mean − Cheaper)\nसस्ता : महँगा = (महँगा − मध्य) : (मध्य − सस्ता)", [["c", "Price of the cheaper item", "e.g. 40", null, false], ["d", "Price of the dearer item", "e.g. 60", null, false], ["m", "Mean (mixture) price", "e.g. 48", null, false]], i=>{
+        let c = i.n('c'), d = i.n('d'), m = i.n('m');
+        if (!(c < m && m < d)) return null;
+        let a = d - m, b = m - c;
+        return [
+          ['Cheaper : Dearer / सस्ता : महँगा', `${_fmt(a)} : ${_fmt(b)}`],
+          ['Cheaper item share / सस्ते का हिस्सा', `${_fmt(a / (a + b) * 100)}%`],
+        ];
+      }], ["Calendar & Clock / कैलेंडर और घड़ी", "📆", "Day of the week", "तारीख से वार", "Enter any date to see which weekday it was / will be.\nकोई भी तारीख डालें, उसका वार (दिन) देखें।", [["d", "Day (1-31)", "e.g. 15", null, false], ["m", "Month (1-12)", "e.g. 8", null, false], ["y", "Year", "e.g. 1947", null, false]], i=>{const t=_mkDate(i.n('y'),i.n('m'),i.n('d'));if(!t)return null;const wd=(t.getUTCDay()+6)%7,doy=Math.round((t-Date.UTC(t.getUTCFullYear(),0,1))/864e5)+1;return [['Day / वार',`${_dayEn[wd]} / ${_dayHi[wd]}`],['Day number of the year / वर्ष का दिन',''+doy],['Leap year? / लीप वर्ष?',_isLeap(t.getUTCFullYear())?'Yes / हाँ':'No / नहीं']]}], ["Calendar & Clock / कैलेंडर और घड़ी", "🗓️", "Days between two dates", "दो तारीखों के बीच के दिन", "Gives the gap in days, weeks and years-months-days.\nदिन, सप्ताह और वर्ष-माह-दिन में अंतर बताता है।", [["d1", "From: Day", "e.g. 26", null, false], ["m1", "From: Month (1-12)", "e.g. 1", null, false], ["y1", "From: Year", "e.g. 1950", null, false], ["d2", "To: Day", "e.g. 15", null, false], ["m2", "To: Month (1-12)", "e.g. 8", null, false], ["y2", "To: Year", "e.g. 2026", null, false]], i=>{const a=_mkDate(i.n('y1'),i.n('m1'),i.n('d1')),b=_mkDate(i.n('y2'),i.n('m2'),i.n('d2'));if(!a||!b)return null;const f=a>b?b:a,t=a>b?a:b,days=Math.round((t-f)/864e5);let y=t.getUTCFullYear()-f.getUTCFullYear(),m=t.getUTCMonth()-f.getUTCMonth(),d=t.getUTCDate()-f.getUTCDate();if(d<0){m--;d+=new Date(Date.UTC(t.getUTCFullYear(),t.getUTCMonth(),0)).getUTCDate()}if(m<0){y--;m+=12}return [['Days between / बीच के दिन',''+days],['Counting both dates / दोनों तारीखें गिनकर',''+(days+1)],['Weeks & days / सप्ताह और दिन',`${Math.floor(days/7)} w ${days%7} d`],['Years-Months-Days / वर्ष-माह-दिन',`${y} y ${m} m ${d} d`]]}], ["Calendar & Clock / कैलेंडर और घड़ी", "🕐", "Clock angle", "घड़ी का कोण", "Angle = |30 × H − 5.5 × M|   (use the smaller angle, if above 180° take 360° − angle)\nकोण = |30 × घंटा − 5.5 × मिनट|", [["h", "Hour (0-12)", "e.g. 3", null, false], ["m", "Minutes (0-59)", "e.g. 40", null, false]], i=>{const h=i.n('h'),m=i.n('m');if(h<0||h>12||m<0||m>=60)return null;let a=Math.abs(30*(h%12)+0.5*m-6*m);if(a>180)a=360-a;return [['Angle between hands / हाथों के बीच कोण',_fmt(a)+'°'],['Other side / दूसरी ओर',_fmt(360-a)+'°']]}], ["Calendar & Clock / कैलेंडर और घड़ी", "🔮", "Leap year check", "लीप वर्ष जाँच", "Leap year: divisible by 4, but a century year must be divisible by 400.\nलीप वर्ष: 4 से विभाज्य; शताब्दी वर्ष 400 से विभाज्य होना चाहिए।", [["y", "Year", "e.g. 2100", null, false]], i=>{const y=i.n('y');if(!_isInt(y)||y<1||y>9998)return null;let n=y+1;while(!_isLeap(n))n++;return [['Leap year? / लीप वर्ष?',_isLeap(y)?'Yes / हाँ':'No / नहीं'],['Next leap year / अगला लीप वर्ष',''+n],['Days in February / फरवरी में दिन',_isLeap(y)?'29':'28']]}], ["Number Tools / संख्या टूल", "🔗", "HCF & LCM", "म.स. (HCF) और ल.स. (LCM)", "HCF = greatest number that divides all the numbers.\nLCM = smallest number that all of them divide.\nमहत्तम समापवर्तक (म.स.) और लघुत्तम समापवर्त्य (ल.स.)", [["x", "Numbers (2 to 10, whole numbers)", "e.g. 12, 18, 30", null, true]], i=>{const v=i.l('x');if(v.length<2||v.length>10||v.some(e=>e<1||e>1e9||!_isInt(e)))return null;const G=(a,b)=>b==0n?a:G(b,a%b);let g=BigInt(v[0]),l=g;for(const e of v.slice(1)){const b=BigInt(e);g=G(g,b);l=l/G(l,b)*b}return [['HCF / म.स.',g.toString()],['LCM / ल.स.',l.toString()]]}], ["Number Tools / संख्या टूल", "🧬", "Prime factors & number of factors", "अभाज्य गुणनखंड और गुणनखंडों की संख्या", "Number of factors: if N = a^p × b^q × c^r then factors = (p+1)(q+1)(r+1)\nसंख्या N = a^p × b^q × c^r हो तो गुणनखंड = (p+1)(q+1)(r+1)", [["n", "Number (2 to 1,000,000,000,000)", "e.g. 360", null, false]], i=>{const x=i.n('n');if(!_isInt(x)||x<2||x>1e12)return null;let n=x;const ps=[];let c=1,p=2;while(p*p<=n){if(n%p==0){let e=0;while(n%p==0){n=n/p;e++}ps.push(e==1?''+p:p+'^'+e);c*=e+1}p+=p==2?1:2}if(n>1){ps.push(''+n);c*=2}const pr=ps.length==1&&!ps[0].includes('^');return [['Prime factors / अभाज्य गुणनखंड',ps.join(' × ')],['Number of factors / गुणनखंडों की संख्या',''+c],['Is it prime? / क्या अभाज्य है?',pr?'Yes / हाँ':'No / नहीं']]}], ["Number Tools / संख्या टूल", "🔟", "Last digit / remainder of a^b", "a^b का इकाई अंक / शेषफल", "Remainder of a^b ÷ m.   With m = 10 you get the LAST DIGIT of a^b.\nm = 10 रखने पर a^b का इकाई अंक मिलता है।", [["a", "Base (a)", "e.g. 7", null, false], ["b", "Power (b)", "e.g. 2026", null, false], ["m", "Divide by (m)", "10 = last digit", "10", false]], i=>{const a=i.n('a'),b=i.n('b'),m=i.n('m');if(![a,b,m].every(_isInt)||a<0||b<0||m<1||a>1e15||b>1e15||m>1e9)return null;let r=1n,B=BigInt(a)%BigInt(m),E=BigInt(b);const M=BigInt(m);while(E>0n){if(E&1n)r=r*B%M;B=B*B%M;E>>=1n}return [['Remainder / शेषफल',(r%M).toString()]]}], ["Unit Converters / इकाई बदलें", "🛣️", "Kilometres ↔ Miles", "किलोमीटर ↔ मील", "1 mile = 1.609344 km\nमील → km : × 1.609344      km → मील : ÷ 1.609344", [["v", "Value", "e.g. 100", null, false]], i=> [
+        ['If it is km → miles', `${_fmt(i.n('v') / 1.609344)} mi`],
+        ['If it is miles → km', `${_fmt(i.n('v') * 1.609344)} km`],
+      ]], ["Unit Converters / इकाई बदलें", "🏋️", "Kilograms ↔ Pounds", "किलोग्राम ↔ पाउंड", "1 kg = 2.20462 lb", [["v", "Value", "e.g. 70", null, false]], i=> [
+        ['If it is kg → pounds', `${_fmt(i.n('v') * 2.20462)} lb`],
+        ['If it is pounds → kg', `${_fmt(i.n('v') / 2.20462)} kg`],
+      ]], ["Unit Converters / इकाई बदलें", "🌡️", "Celsius ↔ Fahrenheit", "सेल्सियस ↔ फॉरेनहाइट", "°F = °C × 9/5 + 32\n°C = (°F − 32) × 5/9", [["v", "Temperature", "e.g. 37", null, false]], i=> [
+        ['If it is °C → °F', `${_fmt(i.n('v') * 9 / 5 + 32)} °F`],
+        ['If it is °F → °C', `${_fmt((i.n('v') - 32) * 5 / 9)} °C`],
+      ]], ["Unit Converters / इकाई बदलें", "📏", "Metres ↔ Feet", "मीटर ↔ फ़ुट", "1 metre = 3.28084 feet     1 foot = 12 inches", [["v", "Value", "e.g. 100", null, false]], i=> [
+        ['If it is metres → feet', `${_fmt(i.n('v') * 3.28084)} ft`],
+        ['If it is feet → metres', `${_fmt(i.n('v') / 3.28084)} m`],
+      ]], ["Unit Converters / इकाई बदलें", "🌾", "Acre ↔ Hectare", "एकड़ ↔ हेक्टेयर", "1 hectare = 10,000 sq m = 2.47105 acre\n1 acre = 4046.86 sq m", [["v", "Value", "e.g. 5", null, false]], i=> [
+        ['If it is acres → hectares', `${_fmt(i.n('v') * 0.404686)} ha`],
+        ['If it is acres → sq metres', `${_fmt(i.n('v') * 4046.86)} sq m`],
+        ['If it is hectares → acres', `${_fmt(i.n('v') * 2.47105)} acre`],
+      ]]];
+
+Object.assign(Number.prototype,{abs(){return Math.abs(this)},toInt(){return Math.trunc(this)},toDouble(){return +this}});
+function calcList(){const gs=[...new Set(CALCS.map(c=>c[0]))];return `<input id="cs" placeholder="🔍 Search a calculator / कैलकुलेटर खोजें" oninput="calcFilter(this.value)" style="margin:0 0 6px">`
+ +`<div class="cgrp"><h3 style="margin:16px 0 8px;font-size:13.5px">Age & Eligibility / आयु और पात्रता</h3><a class="card cr" data-t="age calculator उम्र और आयु-सीमा की जाँच" href="#/age"><span style="font-size:24px">🎂</span><span style="flex:1"><b>Age Calculator</b><br><small class="mu">उम्र और आयु-सीमा की जाँच</small></span><span class="material-icons mu">chevron_right</span></a></div>`
+ +gs.map(g=>`<div class="cgrp"><h3 style="margin:16px 0 8px;font-size:13.5px">${esc(g)}</h3>${CALCS.map((c,n)=>c[0]==g?`<a class="card cr" data-t="${esc((c[2]+' '+c[3]).toLowerCase())}" href="#/calc/${n}"><span style="font-size:24px">${c[1]}</span><span style="flex:1"><b>${esc(c[2])}</b><br><small class="mu">${esc(c[3])}</small></span><span class="material-icons mu">chevron_right</span></a>`:'').join('')}</div>`).join('')+`<p id="cnf" class="mu" style="display:none;text-align:center;margin-top:30px">No calculator found.<br>कोई कैलकुलेटर नहीं मिला।</p>`}
+function calcFilter(v){v=v.trim().toLowerCase();let any=false;document.querySelectorAll('.cgrp').forEach(g=>{let h=0;g.querySelectorAll('.cr').forEach(r=>{const ok=!v||r.dataset.t.includes(v);r.style.display=ok?'':'none';if(ok)h++});g.style.display=h?'':'none';if(h)any=true});const n=document.getElementById('cnf');if(n)n.style.display=any?'none':''}
+function calcPage(n){const c=CALCS[n];if(!c)return wrap(back+empty);window.CC=c;
+ return wrap(back+`<h2 class="pageTitle">${esc(c[2])}</h2><div class="card" style="background:#fff8d6"><b style="color:var(--ac);font-size:12px">Formula / सूत्र</b><div style="white-space:pre-line;font-size:13px;line-height:1.5;margin-top:4px">${esc(c[4])}</div></div>`
+ +c[5].map(f=>`<label class="mu" style="font-size:12.5px">${esc(f[1])}</label><input id="cf_${f[0]}" ${f[4]?'type="text"':'type="text" inputmode="decimal"'} placeholder="${esc(f[2])}" oninput="calcRun()">`).join('')+`<div id="cr" style="margin-top:10px"></div><div class="row" style="justify-content:center"><button class="s" onclick="document.querySelectorAll('[id^=cf_]').forEach(e=>e.value='');calcRun()">↺ Clear / साफ़ करें</button></div>`)}
+function calcRun(){const el=document.getElementById('cr');if(!el||!window.CC)return;const m={};
+ for(const f of CC[5]){const raw=document.getElementById('cf_'+f[0]).value,tx=raw.trim()?raw:(f[3]||'');if(f[4]){const p=tx.trim().split(/[,\s]+/).filter(Boolean);if(!p.length||p.some(x=>isNaN(+x)))return el.innerHTML=calcMsg();m[f[0]]=p.map(Number)}else{const v=parseFloat(tx.trim().replace(/,/g,''));if(tx.trim()===''||isNaN(v)||!isFinite(+tx.trim().replace(/,/g,'')))return el.innerHTML=calcMsg();m[f[0]]=[v]}}
+ let r=null;try{r=CC[6](new _In(m))}catch(e){}
+ if(!r||!r.length){el.innerHTML='<p class="err" style="text-align:center;font-size:12.5px">Please check the values (for example, no division by zero).<br>कृपया वैल्यू जाँचें।</p>';return}
+ el.innerHTML=`<div style="background:linear-gradient(135deg,#ffff66,#ffff29);color:#000;border-radius:16px;padding:16px">${r.map((x,k)=>`<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;${k?'margin-top:10px':''}"><span style="font-size:12.5px;font-weight:600">${esc(x[0])}</span><b style="font-size:${k?16:22}px;text-align:right;max-width:55%;word-break:break-word">${esc(x[1])}</b></div>`).join('')}</div>`}
+const calcMsg=()=>'<p class="mu" style="text-align:center;font-size:12.5px">Fill in the values above to see the answer.<br>जवाब देखने के लिए ऊपर वैल्यू भरें।</p>';
+function omrInit(){window.OM=window.OM||{n:0};if(!OM.n)omrDraw()}
+function omrStart(n,m){window.OM={n,m,a:Array(n).fill(null),left:m*60,done:false};clearT();timers.push(setInterval(()=>{if(OM.done)return;OM.left--;const e=document.getElementById('omt');if(e){e.textContent='⏱ '+fmtT(Math.max(0,OM.left));e.classList.toggle('low',OM.left<=60)}if(OM.left<=0)omrEnd()},1000));omrDraw()}
+function omrPick(i,j){if(OM.done)return;OM.a[i]=OM.a[i]===j?null:j;omrDraw()}
+function omrDraw(){const el=document.getElementById('omr');if(!el)return;const S=window.OM;
+ if(!S||!S.n){el.innerHTML=`<div class="card"><b>Timed OMR sheet / टाइमर वाली OMR शीट</b><p class="mu">Paper par test do, yahan bubbles bharo / पेपर टेस्ट देते हुए यहाँ बबल भरें।</p><div class="row">${[20,50,100].map(n=>`<button class="s" onclick="omrStart(${n},${n==20?15:n==50?40:60})">${n} Qs · ${n==20?15:n==50?40:60} min</button>`).join('')}</div></div>`;return}
+ const att=S.a.filter(x=>x!==null).length;
+ el.innerHTML=`<div class="mtop" style="margin-top:0"><span id="omt" class="mtime">⏱ ${fmtT(Math.max(0,S.left))}</span><span>${att}/${S.n}</span>${S.done?'':'<button class="p" onclick="if(confirm(\'Finish OMR? / OMR खत्म करें?\'))omrEnd()">Finish</button>'}</div>`
+ +(S.done?omrResult():'')+S.a.map((a,i)=>`<div class="row" style="margin:4px 0;flex-wrap:nowrap"><b style="width:34px">${i+1}</b>${[0,1,2,3].map(j=>`<span class="badge" style="width:34px;height:34px;cursor:pointer;${a===j?'background:#000066;color:#fff;border-color:#000066':''}${S.done&&S.key&&S.key[i]===j?';box-shadow:0 0 0 3px #1b8a3a':''}" onclick="omrPick(${i},${j})">${'ABCD'[j]}</span>`).join('')}</div>`).join('')}
+function omrEnd(){OM.done=true;clearT();xpAdd(10);omrDraw()}
+function omrKey(){const k=document.getElementById('omk').value.toUpperCase().replace(/[^ABCD]/g,'').split('').map(c=>'ABCD'.indexOf(c));if(!k.length){toast('A B C D me key likho');return}OM.key=k;omrDraw()}
+function omrResult(){const S=OM,att=S.a.filter(x=>x!==null).length;let h=`<div class="card"><b>Attempted ${att} · Unattempted ${S.n-att}</b>`;
+ if(S.key){let c=0,w=0;S.a.forEach((a,i)=>{if(a===null||S.key[i]===undefined)return;a===S.key[i]?c++:w++});h+=`<p>✅ ${c} · ❌ ${w} · Score (−0.25): <b>${rn(c-w*.25,2)}</b> / ${S.key.length}</p>`}else h+=`<input id="omk" placeholder="Answer key likho: ABCDDA… / आंसर की"><button class="p" onclick="omrKey()">Check score</button>`;
+ return h+'</div>'}
+
+const CKG=[["📄", "Documents", "दस्तावेज़", [["doc1", "Admit card / e-call letter printed (carry 2 copies)", "एडमिट कार्ड / ई-कॉल लेटर का प्रिंट (2 कॉपी साथ रखें)"], ["doc2", "Original photo ID that your admit card allows (Aadhaar, PAN, Voter ID, Driving Licence, Passport ...)", "एडमिट कार्ड में मान्य मूल फोटो पहचान-पत्र (आधार, पैन, वोटर ID, ड्राइविंग लाइसेंस, पासपोर्ट ...)"], ["doc3", "Passport-size photos (as many as the admit card asks)", "पासपोर्ट साइज़ फोटो (एडमिट कार्ड में जितनी माँगी हों)"], ["doc4", "Declaration / undertaking form, if the admit card mentions one (filled as instructed)", "घोषणा-पत्र / अंडरटेकिंग फॉर्म, यदि एडमिट कार्ड में हो (निर्देश अनुसार भरा हुआ)"]]], ["🗺️", "Day before the exam", "परीक्षा से एक दिन पहले", [["pre1", "Exam centre address and route checked on a map (visit it if you can)", "परीक्षा केंद्र का पता और रास्ता मैप पर देख लिया (हो सके तो एक बार जाकर देखें)"], ["pre2", "Reporting time and gate-closing time noted down", "रिपोर्टिंग समय और गेट बंद होने का समय नोट कर लिया"], ["pre3", "All instructions on the admit card read", "एडमिट कार्ड के सारे निर्देश पढ़ लिए"], ["pre4", "Travel plan fixed - reach at least 45-60 minutes early", "यात्रा की योजना तय - कम से कम 45-60 मिनट पहले पहुँचें"], ["pre5", "Only light revision of short notes and formulas, no new topics", "सिर्फ़ छोटे नोट्स और सूत्रों का हल्का रिविज़न, कोई नया टॉपिक नहीं"], ["pre6", "Early sleep (7-8 hours)", "जल्दी सोना (7-8 घंटे की नींद)"]]], ["🎒", "What to carry (if allowed)", "साथ क्या ले जाएँ (अनुमति हो तो)", [["car1", "Black / blue ball pens (2-3), as your exam asks", "काले / नीले बॉल पेन (2-3), परीक्षा के नियम अनुसार"], ["car2", "Pencil, eraser, sharpener (only if allowed)", "पेंसिल, रबर, शार्पनर (सिर्फ़ अनुमति हो तो)"], ["car3", "Transparent water bottle (only if allowed)", "पारदर्शी पानी की बोतल (सिर्फ़ अनुमति हो तो)"], ["car4", "Some cash for travel", "यात्रा के लिए कुछ नक़द"], ["car5", "Mobile, smartwatch, earphones, calculator and bag left at home (usually not allowed)", "मोबाइल, स्मार्टवॉच, ईयरफ़ोन, कैलकुलेटर और बैग घर पर (आमतौर पर अनुमति नहीं)"]]], ["🏫", "At the exam centre", "परीक्षा केंद्र पर", [["cen1", "Roll number and seat checked", "रोल नंबर और सीट जाँच ली"], ["cen2", "Instructions on the paper / screen read before starting", "शुरू करने से पहले प्रश्न-पत्र / स्क्रीन के निर्देश पढ़े"], ["cen3", "OMR / personal details (roll no., set code) filled carefully", "OMR / व्यक्तिगत विवरण (रोल नंबर, सेट कोड) ध्यान से भरा"], ["cen4", "Plan: easy questions first, keep 5-10 minutes for review", "योजना: पहले आसान प्रश्न, 5-10 मिनट रिव्यू के लिए बचाएँ"]]]];
+const CKS=()=>J.get('checklist',{done:[],custom:[]});
+function ckTick(id,c){const s=CKS();if(c){const L=s.custom.find(x=>x.id==id);if(L)L.done=!L.done}else s.done=s.done.includes(id)?s.done.filter(x=>x!=id):[...s.done,id];J.set('checklist',s);route()}
+function ckAdd(){const e=document.getElementById('cka'),v=e.value.trim().slice(0,80);if(!v)return;const s=CKS();if(s.custom.length>=30){toast('Limit reached (30 items) / सीमा पूरी');return}s.custom.push({id:'c'+Date.now(),text:v,done:false});J.set('checklist',s);route()}
+function ckDel(id){const s=CKS();s.custom=s.custom.filter(x=>x.id!=id);J.set('checklist',s);route()}
+function ckReset(){if(!confirm('Untick everything? / सब टिक हटाएँ?\nYour own items stay. / आपके अपने आइटम बने रहेंगे।'))return;const s=CKS();s.done=[];s.custom.forEach(x=>x.done=false);J.set('checklist',s);route()}
+function ckCount(){const s=CKS(),all=CKG.reduce((n,g)=>n+g[3].length,0)+s.custom.length;return [CKG.reduce((n,g)=>n+g[3].filter(i=>s.done.includes(i[0])).length,0)+s.custom.filter(x=>x.done).length,all]}
+
+// ---------- GK Flash Quiz (flashcards -> 4-option MCQ, like the App) ----------
+function gkBuild(cat,n){const C=DATA.cards,pool=shuf(C.filter(c=>cat=='all'||c.cat==cat)).slice(0,n),out=[];
+ pool.forEach(c=>{const same=shuf(C.filter(x=>x.cat==c.cat&&x.id!=c.id&&x.a!=c.a)),oth=shuf(C.filter(x=>x.cat!=c.cat&&x.a!=c.a)),w=[];
+  for(const x of [...same,...oth]){if(w.length==3)break;if(w.some(y=>y.a==x.a))continue;w.push(x)}
+  if(w.length<3)return;const all=[c,...w],ord=shuf([0,1,2,3]),lb=DATA.fcats[c.cat];
+  out.push({text:c.q,textHi:c.qh,options:ord.map(i=>all[i].a),optionsHi:ord.map(i=>all[i].ah),correctIndex:ord.indexOf(0),explanation:lb?'Topic: '+lb[0]:'',explanationHi:lb?'विषय: '+lb[1]:''})});
+ return out}
+function gkStart(){const Q=gkBuild(GK.cat,10);if(!Q.length){toast('Could not make a quiz / क्विज़ नहीं बन सका');return}
+ const lb=DATA.fcats[GK.cat],ti='GK Flash Quiz • '+(GK.cat=='all'?'All Topics / सभी विषय':lb[0]+' / '+lb[1]);
+ (window.QS=window.QS||{}).fq=Q;window.FQ={m:null,Q,i:0,picked:null,ans:Array(Q.length).fill(null),hi:lang=='hi',done:false,title:ti,mode:'gk'};location.hash='#/revq'}
+function gkPage(){const B=J.get('gkBest',null),n=c=>c=='all'?DATA.cards.length:DATA.cards.filter(x=>x.cat==c).length,cur=window.GK=window.GK||{cat:'all'};
+ return `<div class="card"><b>Turn your flashcards into a quick MCQ quiz.<br>फ्लैशकार्ड से झटपट MCQ क्विज़।</b><p class="mu" style="margin:8px 0 0">${B?`Best: ${B.c}/${B.t} (${B.p}%) · बेस्ट: ${B.c}/${B.t}`:`${DATA.cards.length} cards ready · new mix every time<br>${DATA.cards.length} कार्ड तैयार · हर बार नया मिक्स`}</p></div>
+ <h3 style="margin:14px 0 4px">Pick a topic / विषय चुनें</h3><div class="chips">${[['all','🎯','All','सभी'],...Object.entries(DATA.fcats).map(([k,v])=>[k,v[2],v[0],v[1]])].map(c=>`<a class="chip ${cur.cat==c[0]?'on':''}" onclick="GK.cat='${c[0]}';document.getElementById('gkp').innerHTML=gkPage()">${c[1]} ${esc(c[2])} / ${esc(c[3])} (${n(c[0])})</a>`).join('')}</div>
+ <div class="row"><button class="p" style="width:100%" ${n(cur.cat)<4?'disabled':''} onclick="gkStart()">▶ Start ${Math.min(10,n(cur.cat))} questions / शुरू करें</button></div>`}
+
+// ---------- Exam Tracker (form last date, exam date, 3 checkboxes) ----------
+const XT=()=>J.get('examTracker',[]);
+const xtDay=s=>/^\d{4}-\d{2}-\d{2}$/.test(s||'')?new Date(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)):null;
+const xtUntil=d=>{const n=new Date();return Math.round((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(n.getFullYear(),n.getMonth(),n.getDate()))/DAY)};
+function xtNext(e){let b=null;const f=xtDay(e.f),x=xtDay(e.e);if(f&&!e.a){const n=xtUntil(f);if(n>=0)b=n}if(x){const n=xtUntil(x);if(n>=0&&(b===null||n<b))b=n}return b}
+const xtSorted=()=>XT().slice().sort((a,b)=>{const x=xtNext(a),y=xtNext(b);return x!==null&&y!==null?x-y:x!==null?-1:y!==null?1:a.n.toLowerCase().localeCompare(b.n.toLowerCase())});
+const xtFmt=d=>d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+function xtLeft(d){const n=xtUntil(d);return n==0?'Today! / आज!':n==1?'1 day left / 1 दिन बाकी':n+' days left / '+n+' दिन बाकी'}
+function xtSummary(){const L=XT();let best=null;L.forEach(e=>{const f=xtDay(e.f),x=xtDay(e.e);if(f&&!e.a){const n=xtUntil(f);if(n>=0&&(!best||n<best.d))best={n:e.n,d:n}}if(x){const n=xtUntil(x);if(n>=0&&(!best||n<best.d))best={n:e.n,d:n}}});return {count:L.length,near:best}}
+function xtSave(){const n=document.getElementById('xn').value.trim();if(!n){toast('Enter the exam name. / परीक्षा का नाम लिखें।');return}
+ const L=XT(),o={n,f:document.getElementById('xf').value,e:document.getElementById('xe').value,x:document.getElementById('xx').value.trim()},id=window.XTE;
+ if(id){const e=L.find(z=>z.id==id);if(e)Object.assign(e,o)}else{if(L.length>=25){toast('Limit reached (25 exams) / सीमा पूरी (25)');return}L.push({id:String(Date.now()),a:false,p:false,c:false,...o})}
+ J.set('examTracker',L);window.XTE=null;route()}
+function xtEdit(id){window.XTE=id;route()}
+function xtDel(id){const e=XT().find(x=>x.id==id);if(!e||!confirm('Delete "'+e.n+'"? / हटाएँ?'))return;J.set('examTracker',XT().filter(x=>x.id!=id));if(window.XTE==id)window.XTE=null;route()}
+function xtTog(id,k){const L=XT(),e=L.find(x=>x.id==id);if(e){e[k]=!e[k];J.set('examTracker',L);route()}}
+
+// ---------- Reasoning Drill (auto-generated questions, ported from the App) ----------
+const RTYPES=[['series','🔢','Number Series','संख्या श्रृंखला','3, 6, 12, 24, ?'],['letters','🔤','Letter Series','अक्षर श्रृंखला','A, C, E, G, ?'],['coding','🔐','Coding-Decoding','कोडिंग-डिकोडिंग','CAT → DBU, DOG → ?'],['calendar','📆','Days & Calendar','दिन व कैलेंडर','Today Monday, after 45 days?'],['clock','🕒','Clock Angle','घड़ी का कोण','4:20 → angle?'],['rank','🏅','Ranking & Order','रैंकिंग व क्रम','12th from top, 25th from bottom'],['direction','🧭','Direction Sense','दिशा ज्ञान','3 km East, 4 km North → ?']];
+const rdOrd=n=>{const m=n%100;if(m>=11&&m<=13)return n+'th';return n+(['th','st','nd','rd'][n%10]||'th')};
+function rdMk(text,textHi,ch,chHi,exp,expHi){if(ch.length!=4||new Set(ch).size!=4)throw 0;const o=shuf([0,1,2,3]);return {text,textHi,options:o.map(i=>ch[i]),optionsHi:chHi?o.map(i=>chHi[i]):[],correctIndex:o.indexOf(0),explanation:exp,explanationHi:expHi}}
+function rdWrong(c,pr,fi){const w=[];for(const v of [...pr,...shuf([...fi])]){if(v==c||w.includes(v)||(c>0&&v<=0))continue;w.push(v);if(w.length==3)break}return w}
+const rdNear=(a,u)=>[1,-1,2,-2,3,-3,4,-4,5,-5].map(o=>a+o*Math.max(1,u));
+const rdInts=(c,pr,fi,sfx='',sfxHi='')=>{const w=rdWrong(c,pr,fi);return [[c+sfx,...w.map(e=>e+sfx)],[c+sfxHi,...w.map(e=>e+sfxHi)]]};
+const RG={
+series(){const k=rnd(7);let s=[],re='',rh='';
+ if(k==0){const a=2+rnd(30),d=2+rnd(9);s=[...Array(6)].map((_,i)=>a+d*i);re=`Each term is ${d} more than the one before it (+${d}).`;rh=`हर पद पिछले पद से ${d} अधिक है (+${d})।`}
+ else if(k==1){const a=1+rnd(5),m=2+rnd(2);let v=a;for(let i=0;i<6;i++){s.push(v);v*=m}re=`Each term is multiplied by ${m} (×${m}).`;rh=`हर पद को ${m} से गुणा किया जाता है (×${m})।`}
+ else if(k==2){const n=2+rnd(8);s=[...Array(6)].map((_,i)=>(n+i)**2);re=`These are squares of consecutive numbers: ${n}², ${n+1}², ${n+2}² ...`;rh=`ये क्रमागत संख्याओं के वर्ग हैं: ${n}², ${n+1}², ${n+2}² ...`}
+ else if(k==3){const n=1+rnd(5);s=[...Array(6)].map((_,i)=>(n+i)**3);re=`These are cubes of consecutive numbers: ${n}³, ${n+1}³, ${n+2}³ ...`;rh=`ये क्रमागत संख्याओं के घन हैं: ${n}³, ${n+1}³, ${n+2}³ ...`}
+ else if(k==4){const a=1+rnd(20),d=1+rnd(4);let v=a;for(let i=0;i<6;i++){s.push(v);v+=d+i}re=`The differences grow by 1 each time: +${d}, +${d+1}, +${d+2}, +${d+3}, +${d+4}.`;rh=`अंतर हर बार 1 बढ़ता है: +${d}, +${d+1}, +${d+2}, +${d+3}, +${d+4}।`}
+ else if(k==5){const a=1+rnd(4),m=2+rnd(2),c=1+rnd(3);let v=a;for(let i=0;i<6;i++){s.push(v);v=v*m+c}re=`Multiply the previous term by ${m}, then add ${c} (×${m} + ${c}).`;rh=`पिछले पद को ${m} से गुणा करके ${c} जोड़ें (×${m} + ${c})।`}
+ else{const n=2+rnd(7),c=1+rnd(5),pl=rnd(2)==0;s=[...Array(6)].map((_,i)=>(n+i)**2+(pl?c:-c));re=`Square of each consecutive number ${pl?'plus':'minus'} ${c}: ${n}² ${pl?'+':'−'} ${c}, ${n+1}² ${pl?'+':'−'} ${c} ...`;rh=`क्रमागत संख्याओं के वर्ग ${pl?'में '+c+' जोड़ें':'में से '+c+' घटाएँ'}: ${n}² ${pl?'+':'−'} ${c}, ${n+1}² ${pl?'+':'−'} ${c} ...`}
+ const ans=s[5],sh=s.slice(0,5).join(', '),w=rdWrong(ans,[],rdNear(ans,Math.max(1,Math.floor(Math.abs(ans)/12))));
+ return rdMk(`Find the next number in the series:\n${sh}, ?`,`श्रृंखला की अगली संख्या ज्ञात कीजिए:\n${sh}, ?`,[ans,...w].map(String),null,`${re}\nSo the next number is ${ans}.`,`${rh}\nइसलिए अगली संख्या ${ans} है।`)},
+letters(){const step=1+rnd(4),st=rnd(26-5*step),de=rnd(2)==0,pos=i=>{const p=st+step*i;return de?25-p:p},ch=p=>String.fromCharCode(65+p),sh=[0,1,2,3,4].map(i=>ch(pos(i))).join(', '),ap=pos(5),w=[];
+ for(const p of shuf([ap+1,ap-1,ap+2,ap-2,ap+3,ap-3])){if(p<0||p>25||p==ap)continue;w.push(ch(p));if(w.length==3)break}
+ return rdMk(`Find the next letter in the series:\n${sh}, ?`,`श्रृंखला का अगला अक्षर ज्ञात कीजिए:\n${sh}, ?`,[ch(ap),...w],null,`Each letter moves ${step} place${step>1?'s':''} ${de?'backward':'forward'} in the alphabet. So the next letter is ${ch(ap)}.`,`हर अक्षर वर्णमाला में ${step} स्थान ${de?'पीछे':'आगे'} खिसकता है। इसलिए अगला अक्षर ${ch(ap)} है।`)},
+coding(){const W=['PEN','BAG','CAT','DOG','SUN','MAP','FAN','BOX','CUP','HAT','KEY','ARM','BUS','JAR','TEA','EGG','RAT','LION'],sf=(w,s)=>[...w].map(c=>String.fromCharCode(65+(((c.charCodeAt(0)-65+s)%26)+26)%26)).join('');
+ let s=1+rnd(4);if(rnd(2))s=-s;const w1=W[rnd(W.length)];let w2=w1,k=0;while(w2==w1&&k++<20)w2=W[rnd(W.length)];if(w2==w1)throw 0;
+ const c1=sf(w1,s),cr=sf(w2,s),w=[];for(const o of shuf([-4,-3,-2,-1,1,2,3,4])){if(o==s)continue;const c=sf(w2,o);if(c==cr||w.includes(c))continue;w.push(c);if(w.length==3)break}
+ const n=Math.abs(s);return rdMk(`If ${w1} is coded as ${c1}, how will ${w2} be coded in the same way?`,`यदि ${w1} को ${c1} लिखा जाता है, तो उसी तरह ${w2} को कैसे लिखा जाएगा?`,[cr,...w],null,`Every letter is shifted ${n} place${n>1?'s':''} ${s>0?'forward':'backward'} (${w1} → ${c1}).\nSo ${w2} → ${cr}.`,`हर अक्षर ${n} स्थान ${s>0?'आगे':'पीछे'} खिसकाया गया है (${w1} → ${c1})।\nइसलिए ${w2} → ${cr}।`)},
+calendar(){const E=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],H=['सोमवार','मंगलवार','बुधवार','गुरुवार','शुक्रवार','शनिवार','रविवार'],d=rnd(7);let ai,tx,th,ex,eh;
+ if(rnd(2)){const n=10+rnd(190),af=rnd(2)==0,r=n%7;ai=af?(d+r)%7:(((d-r)%7)+7)%7;tx=`Today is ${E[d]}. What day of the week ${af?'will it be after':'was it'} ${n} days${af?'':' ago'}?`;th=`आज ${H[d]} है। ${n} दिन ${af?'बाद':'पहले'} सप्ताह का कौन-सा दिन ${af?'होगा':'था'}?`;ex=`${n} ÷ 7 leaves remainder ${r} (odd days).\n${E[d]} ${af?'+':'−'} ${r} day${r==1?'':'s'} = ${E[ai]}.`;eh=`${n} ÷ 7 का शेष ${r} (विषम दिन) है।\n${H[d]} ${af?'+':'−'} ${r} दिन = ${H[ai]}।`}
+ else{const a=1+rnd(14),b=a+7+rnd(30-a-7+1>0?30-a-7+1:1),n=b-a,r=n%7;ai=(d+r)%7;tx=`If the ${rdOrd(a)} of a month is a ${E[d]}, which day will the ${rdOrd(b)} of that month be?`;th=`यदि किसी माह की ${a} तारीख़ को ${H[d]} है, तो उसी माह की ${b} तारीख़ को कौन-सा दिन होगा?`;ex=`Difference = ${b} − ${a} = ${n} days. ${n} ÷ 7 leaves remainder ${r}.\n${E[d]} + ${r} day${r==1?'':'s'} = ${E[ai]}.`;eh=`अंतर = ${b} − ${a} = ${n} दिन। ${n} ÷ 7 का शेष ${r} है।\n${H[d]} + ${r} दिन = ${H[ai]}।`}
+ const p=shuf([0,1,2,3,4,5,6].filter(i=>i!=ai)).slice(0,3);return rdMk(tx,th,[E[ai],...p.map(i=>E[i])],[H[ai],...p.map(i=>H[i])],ex,eh)},
+clock(){const h=1+rnd(12),m=rnd(12)*5,df=Math.abs(60*h-11*m),an=df>360?720-df:df,hf=v=>v%2==0?''+v/2:Math.floor(v/2)+'.5',w=[];
+ for(const v of shuf([an+10,an-10,an+20,an-20,an+30,an-30,an+40,an-40])){if(v<0||v>360||v==an)continue;w.push(hf(v)+'°');if(w.length==3)break}
+ const tm=h+':'+String(m).padStart(2,'0');return rdMk(`What is the angle between the hour hand and the minute hand of a clock at ${tm}?`,`घड़ी में ${tm} बजे घंटे और मिनट की सुइयों के बीच कितना कोण बनेगा?`,[hf(an)+'°',...w],null,`Angle = |30×H − 5.5×M| = |30×${h} − 5.5×${m}| = |${hf(60*h)} − ${hf(11*m)}| = ${hf(df)}°.${df>360?`\nThis is more than 180°, so take 360° − ${hf(df)}° = ${hf(an)}°.`:''}\nAnswer: ${hf(an)}°.`,`कोण = |30×H − 5.5×M| = |30×${h} − 5.5×${m}| = |${hf(60*h)} − ${hf(11*m)}| = ${hf(df)}°।${df>360?`\nयह 180° से अधिक है, इसलिए 360° − ${hf(df)}° = ${hf(an)}°।`:''}\nउत्तर: ${hf(an)}°।`)},
+rank(){const N=['Rahul','Amit','Neha','Priya','Sonu','Ravi','Anita','Mohit','Pooja','Kiran'],NH=['राहुल','अमित','नेहा','प्रिया','सोनू','रवि','अनीता','मोहित','पूजा','किरण'],i=rnd(10),nm=N[i],nh=NH[i];
+ if(rnd(2)){const a=5+rnd(30),b=5+rnd(30),to=a+b-1,w=rdWrong(to,[a+b],[to+1,to-1,to+2,to-2,to+3]);return rdMk(`${nm} ranks ${rdOrd(a)} from the top and ${rdOrd(b)} from the bottom in a class. How many students are there in the class?`,`एक कक्षा में ${nh} का स्थान ऊपर से ${a} वाँ और नीचे से ${b} वाँ है। कक्षा में कुल कितने विद्यार्थी हैं?`,[to,...w].map(String),null,`Total = (rank from top) + (rank from bottom) − 1 = ${a} + ${b} − 1 = ${to}.`,`कुल = (ऊपर से स्थान) + (नीचे से स्थान) − 1 = ${a} + ${b} − 1 = ${to}।`)}
+ const n=20+rnd(41),l=5+rnd(n-9),an=n-l+1,w=rdWrong(an,[n-l],[an+1,an-1,an+2,an-2,an+3]);
+ return rdMk(`There are ${n} students standing in a row. If ${nm} is ${rdOrd(l)} from the left end, what is ${nm}'s position from the right end?`,`एक पंक्ति में ${n} विद्यार्थी खड़े हैं। यदि ${nh} बाएँ छोर से ${l} वाँ है, तो दाएँ छोर से उसका स्थान क्या होगा?`,[an,...w].map(String),null,`Position from right = Total − Position from left + 1 = ${n} − ${l} + 1 = ${an}.`,`दाएँ से स्थान = कुल − बाएँ से स्थान + 1 = ${n} − ${l} + 1 = ${an}।`)},
+direction(){const T=[[3,4,5],[5,12,13],[8,15,17],[6,8,10],[9,12,15],[7,24,25],[12,16,20],[15,20,25],[10,24,26],[20,21,29]],tr=T[rnd(T.length)];let a=tr[0],b=tr[1];const c=tr[2];if(rnd(2))[a,b]=[b,a];
+ const fe=rnd(2)?'East':'West',se=rnd(2)?'North':'South',fh=fe=='East'?'पूर्व':'पश्चिम',sh=se=='North'?'उत्तर':'दक्षिण',[en,hi]=rdInts(c,[a+b],[c+1,c-1,c+2,c-2,c+3],' km',' किमी');
+ return rdMk(`A man walks ${a} km towards ${fe}, then turns and walks ${b} km towards ${se}. How far is he from the starting point?`,`एक आदमी ${fh} की ओर ${a} किमी चलता है, फिर मुड़कर ${sh} की ओर ${b} किमी चलता है। वह शुरुआती बिंदु से कितनी दूर है?`,en,hi,`The two walks are at right angles, so use Pythagoras:\nDistance = √(${a}² + ${b}²) = √${a*a+b*b} = ${c} km.`,`दोनों रास्ते समकोण पर हैं, इसलिए पाइथागोरस से:\nदूरी = √(${a}² + ${b}²) = √${a*a+b*b} = ${c} किमी।`)}};
+function rdGen(type,n){const out=[],seen=new Set();let g=0;while(out.length<n&&g++<n*40){const k=type=='mix'?RTYPES[rnd(RTYPES.length)][0]:type;let q=null;try{q=RG[k]()}catch(e){}if(!q||seen.has(q.text))continue;seen.add(q.text);out.push(q)}return out}
+function rdStart(type,title){const Q=rdGen(type,10);if(!Q.length){toast('Could not make questions. Try again. / सवाल नहीं बन सके।');return}(window.QS=window.QS||{}).fq=Q;window.FQ={m:null,Q,i:0,picked:null,ans:Array(Q.length).fill(null),hi:lang=='hi',done:false,title,mode:'rd',dtype:type};location.hash='#/revq'}
 
 function loginView(mode='login'){
  showNav(null);
@@ -271,7 +667,29 @@ async badges(){const L=badgeList(),u=L.filter(b=>b.cur>=b.t).length,seen=J.get('
  const html=wrap(back+`<h2 class="pageTitle">Badges</h2><div class="card" style="text-align:center"><div style="font-size:40px;font-weight:800;color:var(--ac)">${u} / ${L.length}</div>Badges unlocked / बैज खुले<br><b>Level: ${badgeLevel(u)}</b><div class="row" style="justify-content:center"><button class="s" onclick="badgeShare()">Share my progress / प्रोग्रेस शेयर करें</button></div></div>
  <div class="grid">${L.map(b=>{const ok=b.cur>=b.t,nw=ok&&!seen.includes(b.id);return `<div class="card" style="${ok?'border-color:var(--gold);background:#fff8d6':'opacity:.85'}"><div style="font-size:30px">${b.e}</div><b>${esc(b.title)}</b><div class="mu">${esc(b.th)}</div><small class="mu">${esc(b.d)}<br>${esc(b.dh)}</small>${nw?'<div><b style="color:#e53935">NEW</b></div>':''}${ok?'<div><b style="color:#1b8a3a">✓ Unlocked / खुल गया</b></div>':`<div class="bar"><i style="width:${Math.min(100,b.cur/b.t*100)}%"></i></div><small>${b.cur} / ${b.t}</small>`}</div>`}).join('')}</div><p class="mu">Badges are calculated on this browser. / बैज इस ब्राउज़र के डेटा से बनते हैं।</p>`);
  J.set('badgesSeen',L.filter(b=>b.cur>=b.t).map(b=>b.id));return html},
-soon:async(n)=>wrap(back+`<h2 class="pageTitle">Coming soon</h2><div class="card">Ye feature abhi website par nahi hai, App me use karein.<br><span class="mu">This feature is not on the website yet. Please use the App.</span></div>`),
+calc:async(n)=>n===undefined||n===''?wrap(back+`<h2 class="pageTitle">Quick Calculators / कैलकुलेटर</h2>${calcList()}`):calcPage(+n),
+ omr:async()=>wrap(back+`<h2 class="pageTitle">OMR Practice</h2><div id="omr"></div>`),
+ checklist:async()=>{const s=CKS(),[dn,tot]=ckCount(),row=(id,txt,sub,on,c)=>`<label class="card" style="display:flex;gap:10px;align-items:flex-start;margin:6px 0;cursor:pointer"><input type="checkbox" style="width:auto;margin:3px 0 0" ${on?'checked':''} onchange="ckTick('${id}',${c})"><span style="flex:1;${on?'text-decoration:line-through;opacity:.6':''}">${esc(txt)}${sub?`<br><small class="mu">${esc(sub)}</small>`:''}</span>${c?`<button class="s" style="padding:2px 8px" onclick="event.preventDefault();ckDel('${id}')">🗑️</button>`:''}</label>`;
+  return wrap(back+`<h2 class="pageTitle">Exam Day Checklist / परीक्षा चेकलिस्ट</h2><div class="card"><div class="row" style="justify-content:space-between;margin:0"><b>${dn} / ${tot} ready ${dn==tot?'🎉':''}</b><button class="s" onclick="ckReset()">↺ Untick all</button></div><div class="bar"><i style="width:${Math.round(dn/tot*100)}%"></i></div></div>`
+  +CKG.map(g=>`<h3 style="margin:16px 0 4px">${g[0]} ${esc(g[1])} / ${esc(g[2])}</h3>`+g[3].map(i=>row(i[0],i[1],i[2],s.done.includes(i[0]),0)).join('')).join('')
+  +`<h3 style="margin:16px 0 4px">➕ Your own items / आपके अपने आइटम</h3>`+s.custom.map(x=>row(x.id,x.text,'',x.done,1)).join('')+`<div class="row"><input id="cka" maxlength="80" placeholder="e.g. Spare photocopy of ID" style="flex:1;margin:0"><button class="p" onclick="ckAdd()">Add</button></div>`)},
+ gk:async()=>wrap(back+`<h2 class="pageTitle">GK Flash Quiz / जीके फ्लैश क्विज़</h2><div id="gkp">${gkPage()}</div>`),
+ tracker:async()=>{const ed=XT().find(x=>x.id==window.XTE)||null,L=xtSorted(),names=['SSC CGL','SSC CHSL','SSC MTS','SSC GD','UP Police','Railway NTPC','Railway Group D','IBPS PO','IBPS Clerk','SBI PO','SBI Clerk','UPSC CSE','CTET','UPTET'];
+  const dl=(lab,s,over,done)=>{const d=xtDay(s);if(!d)return `<div class="row mu" style="margin:2px 0">${lab}: Not set / तय नहीं</div>`;const n=xtUntil(d);return `<div class="row" style="margin:2px 0"><span class="mu">${lab}: ${xtFmt(d)}</span><b style="color:${done?'#1b8a3a':n<0?'var(--mu)':n<=3?'#d22':'var(--ac)'}">${done?'Applied ✓ / फॉर्म भरा ✓':n<0?over:xtLeft(d)}</b></div>`};
+  return wrap(back+`<h2 class="pageTitle">Exam Tracker / परीक्षा ट्रैकर</h2><div class="card"><b>${ed?'Edit exam / परीक्षा बदलें':'Add exam / परीक्षा जोड़ें'}</b><input id="xn" maxlength="40" placeholder="Exam name / परीक्षा का नाम" value="${esc(ed?ed.n:'')}">`
+  +(ed?'':`<div class="chips">${names.map(n=>`<a class="chip" onclick="document.getElementById('xn').value='${n}'">${n}</a>`).join('')}</div>`)
+  +`<label class="mu">Form last date / फॉर्म की अंतिम तिथि</label><input id="xf" type="date" value="${ed?ed.f:''}"><label class="mu">Exam date / परीक्षा की तिथि</label><input id="xe" type="date" value="${ed?ed.e:''}"><input id="xx" maxlength="100" placeholder="Note (optional) / नोट (वैकल्पिक)" value="${esc(ed?ed.x:'')}"><div class="row"><button class="p" onclick="xtSave()">Save / सेव करें</button>${ed?'<button class="s" onclick="xtEdit(null)">Cancel</button>':''}</div></div>`
+  +(L.length?L.map(e=>`<div class="card"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(e.n)}</b><span><button class="s" style="padding:4px 9px" onclick="xtEdit('${e.id}')">✏️</button> <button class="s" style="padding:4px 9px" onclick="xtDel('${e.id}')">🗑️</button></span></div>${dl('Form last date / फॉर्म अंतिम तिथि',e.f,'closed / बंद',e.a)}${dl('Exam date / परीक्षा तिथि',e.e,'over / हो गई',false)}${e.x?`<small class="mu">📝 ${esc(e.x)}</small>`:''}<div class="row">${[['a','Form filled / फॉर्म भरा'],['p','Fee paid / फीस दी'],['c','Admit card / एडमिट कार्ड']].map(k=>`<a class="chip ${e[k[0]]?'on':''}" onclick="xtTog('${e.id}','${k[0]}')">${e[k[0]]?'✓ ':''}${k[1]}</a>`).join('')}</div></div>`).join(''):empty))},
+ reasoning:async()=>{const B=J.get('rdBest',{}),S=J.get('rdSess',{n:0,days:{}}),td=S.days[dayKey()]||0;
+  return wrap(back+`<h2 class="pageTitle">Reasoning Drill / रीज़निंग ड्रिल</h2><div class="card"><b>Fresh questions every time — the set never repeats.<br>हर बार नए सवाल — सेट कभी दोहराता नहीं।</b><p class="mu" style="margin:8px 0 0">Drills done: ${S.n} • Today: ${td}<br>कुल ड्रिल: ${S.n} • आज: ${td}</p></div><div class="row"><button class="p" style="width:100%" onclick="rdStart('mix','Mixed Reasoning / मिक्स रीज़निंग')">🔀 Mixed Drill — 10 questions / मिक्स ड्रिल</button></div><h3 style="margin:14px 0 4px">Pick a topic / टॉपिक चुनें</h3>`
+  +RTYPES.map(r=>{const b=B[r[0]];return `<a class="card" style="display:flex;gap:12px;align-items:center;cursor:pointer" onclick="rdStart('${r[0]}','${r[2]} / ${r[3]}')"><span style="font-size:28px">${r[1]}</span><span style="flex:1"><b>${r[2]} / ${r[3]}</b><br><small class="mu">${esc(r[4])}</small></span>${b?`<span class="mu" style="font-size:12px;text-align:right">Best<br><b>${b.c}/${b.t}</b></span>`:''}</a>`}).join(''))},
+ timer:async()=>wrap(back+`<h2 class="pageTitle">Study Timer</h2><div id="tm"></div>`),
+ typing:async()=>wrap(back+`<h2 class="pageTitle">Typing Test</h2><div id="ty"></div>`),
+ age:async()=>wrap(back+`<h2 class="pageTitle">Age Calculator</h2><div class="card"><label class="mu">Date of birth / जन्मतिथि</label><input id="ab" type="date" onchange="ageCalc()"><label class="mu">Age as on / इस तारीख पर (optional)</label><input id="at" type="date" onchange="ageCalc()"></div><div id="ar"></div>`),
+ journal:async()=>{const L=SJ(),avg=L.length?Math.round(L.reduce((a,e)=>a+e.s*100/e.t,0)/L.length):0,best=L.length?Math.round(Math.max(...L.map(e=>e.s*100/e.t))):0,last=L.slice(0,7).reverse();
+  return wrap(back+`<h2 class="pageTitle">Score Journal</h2><p class="mu">Kisi bhi test series ka score yahan likho / किसी भी टेस्ट का स्कोर लिखें</p><div class="card"><input id="sjn" placeholder="Test name / टेस्ट का नाम"><div class="row"><input id="sjs" type="number" step="any" placeholder="Score" style="flex:1"><input id="sjt" type="number" step="any" placeholder="Out of" style="flex:1"></div><input id="sjd" type="date" value="${dayKey()}"><input id="sjx" placeholder="Note (optional)"><button class="p" onclick="sjAdd()">➕ Add score</button></div>`
+  +(L.length?`<div class="card"><b>Tests: ${L.length} · Avg: ${avg}% · Best: ${best}%</b><div class="bars">${last.map(e=>{const p=Math.max(0,Math.min(100,Math.round(e.s*100/e.t)));return `<div class="bc"><small>${p}%</small><i style="height:${Math.max(4,p)}px"></i></div>`}).join('')}</div></div>`+L.map(e=>`<div class="card"><div class="row" style="justify-content:space-between;margin:0"><b>${esc(e.n)}</b><button class="s" onclick="sjDel('${e.id}')">🗑️</button></div><b style="color:var(--ac)">${e.s} / ${e.t} (${Math.round(e.s*100/e.t)}%)</b><br><small class="mu">${new Date(e.d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}${e.x?' · '+esc(e.x):''}</small></div>`).join(''):empty))},
+ soon:async(n)=>wrap(back+`<h2 class="pageTitle">Coming soon</h2><div class="card">Ye feature abhi website par nahi hai, App me use karein.<br><span class="mu">This feature is not on the website yet. Please use the App.</span></div>`),
 flash:async()=>wrap(back+`<h2 class="pageTitle">Flashcards</h2><div id="fc"></div>`),
 async syllabus(){const ex=sylExam();
  if(!ex)return wrap(back+`<h2 class="pageTitle">Syllabus Tracker</h2><p class="mu">Choose your exam / अपनी परीक्षा चुनें</p><div class="grid">`+DATA.syl.map(e=>`<a class="card" href="javascript:void 0" onclick="sylPick('${e.id}')"><div class="i">${e.emoji}</div><b>${esc(e.en)}</b><small>${e.subjects.reduce((a,s)=>a+s.topics.length,0)} topics</small></a>`).join('')+`</div><p class="mu">यह आम पैटर्न पर आधारित है। नए सिलेबस के लिए आधिकारिक अधिसूचना ज़रूर देखें।</p>`);
@@ -304,7 +722,7 @@ async home(){
  const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
  return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
  +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}">${t[0]=='revision'&&revOverview().due>0?'<i class="rdot"></i>':''}<span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
- +`<div id="soc" class="soc"></div>`+studyCard()+toolsCards()+moreCard()+gyanCard()
+ +`<div id="soc" class="soc"></div>`+studyCard()+toolsCards()+moreCard()+boostCard()+gyanCard()
  +`<div class="sec">YouTube Videos <a href="${esc(cfg.youtubeUrl)}" target="_blank" rel="noopener">Channel</a></div>`
  +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>')
  +`</div>`},
@@ -451,7 +869,7 @@ function initTest(){const s=T;window.QS=window.QS||{};QS.mt=s.Q;s.ans=Array(s.Q.
  drawTest();updTimer();
  timers.push(setInterval(()=>{if(T.done)return;if(T.t.durationMinutes){T.left--;updTimer();if(T.left<=0)submitTest()}else updTimer()},1000))}
 const fmtT=x=>`${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`;
-function updTimer(){const e=document.getElementById('mtime');if(!e)return;e.textContent='⏱ '+fmtT(T.t.durationMinutes?Math.max(0,T.left):Math.floor((Date.now()-T.start)/1000))}
+function updTimer(){const e=document.getElementById('mtime');if(!e)return;e.textContent='⏱ '+fmtT(T.t.durationMinutes?Math.max(0,T.left):Math.floor((Date.now()-T.start)/1000))+(T.t.durationMinutes?'':'  (no limit)');e.classList.toggle('low',!!T.t.durationMinutes&&T.left<=60)}
 function drawTest(){const s=T,Q=s.Q,q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,ng=s.t.negativeMarks||0;
  if(s.done)return;
  const answered=s.ans.filter(a=>a!==null).length,sv=J.get('bookmarks',[]);
@@ -554,6 +972,8 @@ function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
 function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
 function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
 function fqNext(){const s=FQ;if(s.i<s.Q.length-1){s.i++;s.picked=null;drawFq();scrollTo(0,0);return}
+ if(s.mode=='rd'){s.done=true;const wr=[];let an=0,co=0;s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;an++;if(a==q.correctIndex)co++;else wr.push(q)});addMistakes(wr,'Reasoning',s.title);addGoal(Math.floor(an/2));if(an>0){xpAdd(10);const B=J.get('rdBest',{}),b=B[s.dtype];if(!b||co>b.c){B[s.dtype]={c:co,t:s.Q.length};J.set('rdBest',B)}const S=J.get('rdSess',{n:0,days:{}});S.n++;S.days[dayKey()]=(S.days[dayKey()]||0)+1;J.set('rdSess',S)}drawFq();scrollTo(0,0);return}
+ if(s.mode=='gk'){s.done=true;const wr=[];let an=0,co=0;s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;an++;if(a==q.correctIndex)co++;else wr.push(q)});addMistakes(wr,'GK','GK Flash Quiz');addGoal(Math.floor(an/2));if(an>0)xpAdd(10);if(an>0){const b=J.get('gkBest',null),p=Math.round(co*100/s.Q.length);if(!b||p>b.p||(p==b.p&&co>b.c))J.set('gkBest',{c:co,t:s.Q.length,p})}drawFq();scrollTo(0,0);return}
  if(s.mode=='rev'||s.mode=='extra'){s.done=true;revRecord(s.Q,s.ans,s.mode=='rev');drawFq();scrollTo(0,0);return}
  s.done=true;const wrong=[];let answered=0,correct=0;
  s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null)return;answered++;if(a==q.correctIndex)correct++;else wrong.push(q)});
@@ -827,7 +1247,7 @@ async function ssRank(id){try{const sn=await db.collection('mockScores').doc(id)
 async function ssMock(){const r=window.MR;if(!r)return;const att=r.c+r.w,acc=att?(r.c/att*100).toFixed(1):'0.0',rk=r.id?await ssRank(r.id):'';scoreShare({title:r.title,big:r.marks+' / '+r.total,bigLabel:'Marks',stats:[['Accuracy',acc+'%'],['Correct',r.c],['Wrong',r.w]],rank:rk})}
 function ssQuiz(){const s=window.FQ;if(!s)return;let c=0,w=0;s.Q.forEach((q,i)=>{const a=s.ans[i];if(a===null||a===undefined)return;a==q.correctIndex?c++:w++});const t=s.Q.length;scoreShare({title:s.title,big:c+' / '+t,bigLabel:'Correct answers',stats:[['Accuracy',(t?Math.round(c/t*100):0)+'%'],['Correct',c],['Wrong',w]]})}
 function ssDaily(){const r=window.QR;if(!r)return;scoreShare({title:'Daily Quiz',big:r.c+' / '+r.t,bigLabel:'Correct answers',stats:[['Accuracy',(r.t?Math.round(r.c/r.t*100):0)+'%'],['Correct',r.c],['Wrong',r.w]]})}
-function submitTest(){if(!T||T.done)return;clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;
+function submitTest(){if(!T||T.done)return;const auto=!!T.t.durationMinutes&&T.left<=0,secs=Math.max(1,Math.round((Date.now()-T.start)/1000));clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;
  const mp=t.marksPerQuestion||1,ng=t.negativeMarks||0;let c=0,w=0,m=0;
  Q.forEach((q,i)=>{const a=s.ans[i];if(a!==null){if(a==q.correctIndex){c++;m+=mp}else{w++;m-=ng}}});
  const total=+(Q.length*mp).toFixed(2),marks=+m.toFixed(2),skipped=Q.length-c-w,sub=(t.subject||'').trim();
@@ -835,8 +1255,8 @@ function submitTest(){if(!T||T.done)return;clearT();const s=T,t=s.t,Q=s.Q,hi=s.h
  if(s.rev){revRecord(Q.slice(),s.ans,true,true);revMockDone(Q);window.MR={title:t.title,id:'',marks,total,c,w}}else{addMistakes(Q.filter((q,i)=>s.ans[i]!==null&&s.ans[i]!=q.correctIndex),sub,t.title);
  addGoal(c+w);if(c+w>0)xpAdd((total>0?marks/total*100:0)>=80?30:20);lifeTest(c,w,marks,total);saveAttempt(t,s.id,marks,total,s.ans);window.MR={title:t.title,id:s.id,marks,total,c,w}}
  const review=Q.map((q,i)=>{const a=s.ans[i];const opts=hi&&q.optionsHi?.length?q.optionsHi:q.options;const ex=hi&&q.explanationHi||q.explanation;
-  return `<div class="q"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<small class="mu">Skipped</small>':''}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('');
- document.getElementById('mtest').innerHTML=`<div class="q"><h2>${s.rev?'Marks':'Score'}: ${marks} / ${total}</h2>✅ ${c} · ❌ ${w} · ⏭ ${skipped}${s.rev?'<p class="mu">Revision Mock: right answers move up your revision steps, wrong ones come back tomorrow.<br>रिवीज़न मॉक: सही जवाब अगले स्टेप पर जाते हैं, गलत कल फिर आएँगे।</p>':''}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<div class="row"><button class="p" onclick="ssMock()">Share Score Card / स्कोर कार्ड शेयर करें</button></div><h2 class="pageTitle">Review / समीक्षा</h2>${review}`;
+  return `<div class="q"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<div class="ylab mu">Not attempted / अनुत्तरित</div>':a==q.correctIndex?'<div class="ylab" style="color:#1b8a3a">✔ Your answer is correct</div>':'<div class="ylab" style="color:#d22">✘ Your answer: '+'ABCD'[a]+' · Correct: '+'ABCD'[q.correctIndex]+'</div>'}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('');
+ document.getElementById('mtest').innerHTML=`${auto?'<p class="mu" style="text-align:center">⏰ Time is up — your test was submitted automatically.<br>समय समाप्त — टेस्ट अपने आप सबमिट हो गया।</p>':''}<div class="bigm"><small>${esc(t.title||'Result')}</small><b>${marks} / ${total}</b><small>Marks</small></div><div class="sg"><div class="st"><small>Accuracy</small><b>${c+w?(c/(c+w)*100).toFixed(1):'0.0'}%</b></div><div class="st"><small>Correct</small><b style="color:#1b8a3a">${c}</b></div><div class="st"><small>Wrong</small><b style="color:#d22">${w}</b></div><div class="st"><small>Unattempted</small><b>${skipped}</b></div><div class="st"><small>Time</small><b>${fmtT(secs)}</b></div><div class="st"><small>Rank</small><b id="rk">—</b></div></div>${s.rev?'<p class="mu">Revision Mock: right answers move up your revision steps, wrong ones come back tomorrow.<br>रिवीज़न मॉक: सही जवाब अगले स्टेप पर जाते हैं, गलत कल फिर आएँगे।</p>':''}</div>${s.id?`<a class="card" href="#/board/${s.id}">🏆 Leaderboard</a>`:''}<div class="row"><button class="p" onclick="ssMock()">Share Score Card / स्कोर कार्ड शेयर करें</button></div><div class="row"><a class="btnlink" href="#/${s.rev?'revision':'home'}">${s.rev?'Back to Smart Revision / वापस रिवीज़न':'Back to Home'}</a></div><h2 class="pageTitle">Review / समीक्षा</h2>${review}`;if(s.id)ssRank(s.id).then(r=>{const e=document.getElementById('rk');if(e&&r)e.textContent=r.replace(/^.*#/,'#').replace(' of ',' / ')});
  scrollTo(0,0)}
 
 
@@ -870,6 +1290,7 @@ function showNav(p){
 async function route(){
  clearT();
  if(window.TM&&TM.running)tmPause();
+ if(!location.hash.startsWith('#/tracker'))window.XTE=null;
  const[p,a,b]=(location.hash.slice(2)||'home').split('/');
  if(!V[p]){location.hash='#/home';return}
  app.innerHTML='<p class="mu" style="padding:16px">Loading…</p>';
@@ -881,7 +1302,7 @@ async function route(){
   checkBell();
   if(p=='test'||p=='revmock')initTest();
   if(p=='fmq'||p=='revq')initFq();
-  if(p=='flash')fcInit();
+  if(p=='flash')fcInit();if(p=='timer')tmInit();if(p=='typing')tyInit();if(p=='omr'){window.OM=null;omrInit()}if(p=='calc'&&a)calcRun();if(p=='gk')window.GK=window.GK||{cat:'all'};
   if(p=='speedplay')smInit();
   if(p=='days')idDraw();
   if(p=='reckoner')rrDraw();
