@@ -195,6 +195,26 @@ nav.bn a::selection,nav.bn a *::selection,.side a::selection,.side a *::selectio
 .side a.on,.side a.on:visited,.side a.on:focus,.side a.on:active{color:var(--yel)}
 .side a:active{background:rgba(255,255,255,.2)}
 a,button,.tile,.stool,.card,.chip,.opt,.badge,.pn{-webkit-tap-highlight-color:transparent}
+/* Batch tabs (Videos / PDFs / Mocks) */
+.bthd{margin:4px 0 8px}.bthd b{color:#2e7d32;display:block}.bthd small{display:block;margin:3px 0 0 22px;font-size:12px}
+.btsoon{color:#e65100}
+.btabs{display:flex;border-bottom:1px solid var(--line);margin:10px 0 8px}
+.btab{flex:1;text-align:center;padding:12px 4px 10px;font-weight:700;font-size:15px;color:var(--mu);border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.btab.on{color:var(--navy);border-bottom-color:var(--gold)}
+.btp[hidden]{display:none}
+details.bx{background:var(--card);border:1px solid var(--line);border-radius:14px;margin:8px 0;box-shadow:0 2px 10px #1a3bcc12;overflow:hidden}
+details.bx>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;font-weight:700;-webkit-tap-highlight-color:transparent}
+details.bx>summary::-webkit-details-marker{display:none}
+details.bx>summary .i{width:40px;height:40px;border-radius:12px;background:var(--card2);display:grid;place-items:center;font-size:22px;flex:none}
+details.bx>summary .t{flex:1;min-width:0}details.bx>summary .t small{display:block;font-weight:400;font-size:12px}
+details.bx>summary .ch{color:var(--mu);transition:transform .2s}
+details.bx[open]>summary .ch{transform:rotate(180deg)}
+details.bx[open]>summary{border-bottom:1px solid var(--line)}
+.bxb{padding:4px 10px 10px}
+.bxb .card{margin:8px 0;background:#fff;box-shadow:none}
+.bxb details.bx{background:#fff;box-shadow:none;margin:8px 0}
+.bxb details.bx>summary{padding:10px 12px}.bxb details.bx>summary .i{width:34px;height:34px;font-size:18px}
+.bxr .bth{width:64px;height:38px;object-fit:cover;border-radius:6px;flex:none}.bxr .bth.sq{width:34px;height:34px}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -752,13 +772,22 @@ async pdf(l,t){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\
  <iframe id="pdfv" class="pdf" src="${esc(src)}"></iframe>`)},
 async batches(){const b=(await list(db.collection('batches'))).sort(ord);return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(b.length?'<div class="grid">'+b.map(x=>tile('batch/'+x.id,'🎓',x.title,x.price>0?'₹'+x.price:'Free')).join('')+'</div>':empty))},
 async batch(id){
- const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data(),em=auth.currentUser.email.toLowerCase();
+ const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data(),em=auth.currentUser.email.toLowerCase();let exp=null;
  if(b.price>0&&!isAdminUser()){let ok=false,msg='';const code=ls.get('code_'+id)||'';
-  if(code)try{const a=(await db.doc(`batchAccess/${em}_${id}`).get()).data();ok=a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date());if(!ok)msg='Code galat ya expire ho gaya'}catch(e){msg='Access expire / not found'}
+  if(code)try{const a=(await db.doc(`batchAccess/${em}_${id}`).get()).data();ok=a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date());if(ok&&a.expiresAt)exp=a.expiresAt.toDate();if(!ok)msg='Code galat ya expire ho gaya'}catch(e){msg='Access expire / not found'}
   if(!ok)return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2><p>Price: ₹${b.price} · UPI: ${esc(cfg.upiId)}</p><p class="mu">Payment ke baad Telegram par screenshot bhejo, access code milega.</p><a class="card" href="${esc(cfg.paymentTelegramUrl)}" target="_blank" rel="noopener">Payment / Request on Telegram ↗</a><input id="c" placeholder="Access code"><p class="err">${msg}</p><button class="p" onclick="ls.set('code_${id}',document.getElementById('c').value.trim());route()">Unlock</button>`)}
- const [vf,pf,mf]=await Promise.all([list(db.collection('videoFolders').where('batchId','==',id)),list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('mockTestFolders').where('batchIds','array-contains',id))]);
- const S=(t,a,p,i)=>a.length?`<h2 class="pageTitle">${t}</h2><div class="grid">`+a.sort(ord).map(x=>tile(p+x.id,i,x.name||x.examName)).join('')+'</div>':'';
- return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2>`+(S('Videos',vf,'vf/','🎬')+S('PDFs',pf,'pf/','📄')+S('Mock Tests',mf,'mf/','📝')||empty))},
+ const mo=b.mockOnly===true;
+ const [vf,pf,mf]=await Promise.all([mo?[]:list(db.collection('videoFolders').where('batchId','==',id)),mo?[]:list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('mockTestFolders').where('batchIds','array-contains',id))]);
+ vf.sort(ord);pf.sort(ord);mf.sort(ord);
+ const T=mo?[['mocks','Mocks',mf]]:[['videos','Videos',vf],['pdfs','PDFs',pf],['mocks','Mocks',mf]];
+ let cur=ls.get('bt_'+id);if(!T.some(t=>t[0]==cur))cur=(T.find(t=>t[2].length)||T[0])[0];
+ const opened=btOpenSet(id);
+ const fold=(k,ic,arr,nm)=>arr.length?arr.map(x=>`<details class="bx" data-k="${k}" data-id="${esc(x.id)}"${opened.includes(k+x.id)?' open':''} ontoggle="btOpen(this,'${esc(id)}')"><summary><span class="i">${ic}</span><span class="t">${esc(nm(x))}</span><span class="material-icons ch">expand_more</span></summary><div class="bxb"><p class="mu" style="margin:8px 6px">Loading…</p></div></details>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">'+({videos:'Is batch mein abhi koi video folder nahi hai',pdfs:'Is batch mein abhi koi PDF folder nahi hai',mocks:'Is batch mein abhi koi mock test folder nahi hai'})[k]+'</p>';
+ const panel={videos:()=>fold('v','📁',vf,x=>x.name),pdfs:()=>fold('p','📁',pf,x=>x.name),mocks:()=>fold('m','📝',mf,x=>x.examName||x.name)};
+ let valid='';if(exp){const dl=Math.floor((exp-new Date())/864e5),soon=dl<=7,left=dl<=0?'ends today':dl==1?'1 day left':dl+' days left';valid=`<small class="${soon?'btsoon':'mu'}">Valid till ${exp.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})} · ${left}${soon?' — contact admin to renew / रिन्यू के लिए एडमिन से बात करें':''}</small>`}
+ return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2><div class="bthd"><b>✅ Access granted</b>${valid}</div>`
+  +`<div class="btabs" role="tablist">${T.map(t=>`<div class="btab${t[0]==cur?' on':''}" role="tab" data-t="${t[0]}" onclick="btTab('${esc(id)}','${t[0]}')">${t[1]}</div>`).join('')}</div>`
+  +T.map(t=>`<div class="btp" data-t="${t[0]}"${t[0]==cur?'':' hidden'}>${panel[t[0]]()}</div>`).join(''))},
 async mycourse(){
  const bs=(await list(db.collection('batches'))).filter(b=>b.price>0);const em=auth.currentUser.email.toLowerCase();const got=[];
  if(isAdminUser())got.push(...bs);else await Promise.all(bs.map(async b=>{const code=ls.get('code_'+b.id)||'';if(!code)return;
@@ -1356,6 +1385,30 @@ function showNav(p){
  bn.style.display='flex';bn.innerHTML=items;
 }
 
+/* ---- Batch page tabs (Videos / PDFs / Mocks) — same layout as the app ---- */
+function btOpenSet(id){try{return JSON.parse(sessionStorage.getItem('bo_'+id)||'[]')}catch(e){return[]}}
+function btTab(id,t){ls.set('bt_'+id,t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
+function btInit(id){document.querySelectorAll('details.bx[open][data-k]').forEach(e=>btOpen(e,id,1))}
+async function btOpen(el,bid,silent){
+ const key=el.dataset.k+el.dataset.id;
+ if(!silent){try{let a=btOpenSet(bid);a=el.open?[...new Set([...a,key])]:a.filter(x=>x!=key);sessionStorage.setItem('bo_'+bid,JSON.stringify(a))}catch(e){}}
+ if(!el.open||el.dataset.done)return;el.dataset.done='1';
+ const body=el.querySelector('.bxb'),k=el.dataset.k,fid=el.dataset.id,none='<p class="mu" style="margin:8px 6px">Empty</p>';
+ try{
+  if(k=='v'){const v=(await list(db.collection('videos').where('folderId','==',fid))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);
+   body.innerHTML=v.length?v.map(x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/play/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">play_circle_outline</span></a>`}).join(''):none}
+  else if(k=='p'){const p=(await list(db.collection('pdfs').where('folderId','==',fid))).sort(ord);
+   body.innerHTML=p.length?p.map(x=>`<a class="card cr bxr" href="#/pdf/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:22px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):none}
+  else{const t=(await list(db.collection('mockTests').where('folderId','==',fid))).sort(ord);
+   const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
+   const sub=arr=>{const g={},u=[];arr.forEach(x=>{const n=(x.subject||'').trim();if(!n)u.push(x);else(g[n.toLowerCase()]=g[n.toLowerCase()]||{name:n,a:[]}).a.push(x)});
+    return Object.values(g).map(s=>`<details class="bx sub"><summary><span class="i">📚</span><span class="t">${esc(s.name)}<small class="mu">${s.a.length} ${s.a.length==1?'test':'tests'}</small></span><span class="material-icons ch">expand_more</span></summary><div class="bxb">${s.a.map(mrow).join('')}</div></details>`).join('')+u.map(mrow).join('')};
+   const P=t.filter(x=>sg(x)=='prelims'),M=t.filter(x=>sg(x)=='mains'),N=t.filter(x=>!sg(x));
+   const stg=(l,e,a)=>a.length?`<details class="bx sub"><summary><span class="i">${e}</span><span class="t">${l}<small class="mu">${a.length} ${a.length==1?'test':'tests'}</small></span><span class="material-icons ch">expand_more</span></summary><div class="bxb">${sub(a)}</div></details>`:'';
+   body.innerHTML=t.length?((P.length||M.length)?stg('Prelims','🎯',P)+stg('Mains','✍️',M)+sub(N):sub(t)):none}
+ }catch(e){body.innerHTML='<p class="err" style="margin:8px 6px">Load nahi hua: '+esc(e.message)+'</p>'}
+}
+
 async function route(){
  clearT();
  tsInit();TS.screenOpen=location.hash.startsWith('#/timer');tsPill();
@@ -1368,6 +1421,7 @@ async function route(){
   const body=await V[p](a,b);
   app.innerHTML=(p=='home'?'':topBar())+body;
   if(p=='home')initHome();
+  if(p=='batch'&&a)btInit(a);
   checkBell();
   if(p=='test'||p=='revmock')initTest();
   if(p=='fmq'||p=='revq')initFq();
