@@ -3,7 +3,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
 <style>
-:root{--bg:#ffffff;--card:#f4f6ff;--card2:#e8ecff;--tile:#ffffff;--navy:#000066;--tx:#0b1240;--tx70:#3a4270;--mu:#5b6385;--ac:#1a3bcc;--gold:#ffd400;--line:#c5cef5;--yel:#fff29;--bad:#d22}
+:root{--bg:#ffffff;--card:#f4f6ff;--card2:#e8ecff;--tile:#ffffff;--navy:#000066;--tx:#0b1240;--tx70:#3a4270;--mu:#5b6385;--ac:#1a3bcc;--gold:#ffd400;--line:#c5cef5;--yel:#ffff29;--bad:#d22}
 *{box-sizing:border-box}
 body{margin:0;font:15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
 a{color:var(--ac);text-decoration:none}
@@ -183,7 +183,10 @@ nav.bn a,.side a{outline:none;transition:background .15s ease,color .15s ease;bo
 nav.bn a,nav.bn a:visited,nav.bn a:focus,nav.bn a:active{color:#b4bbea}
 nav.bn a.on,nav.bn a.on:visited,nav.bn a.on:focus,nav.bn a.on:active{color:var(--yel)}
 nav.bn a:active{background:rgba(255,255,255,.14)}
-nav.bn a.on{background:rgba(255,255,255,.10)}
+nav.bn a.on{background:rgba(255,255,255,.12)}
+nav.bn a.on,nav.bn a.on *,nav.bn a:active.on *{color:#ffff29!important}
+nav.bn a:active,nav.bn a:active *{color:#ffff29}
+.side a.on *{color:#ffff29}
 nav.bn a::selection,nav.bn a *::selection,.side a::selection,.side a *::selection{background:transparent;color:inherit}
 .side a,.side a:visited,.side a:focus,.side a:active{color:#fff}
 .side a.on,.side a.on:visited,.side a.on:focus,.side a.on:active{color:var(--yel)}
