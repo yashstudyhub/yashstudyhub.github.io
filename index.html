@@ -215,6 +215,24 @@ details.bx[open]>summary{border-bottom:1px solid var(--line)}
 .bxb details.bx{background:#fff;box-shadow:none;margin:8px 0}
 .bxb details.bx>summary{padding:10px 12px}.bxb details.bx>summary .i{width:34px;height:34px;font-size:18px}
 .bxr .bth{width:64px;height:38px;object-fit:cover;border-radius:6px;flex:none}.bxr .bth.sq{width:34px;height:34px}
+/* Lists / paid batch / locked screen (App-style) */
+.subh{margin:14px 2px 6px;font-size:14px;color:var(--tx)}
+.bico{width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--card2);display:grid;place-items:center;font-size:22px;flex:none}
+details.bx>summary .bico{width:36px;height:36px;border-radius:8px;font-size:18px}
+.card.bgr{border:2px solid #2e7d32}
+.unl{color:#2e7d32;font-size:11.5px;font-weight:700;white-space:nowrap}.pr{color:var(--ac);white-space:nowrap}
+.lk{text-align:center;max-width:520px;margin:10px auto 30px}
+.lk input{display:block;margin:8px 0;text-align:left}
+.lkx{background:#fff3e0;border:1px solid #e65100;color:#e65100;border-radius:10px;padding:12px;margin-top:12px;font-size:12.5px}
+.lkp{color:var(--ac);font-weight:700;font-size:16px;margin:14px 0 0}
+.upi{margin-top:16px;border:1px solid var(--ac);background:var(--card);border-radius:12px;padding:14px;cursor:pointer}.upi b{color:var(--ac);font-size:15px}
+.how{margin-top:20px;background:var(--card);border-radius:12px;padding:16px;text-align:left}
+.stp{display:flex;gap:10px;margin-top:12px;font-size:13px}.stp small{display:block;margin-top:2px;font-size:12px}
+.stp .n{width:22px;height:22px;border-radius:50%;background:var(--gold);color:#000;font-weight:700;font-size:12px;display:grid;place-items:center;flex:none}
+.sbs{display:flex;gap:10px}.sbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;border-radius:10px;padding:10px 6px;font-size:12.5px;line-height:1.3}
+.sbtn.tg{background:#229ED9}.sbtn.gm{background:#EA4335}.sbtn .material-icons{font-size:18px}
+.who{display:flex;gap:10px;align-items:center;text-align:left;background:var(--card);border-radius:10px;padding:12px 14px;margin-top:20px}
+.lkm{color:#e65100;font-size:12px;white-space:pre-line;margin:10px 0 0}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -236,7 +254,7 @@ const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:
 const J={get:(k,d)=>{try{const v=localStorage.getItem('ysh_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('ysh_'+k,JSON.stringify(v))}catch(e){}}};
 const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const DAY=864e5;
-let cfg={appName:'Yash Study Hub',tagline:'COMPETITIVE EXAM PREP',telegramUrl:'https://t.me/YashStudyHub',paymentTelegramUrl:'https://t.me/YSHinfo',whatsappUrl:'https://whatsapp.com/channel/0029VbCnzSvKmCPLxoMBuk33',youtubeUrl:'https://www.youtube.com/c/YashStudyHub',upiId:'yshpay@upi'};
+let cfg={appName:'Yash Study Hub',tagline:'COMPETITIVE EXAM PREP',telegramUrl:'https://t.me/YashStudyHub',paymentTelegramUrl:'https://t.me/YSHinfo',whatsappUrl:'https://whatsapp.com/channel/0029VbCnzSvKmCPLxoMBuk33',youtubeUrl:'https://www.youtube.com/c/YashStudyHub',upiId:'yshpay@upi',paymentEmail:'officialteamysh@gmail.com'};
 let lang='hi',timers=[];
 const clearT=()=>{timers.forEach(clearInterval);timers=[]};
 const tile=(h,i,t,s='')=>`<a class="card" href="#/${h}"><div class="i">${i}</div><b>${esc(t)}</b><small>${esc(s)}</small></a>`;
@@ -759,23 +777,36 @@ async home(){
  +`</div>`},
 async videos(){
  const [f,v]=await Promise.all([list(db.collection('videoFolders').where('batchId','==','free')),list(db.collection('videos').where('batchId','==',null))]);
- f.sort(ord);const vs=v.filter(x=>!x.hidden&&yid(x.youtubeLink)).sort((a,b)=>(b.publishedAt?.seconds||b.createdAt?.seconds||0)-(a.publishedAt?.seconds||a.createdAt?.seconds||0));
- return wrap(`<h2 class="pageTitle">Video Classes</h2>`+(f.length?'<div class="grid">'+f.map(x=>tile('vf/'+x.id,'📁',x.name)).join('')+'</div>':'')+(vs.length?`<h2 class="pageTitle">Latest</h2><div class="grid">`+vs.slice(0,40).map(vcard).join('')+'</div>':f.length?'':empty))},
-async vf(id){const v=(await list(db.collection('videos').where('folderId','==',id))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?'<div class="grid">'+v.map(vcard).join('')+'</div>':empty))},
+ f.sort(ord);const nw=x=>x.publishedAt?.seconds||x.createdAt?.seconds||0;
+ const ok=v.filter(x=>!x.hidden&&yid(x.youtubeLink)&&!x.folderId).sort((a,b)=>nw(b)-nw(a));
+ const auto=ok.filter(x=>x.source=='youtube_auto').slice(0,10),loose=ok.filter(x=>x.source!='youtube_auto'),vs=[...loose,...auto].sort((a,b)=>nw(b)-nw(a));
+ const cnt=await Promise.all(f.map(x=>db.collection('videos').where('folderId','==',x.id).get().then(r=>r.docs.filter(d=>!d.data().hidden).length).catch(()=>null)));
+ return wrap(`<h2 class="pageTitle">Video Classes</h2>`+(f.length?f.map((x,i)=>lrow('vf/'+x.id,'📁',x.name,cnt[i]==null?'':cnt[i]+(cnt[i]==1?' video':' videos'))).join(''):'')+(f.length&&vs.length?'<h3 class="subh">Videos</h3>':'')+vs.map(vrow).join('')+(f.length||vs.length?'':empty))},
+async vf(id){const v=(await list(db.collection('videos').where('folderId','==',id))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?v.map(vrow).join(''):'<p class="mu">No video in this folder yet / इस फ़ोल्डर में अभी कोई वीडियो नहीं है।</p>'))},
 async play(id,t){return wrap(back+`<h2 class="pageTitle">${esc(decodeURIComponent(t||''))}</h2><iframe class="v" src="https://www.youtube.com/embed/${esc(id)}?autoplay=1&rel=0&cc_load_policy=1&playsinline=1" allow="accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe><a class="btnlink" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in YouTube</a>`)},
-async pdfs(){const f=(await list(db.collection('pdfFolders').where('type','==','free'))).sort(ord);return wrap(`<h2 class="pageTitle">PDF Library</h2>`+(f.length?'<div class="grid">'+f.map(x=>tile('pf/'+x.id,'📁',x.name)).join('')+'</div>':empty))},
-async pf(id){const p=(await list(db.collection('pdfs').where('folderId','==',id))).sort(ord);return wrap(back+(p.length?'<div class="grid">'+p.map(x=>tile('pdf/'+encodeURIComponent(x.driveLink)+'/'+encodeURIComponent(x.title),'📄',x.title)).join('')+'</div>':empty))},
-async pdf(l,t){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/),id=m&&(m[1]||m[2]);
+async pdfs(){
+ let cur=ls.get('pt')=='paid'?'paid':'free';
+ const [f,bs]=await Promise.all([list(db.collection('pdfFolders').where('type','==','free')),list(db.collection('batches'))]);f.sort(ord);bs.sort(ord);
+ const free=f.length?f.map(x=>lrow('pf/'+x.id,'📁',x.name)).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No free folders yet.</p>';
+ const paid=bs.length?bs.map(b=>`<details class="bx" data-b="${esc(b.id)}" ontoggle="ppOpen(this)"><summary>${bico(b)}<span class="t">${esc(b.title)}</span><span class="material-icons ch">expand_more</span></summary><div class="bxb"><p class="mu" style="margin:8px 6px">Loading…</p></div></details>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>';
+ return wrap(`<h2 class="pageTitle">PDF Library</h2><div class="btabs" role="tablist"><div class="btab${cur=='free'?' on':''}" data-t="free" onclick="ppTab('free')">Free</div><div class="btab${cur=='paid'?' on':''}" data-t="paid" onclick="ppTab('paid')">Paid Batch</div></div><div class="btp" data-t="free"${cur=='free'?'':' hidden'}>${free}</div><div class="btp" data-t="paid"${cur=='paid'?'':' hidden'}>${paid}</div>`)},
+async pf(id){const [fd,p]=await Promise.all([db.doc('pdfFolders/'+id).get().catch(()=>null),list(db.collection('pdfs').where('folderId','==',id))]);p.sort(ord);
+ const batch=fd&&fd.exists&&fd.data().type=='batch';
+ return wrap(back+(fd&&fd.exists?`<h2 class="pageTitle">${esc(fd.data().name)}</h2>`:'')+(p.length?p.map(x=>prow(x,batch)).join(''):'<p class="mu">No PDF in this folder yet / इस फ़ोल्डर में अभी कोई PDF नहीं है।</p>'))},
+async pdf(l,t,ext=true){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/),id=m&&(m[1]||m[2]);
  const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u);
  const dl=id?`https://drive.google.com/uc?export=download&id=${id}`:u;
- return wrap(`<h2 class="pageTitle">${esc(decodeURIComponent(t||'PDF'))}</h2><div class="pdfbar"><a href="javascript:history.back()"><span class="material-icons">arrow_back</span>Back</a><a href="javascript:void 0" onclick="document.getElementById('pdfv').src=document.getElementById('pdfv').src"><span class="material-icons">refresh</span>Reload</a><a href="${esc(u)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in browser</a><a href="${esc(dl)}" target="_blank" rel="noopener"><span class="material-icons">download</span>Download</a></div>
+ return wrap(`<h2 class="pageTitle">${esc(decodeURIComponent(t||'PDF'))}</h2><div class="pdfbar"><a href="javascript:history.back()"><span class="material-icons">arrow_back</span>Back</a><a href="javascript:void 0" onclick="document.getElementById('pdfv').src=document.getElementById('pdfv').src"><span class="material-icons">refresh</span>Reload</a>`+(ext?`<a href="${esc(u)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in browser</a><a href="${esc(dl)}" target="_blank" rel="noopener"><span class="material-icons">download</span>Download</a>`:'')+`</div>
  <iframe id="pdfv" class="pdf" src="${esc(src)}"></iframe>`)},
-async batches(){const b=(await list(db.collection('batches'))).sort(ord);return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(b.length?'<div class="grid">'+b.map(x=>tile('batch/'+x.id,'🎓',x.title,x.price>0?'₹'+x.price:'Free')).join('')+'</div>':empty))},
+async pdfb(l,t){return this.pdf(l,t,false)},
+async batches(){const bs=(await list(db.collection('batches'))).sort(ord),g=await bgranted(bs);
+ const row=b=>{const on=g.has(b.id);return `<a class="card cr${on?' bgr':''}" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span>${on?'<span class="unl">✅ Unlocked</span>':'<b class="pr">₹'+esc(b.price)+'</b>'}</a>`};
+ return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(bs.length?[...bs.filter(b=>g.has(b.id)),...bs.filter(b=>!g.has(b.id))].map(row).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>'))},
 async batch(id){
- const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data(),em=auth.currentUser.email.toLowerCase();let exp=null;
- if(b.price>0&&!isAdminUser()){let ok=false,msg='';const code=ls.get('code_'+id)||'';
-  if(code)try{const a=(await db.doc(`batchAccess/${em}_${id}`).get()).data();ok=a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date());if(ok&&a.expiresAt)exp=a.expiresAt.toDate();if(!ok)msg='Code galat ya expire ho gaya'}catch(e){msg='Access expire / not found'}
-  if(!ok)return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2><p>Price: ₹${b.price} · UPI: ${esc(cfg.upiId)}</p><p class="mu">Payment ke baad Telegram par screenshot bhejo, access code milega.</p><a class="card" href="${esc(cfg.paymentTelegramUrl)}" target="_blank" rel="noopener">Payment / Request on Telegram ↗</a><input id="c" placeholder="Access code"><p class="err">${msg}</p><button class="p" onclick="ls.set('code_${id}',document.getElementById('c').value.trim());route()">Unlock</button>`)}
+ const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data();let exp=null;
+ if(b.price>0&&!isAdminUser()){const r=await bchk(id,ls.get('code_'+id)||'');
+  if(!r.granted)return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2>`+lockedView(b,id,r));
+  exp=r.exp||null}
  const mo=b.mockOnly===true;
  const [vf,pf,mf]=await Promise.all([mo?[]:list(db.collection('videoFolders').where('batchId','==',id)),mo?[]:list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('mockTestFolders').where('batchIds','array-contains',id))]);
  vf.sort(ord);pf.sort(ord);mf.sort(ord);
@@ -789,10 +820,8 @@ async batch(id){
   +`<div class="btabs" role="tablist">${T.map(t=>`<div class="btab${t[0]==cur?' on':''}" role="tab" data-t="${t[0]}" onclick="btTab('${esc(id)}','${t[0]}')">${t[1]}</div>`).join('')}</div>`
   +T.map(t=>`<div class="btp" data-t="${t[0]}"${t[0]==cur?'':' hidden'}>${panel[t[0]]()}</div>`).join(''))},
 async mycourse(){
- const bs=(await list(db.collection('batches'))).filter(b=>b.price>0);const em=auth.currentUser.email.toLowerCase();const got=[];
- if(isAdminUser())got.push(...bs);else await Promise.all(bs.map(async b=>{const code=ls.get('code_'+b.id)||'';if(!code)return;
-  try{const a=(await db.doc(`batchAccess/${em}_${b.id}`).get()).data();if(a&&a.status=='granted'&&String(a.accessCode||'').trim()==code&&(!a.expiresAt||a.expiresAt.toDate()>new Date()))got.push(b)}catch(e){}}));
- return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?'<div class="grid">'+got.map(b=>tile('batch/'+b.id,'🎓',b.title)).join('')+'</div>':'<p class="mu">Abhi koi course unlock nahi hai. Paid Batches me jaakar access code daalein.</p>'))},
+ const bs=(await list(db.collection('batches'))).filter(b=>b.price>0).sort(ord),g=await bgranted(bs),got=bs.filter(b=>g.has(b.id));
+ return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?got.map(b=>`<a class="card cr" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span><span style="font-size:16px">✅</span></a>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No active course yet. Buy a batch from Paid Batches.<br>अभी कोई एक्टिव कोर्स नहीं है। Paid Batches से बैच खरीदें।</p>'))},
 async queries(){
  const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
  return wrap(`<h2 class="pageTitle">Queries / सवाल</h2><div class="card"><textarea id="qt2" rows="3" placeholder="Apna doubt yahan likhein / Write your doubt"></textarea><button class="p" onclick="sendQ()">Send / भेजें</button></div>`
@@ -1385,6 +1414,79 @@ function showNav(p){
  bn.style.display='flex';bn.innerHTML=items;
 }
 
+/* ---- Paid batch access / list helpers (same rules as the app) ---- */
+const monthsText=n=>n==1?'1 month':n+' months';
+const bsub=b=>(b.mockOnly?'Mock Test Series':(+b.videos||0)+' videos • '+(+b.pdfs||0)+' PDFs')+((+b.validityMonths||0)>0?' • Valid for '+monthsText(+b.validityMonths):'');
+const bico=b=>b.iconUrl?`<img class="bico" src="${esc(b.iconUrl)}" alt="" onerror="this.outerHTML='<span class=&quot;bico&quot;>🎓</span>'">`:'<span class="bico">🎓</span>';
+const vrow=x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/play/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span></a>`};
+const prow=(x,batch)=>`<a class="card cr bxr" href="#/${batch?'pdfb':'pdf'}/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:24px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`;
+async function bchk(id,code){
+ const em=String(auth.currentUser.email||'').trim().toLowerCase();
+ try{const sn=await db.doc(`batchAccess/${em}_${id}`).get(),a=sn.exists?sn.data():null;
+  if(!a||a.status!='granted')return{};
+  if(a.codeRequired!==false){const sc=String(a.accessCode||'').trim();if(!sc||sc!=String(code||'').trim())return{}}
+  const exp=a.expiresAt?a.expiresAt.toDate():null;
+  if(exp&&new Date()>=exp)return{expired:true,exp};
+  return{granted:true,exp}
+ }catch(e){if(e&&e.code=='permission-denied')return{expired:true};throw e}}
+async function bgranted(bs){const g=new Set();if(isAdminUser()){bs.forEach(b=>g.add(b.id));return g}
+ await Promise.all(bs.map(async b=>{try{const r=await bchk(b.id,ls.get('code_'+b.id)||'');if(r.granted)g.add(b.id)}catch(e){}}));return g}
+const fmD=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+function lockedView(b,id,r){
+ const u=auth.currentUser,price=b.price,vm=+b.validityMonths||0,sid=esc(id);
+ const stp=(n,en,hi)=>`<div class="stp"><span class="n">${n}</span><div><div>${en}</div><small class="mu">${hi}</small></div></div>`;
+ const exTxt=r&&r.expired?(r.exp?`⏰ Your access ended on ${fmD(r.exp)}. Renew below to unlock again. / आपका एक्सेस ${fmD(r.exp)} को खत्म हो गया। दोबारा अनलॉक करने के लिए नीचे रिन्यू करें।`:'⏰ Your access to this batch has ended. Renew below to unlock again. / इस बैच का आपका एक्सेस खत्म हो गया। दोबारा अनलॉक करने के लिए नीचे रिन्यू करें।'):'';
+ setTimeout(()=>{db.doc('students/'+u.uid).get().then(x=>{const n=(x.data()||{}).name;const e=document.getElementById('lkn');if(e&&n)e.textContent=n}).catch(()=>{})},0);
+ return `<div class="lk"><div style="font-size:40px">🔒</div><b style="font-size:16px">This batch is locked</b><div class="mu" style="font-size:13px">यह बैच लॉक है</div>`
+ +(exTxt?`<div class="lkx">${exTxt}</div>`:'')
+ +`<p class="lkp">Amount to pay / भुगतान की राशि: ₹${esc(price)}</p>`
+ +(vm>0?`<p class="mu" style="margin:6px 0 0;font-size:13px">Validity / वैधता: ${monthsText(vm)}</p>`:'')
+ +`<div class="upi" onclick="bUpi('${sid}')"><small class="mu">UPI ID · tap to copy / कॉपी करने के लिए टैप करें</small><div><b id="upiid">${esc(cfg.upiId)}</b> 📋</div></div>`
+ +`<div class="how"><b style="color:var(--ac)">How to unlock / अनलॉक कैसे करें</b>`
+ +stp(1,'Tap the UPI ID above to copy it.','ऊपर UPI ID पर टैप करके कॉपी करें।')
+ +stp(2,`Paste it in your payment app (GPay / PhonePe / Paytm) and pay ₹${esc(price)}.`,`अपने पेमेंट ऐप में पेस्ट करके ₹${esc(price)} का भुगतान करें।`)
+ +stp(3,'Send your payment slip screenshot on Telegram / Gmail — any one method is enough.','अपनी पेमेंट स्लिप का स्क्रीनशॉट Telegram / Gmail में से किसी एक तरीके से भेजें।')
+ +stp(4,'Admin will verify it and share your access code. Come back here, enter the code below and tap "Check Access".','Admin verify करके आपको access code भेजेगा। यहाँ वापस आकर नीचे code डालें और "Check Access" दबाएँ।')
+ +`</div><p class="mu" style="font-size:12px;margin:14px 0 8px">Send screenshot via any one / किसी एक से स्क्रीनशॉट भेजें</p>`
+ +`<div class="sbs"><a class="sbtn tg" href="${esc(cfg.paymentTelegramUrl)}" target="_blank" rel="noopener"><span class="material-icons">send</span><span>Telegram<br>Telegram पर भेजें</span></a><a class="sbtn gm" href="#" onclick="return bMail('${sid}')"><span class="material-icons">email</span><span>Gmail<br>Gmail पर भेजें</span></a></div>`
+ +`<p class="mu" style="font-size:11px;margin:8px 0 0">No Telegram? Email it to / Telegram नहीं है तो ईमेल करें:<br>${esc(cfg.paymentEmail)}</p>`
+ +`<div class="who"><span class="material-icons" style="color:var(--ac)">person</span><div><b id="lkn" style="font-size:13px">Student</b><br><small class="mu">${esc(u.email)}</small></div></div>`
+ +`<p class="mu" style="font-size:11px;margin:6px 0 10px">Pay with this email — access unlocks on this account automatically. / इसी ईमेल से भुगतान करें — एक्सेस अपने आप इस अकाउंट पर अनलॉक हो जाएगा।</p>`
+ +`<input id="lkph" type="tel" placeholder="WhatsApp number (optional) — so admin can send your code">`
+ +`<input id="lkc" placeholder="Access code (optional) / एक्सेस कोड (ज़रूरी नहीं)" value="${r&&r.expired?'':esc(ls.get('code_'+id)||'')}">`
+ +`<button class="p" id="lkb" onclick="bCheck('${sid}')" style="margin-top:6px">Check Access</button><p class="lkm" id="lkm"></p></div>`}
+function bUpi(){const t=cfg.upiId;const done=()=>toast('UPI ID copied! Paste it in your payment app and pay. / UPI ID कॉपी हो गई!');
+ try{navigator.clipboard.writeText(t).then(done,()=>{window.prompt('Copy UPI ID',t)})}catch(e){window.prompt('Copy UPI ID',t)}}
+function bMail(id){db.doc('batches/'+id).get().then(d=>{const b=d.data()||{},ph=(document.getElementById('lkph')||{}).value||'',nm=(document.getElementById('lkn')||{}).textContent||'-';
+ const sub='Payment screenshot - '+b.title,body='Hello Admin,\n\nI have paid for this batch. My payment screenshot is attached.\n\nBatch: '+b.title+'\nAmount: ₹'+b.price+'\nName: '+(nm=='Student'?'-':nm)+'\nEmail (web account): '+auth.currentUser.email+'\nWhatsApp: '+(ph.trim()||'-')+'\n\nPlease share my access code. Thank you.';
+ location.href='mailto:'+cfg.paymentEmail+'?subject='+encodeURIComponent(sub)+'&body='+encodeURIComponent(body)});return false}
+async function bCheck(id){
+ const btn=document.getElementById('lkb'),msg=document.getElementById('lkm'),code=document.getElementById('lkc').value.trim(),ph=document.getElementById('lkph').value.trim();
+ if(btn.disabled)return;btn.disabled=true;msg.textContent='';
+ try{const r=await bchk(id,code);
+  if(r.granted){ls.set('code_'+id,code);route();return}
+  if(r.expired&&code){document.getElementById('lkc').value='';msg.textContent='Your access has expired. To renew: pay again, send the screenshot on Telegram / Gmail, then tap "Check Access" with the code box empty. / एक्सेस खत्म हो गया। रिन्यू करने के लिए दोबारा भुगतान करें, स्क्रीनशॉट Telegram / Gmail पर भेजें, फिर कोड बॉक्स खाली रखकर "Check Access" दबाएँ।';return}
+  if(!code){let t='Request sent — send your payment screenshot on Telegram / Gmail so admin can verify. / रिक्वेस्ट भेज दी गई — वेरिफ़ाई के लिए अपनी पेमेंट का स्क्रीनशॉट Telegram / Gmail पर भेजें।';
+   try{const d=await db.doc('batches/'+id).get(),n=((await db.doc('students/'+auth.currentUser.uid).get()).data()||{}).name||'',em=auth.currentUser.email.trim().toLowerCase();
+    await Promise.race([db.collection('accessRequests').doc(em+'_'+id).set({studentName:String(n).trim(),studentEmail:em,studentPhone:ph,batchId:id,batchTitle:(d.data()||{}).title||'',status:'pending',requestedAt:firebase.firestore.FieldValue.serverTimestamp()}),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))])}
+   catch(e){t=e.message=='timeout'?'Request saved — it will be sent as soon as you are back online. / रिक्वेस्ट सेव हो गई — ऑनलाइन आते ही भेज दी जाएगी।':'Request could not be sent: '+e.message}
+   toast(t.split(' / ')[0]);msg.textContent=t+'\n\nAfter payment, admin will give you an access code — enter that too. / भुगतान के बाद एडमिन आपको एक्सेस कोड देगा — उसे भी यहाँ डालें।'}
+  else msg.textContent='Code didn’t match. Confirm your code with the admin, or wait a bit if it hasn’t been granted yet. / कोड मैच नहीं हुआ। एडमिन से कन्फ़र्म करें, या अगर अभी तक एक्सेस नहीं मिला है तो थोड़ा इंतज़ार करें।'
+ }catch(e){msg.textContent='Something went wrong. Please check your internet connection and try again.'}
+ finally{btn.disabled=false}}
+/* PDF Library: Free | Paid Batch tabs */
+function ppTab(t){ls.set('pt',t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
+async function ppOpen(el){if(!el.open||el.dataset.done)return;el.dataset.done='1';const id=el.dataset.b,body=el.querySelector('.bxb');
+ try{const [a,c]=await Promise.all([list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('pdfFolders').where('batchId','==',id))]);
+  const m={};[...a,...c].forEach(x=>m[x.id]=x);const f=Object.values(m).sort(ord);
+  body.innerHTML=f.length?f.map(x=>`<a class="card cr bxr" href="javascript:void 0" onclick="ppFolder('${esc(id)}','${esc(x.id)}')"><span style="font-size:22px">📁</span><span style="flex:1"><b>${esc(x.name)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):'<p class="mu" style="margin:8px 6px">No folder in this batch yet</p>'}
+ catch(e){body.innerHTML='<p class="err" style="margin:8px 6px">Couldn\'t load folders.</p>'}}
+async function ppFolder(bid,fid){
+ try{if(!isAdminUser()){const r=await bchk(bid,ls.get('code_'+bid)||'');
+   if(!r.granted){toast(r.expired?'Your access to this batch has expired — renew it under Paid Batches. / एक्सेस खत्म हो गया — Paid Batches में रिन्यू करें।':'This batch is locked — unlock it first (under Paid Batches).');return}}
+  location.hash='#/pf/'+fid}
+ catch(e){toast("Couldn't verify your access. Check your internet connection and try again.")}}
+
 /* ---- Batch page tabs (Videos / PDFs / Mocks) — same layout as the app ---- */
 function btOpenSet(id){try{return JSON.parse(sessionStorage.getItem('bo_'+id)||'[]')}catch(e){return[]}}
 function btTab(id,t){ls.set('bt_'+id,t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
@@ -1398,7 +1500,7 @@ async function btOpen(el,bid,silent){
   if(k=='v'){const v=(await list(db.collection('videos').where('folderId','==',fid))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);
    body.innerHTML=v.length?v.map(x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/play/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">play_circle_outline</span></a>`}).join(''):none}
   else if(k=='p'){const p=(await list(db.collection('pdfs').where('folderId','==',fid))).sort(ord);
-   body.innerHTML=p.length?p.map(x=>`<a class="card cr bxr" href="#/pdf/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:22px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):none}
+   body.innerHTML=p.length?p.map(x=>`<a class="card cr bxr" href="#/pdfb/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:22px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):none}
   else{const t=(await list(db.collection('mockTests').where('folderId','==',fid))).sort(ord);
    const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
    const sub=arr=>{const g={},u=[];arr.forEach(x=>{const n=(x.subject||'').trim();if(!n)u.push(x);else(g[n.toLowerCase()]=g[n.toLowerCase()]||{name:n,a:[]}).a.push(x)});
