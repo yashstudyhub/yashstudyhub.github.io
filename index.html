@@ -233,6 +233,14 @@ details.bx>summary .bico{width:36px;height:36px;border-radius:8px;font-size:18px
 .sbtn.tg{background:#229ED9}.sbtn.gm{background:#EA4335}.sbtn .material-icons{font-size:18px}
 .who{display:flex;gap:10px;align-items:center;text-align:left;background:var(--card);border-radius:10px;padding:12px 14px;margin-top:20px}
 .lkm{color:#e65100;font-size:12px;white-space:pre-line;margin:10px 0 0}
+/* News / queries / profile (App-style) */
+.nimg{width:50px;height:50px;border-radius:6px;object-fit:cover;background:var(--card2);display:grid;place-items:center;font-size:24px;flex:none}
+.qrep{margin-top:10px;padding:10px;border-radius:10px;background:#fff9d6;border:1px solid #1a3bcc4d}
+.qrep>b{color:var(--ac);font-size:11px;display:block;margin-bottom:4px}
+.pfm label{display:block;margin-top:12px;font-size:12.5px;color:var(--mu)}
+.pfm label input,.pfm label select{display:block;width:100%;margin-top:4px;color:var(--tx);font-size:15px}
+.pfm label[hidden]{display:none}
+textarea#qt2{display:block;width:100%;margin:8px 0 0;font-size:13.5px;resize:vertical}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -823,13 +831,22 @@ async mycourse(){
  const bs=(await list(db.collection('batches'))).filter(b=>b.price>0).sort(ord),g=await bgranted(bs),got=bs.filter(b=>g.has(b.id));
  return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?got.map(b=>`<a class="card cr" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span><span style="font-size:16px">✅</span></a>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No active course yet. Buy a batch from Paid Batches.<br>अभी कोई एक्टिव कोर्स नहीं है। Paid Batches से बैच खरीदें।</p>'))},
 async queries(){
- const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
- return wrap(`<h2 class="pageTitle">Queries / सवाल</h2><div class="card"><textarea id="qt2" rows="3" placeholder="Apna doubt yahan likhein / Write your doubt"></textarea><button class="p" onclick="sendQ()">Send / भेजें</button></div>`
- +q.map(x=>`<div class="card"><div>${esc(x.text)}</div>${x.reply?`<div class="rep"><b>Reply / जवाब:</b> ${esc(x.reply)}</div>`:'<small class="mu">Abhi jawab nahi aaya</small>'}</div>`).join(''))},
+ const now=Date.now(),when=x=>x.createdAt&&x.createdAt.toDate?x.createdAt.toDate().getTime():now;
+ const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()}))
+  .filter(x=>Math.floor((now-when(x))/864e5)<QDAYS).sort((a,b)=>when(b)-when(a));
+ window.QPEND=q.filter(x=>!String(x.reply||'').trim()).length;
+ const card=x=>{const ans=!!String(x.reply||'').trim(),dl=Math.max(0,QDAYS-Math.floor((now-when(x))/864e5)),dt=new Date(when(x)).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
+  return `<div class="card"><div class="row" style="justify-content:space-between;margin:0"><b style="font-size:11.5px;color:${ans?'#2e7d32':'#b26a00'}">${ans?'✅ Replied / जवाब आया':'⏳ Pending / लंबित'}</b><small class="mu" style="font-size:11px">${esc(dt)}</small></div><div style="margin-top:8px;font-size:13.5px;white-space:pre-line">${esc(x.text)}</div>${ans?`<div class="qrep"><b>Reply / जवाब</b><div style="font-size:13px;white-space:pre-line">${esc(x.reply)}</div></div>`:''}<small class="mu" style="display:block;margin-top:8px;font-size:10.5px">Deletes in ${dl} days / ${dl} दिन बाद डिलीट</small></div>`};
+ return wrap(`<h2 class="pageTitle">Queries / सवाल</h2><div class="card"><b style="font-size:14px">Write your doubt / अपना डाउट लिखें</b><textarea id="qt2" rows="4" oninput="qCount()" placeholder="Type your question here... / यहाँ अपना सवाल लिखें..."></textarea><div class="row" style="justify-content:space-between;margin:6px 0 0"><span id="qwc" class="mu" style="font-size:12px">0 / ${QMAX} words (शब्द)</span><button class="p" id="qsb" onclick="sendQ()" disabled>Send / भेजें</button></div></div>`
+  +`<p class="mu" style="font-size:11px;margin:6px 2px 10px">Doubts are deleted automatically after ${QDAYS} days.<br>डाउट ${QDAYS} दिन बाद अपने आप डिलीट हो जाते हैं।</p><h3 class="subh" style="font-size:15px">My Queries / मेरे डाउट</h3>`
+  +(q.length?q.map(card).join(''):'<p class="mu" style="text-align:center;margin:22px 0">You have not sent any doubt yet.<br>आपने अभी कोई डाउट नहीं भेजा है।</p>'))},
 async notifications(){J.set('notifSeen',Date.now());
  const cut=firebase.firestore.Timestamp.fromDate(new Date(Date.now()-DAY));
- const s=await db.collection('notifications').where('sentAt','>',cut).orderBy('sentAt','desc').limit(50).get();
- return wrap(`<h2 class="pageTitle">Notifications / सूचनाएं</h2>`+(s.docs.length?s.docs.map(d=>{const x=d.data();const t=x.sentAt?.toDate?x.sentAt.toDate().toLocaleString('en-IN'):'';return `<div class="card"><b>${esc(x.title)}</b><div>${esc(x.body)}</div><small class="mu">${esc(t)}</small></div>`}).join(''):'<p class="mu">Pichhle 1 din me koi notification nahi hai.</p>'))},
+ const [sn,me]=await Promise.all([db.collection('notifications').where('sentAt','>',cut).orderBy('sentAt','desc').limit(50).get(),db.doc('students/'+auth.currentUser.uid).get().then(x=>x.data()||{}).catch(()=>({}))]);
+ const mine=Array.isArray(me.exams)?me.exams:[];
+ const items=sn.docs.map(d=>d.data()).filter(x=>!mine.length||!x.topic||mine.includes(x.topic));
+ return wrap(`<h2 class="pageTitle">Notifications / सूचनाएं</h2>`+(items.length?items.map(x=>{const tg=EXAMT.find(e=>e[0]==x.topic),dt=x.sentAt?.toDate?x.sentAt.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+  return `<div class="card cr" style="align-items:flex-start"><span style="font-size:22px">🔔</span><span style="flex:1;min-width:0"><b>${esc(x.title)}</b>${tg?`<br><small class="cat" style="margin-top:2px">🎯 ${esc(tg[2])}</small>`:''}<br><span class="mu">${esc(x.body)}</span></span><small class="mu" style="font-size:10px;white-space:nowrap">${esc(dt)}</small></div>`}).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No notifications yet</p>'))},
 async quiz(day){
  const days=[...Array(7)].map((_,i)=>dayKey(new Date(Date.now()-i*DAY)));const d=day||days[0];
  const dq=await db.doc('dailyCA/quiz_'+d).get().then(x=>x.data()?.questions||[]).catch(()=>[]);
@@ -851,13 +868,14 @@ async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
  +(()=>{const w=Object.entries(subj).map(([k,v])=>({k,a:v.c+v.w,p:(v.c+v.w)?v.c/(v.c+v.w)*100:0})).filter(x=>x.a>=5).sort((a,b)=>a.p-b.p)[0];return w?`<div class="card">💡 Weakest: <b>${esc(w.k)}</b> (${Math.round(w.p)}%). Practice this more.<br><span class="mu">सबसे कमज़ोर: ${esc(w.k)}। इसमें ज़्यादा अभ्यास करें।</span></div>`:''})())},
 async news(c){const all=['banking','ssc','up_state','sports','technology','space','defence'];
  const n=await list(db.collection('newsItems').where('category','in',c?[c]:all).orderBy('pubDate','desc').limit(30));
- return wrap(`<h2 class="pageTitle">News</h2><p><a href="#/news">All</a>${all.map(x=>` · <a href="#/news/${x}">${x}</a>`).join('')}</p>`+(n.length?n.map(x=>`<a class="card" href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small class="mu">${esc(x.categoryLabel)}</small></a>`).join(''):empty))},
+ const lb=x=>({up_state:'UP State',ssc:'SSC'})[x]||x[0].toUpperCase()+x.slice(1);
+ return wrap(`<h2 class="pageTitle">News</h2><div class="chips"><a class="chip ${c?'':'on'}" href="#/news">All</a>${all.map(x=>`<a class="chip ${c==x?'on':''}" href="#/news/${x}">${lb(x)}</a>`).join('')}</div>`+(n.length?n.map(nrow).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No news yet — please check back later</p>'))},
 async ca(){
  const CAS=window.CAS=window.CAS||{mode:'daily',day:-1,topic:'all',lang:'both'};
  const head=`<h2 class="pageTitle">Current Affairs / करेंट अफेयर्स</h2><div class="modes"><button class="${CAS.mode=='daily'?'p':'s'}" onclick="caSet('mode','daily')">Daily One-Liners</button><button class="${CAS.mode=='news'?'p':'s'}" onclick="caSet('mode','news')">News</button></div>`;
  if(CAS.mode=='news'){
   const n=await list(db.collection('newsItems').where('category','in',['national','hindi_news','hindi_ca']).orderBy('pubDate','desc').limit(30));
-  return wrap(head+(n.length?n.map(x=>`<a class="card" href="${esc(x.link)}" target="_blank" rel="noopener"><b>${esc(x.title)}</b><small class="cat">${esc(x.categoryLabel)}</small></a>`).join(''):'<p class="mu">No news yet — please check back later</p>'));
+  return wrap(head+(n.length?n.map(nrow).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No news yet — please check back later</p>'));
  }
  const days=[...Array(7)].map((_,i)=>{const d=new Date(Date.now()+19800000-i*DAY);const key=`${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;return {key,label:i==0?'Today':i==1?'Yesterday':`${String(d.getUTCDate()).padStart(2,'0')} ${MON[d.getUTCMonth()]}`}});
  const datas=await Promise.all(days.map(d=>db.doc('dailyCA/'+d.key).get().then(x=>x.data()?.items||[]).catch(()=>[])));
@@ -894,11 +912,21 @@ async board(id){const s=await db.collection('mockScores').doc(id).collection('sc
  const row=(r,i)=>`<div class="card" style="${r.uid==me?'border-color:var(--gold);background:#fff8d6':''}"><b>#${i+1}</b> ${r.uid==me?'(You)':'Student'} — <b>${r.score}</b> marks · ${Math.floor(r.timeSec/60)}m ${r.timeSec%60}s</div>`;
  return wrap(back+`<h2 class="pageTitle">Leaderboard / लीडरबोर्ड</h2>`+(rows.length?rows.slice(0,20).map(row).join('')+(my>=20?`<p class="mu">Aapka rank: #${my+1}</p>`:''):empty))},
 async profile(){const d=await db.doc('students/'+auth.currentUser.uid).get().then(x=>x.data()||{}).catch(()=>({}));const ex=J.get('exam',null),g=goalVal();
- return wrap(`<h2 class="pageTitle">Profile</h2><div class="card"><b>${esc(d.name||'')}</b><br><span class="mu">${esc(auth.currentUser.email)}</span></div>
- <div class="card"><b>Naam badlein</b><input id="pn" value="${esc(d.name||'')}" placeholder="Naam"><button class="p" onclick="saveName()">Save</button></div>
+ const known=QUALS.includes(d.qualification),qs=d.qualification?(known?d.qualification:'Other'):'',qo=known?'':(d.qualification||''),mine=Array.isArray(d.exams)?d.exams:[];
+ const opt=(a,v)=>'<option value="">Select</option>'+a.map(x=>`<option ${x==v?'selected':''}>${esc(x)}</option>`).join('');
+ return wrap(`<h2 class="pageTitle">My Profile</h2><div class="card pfm"><p class="mu" style="text-align:center;margin:0 0 6px;font-size:12.5px">${esc(auth.currentUser.email)}</p>
+ <label>Full Name *<input id="pn" value="${esc(d.name||'')}" autocomplete="name"></label>
+ <label>State *<select id="pst">${opt(STATES,d.state)}</select></label>
+ <label>District *<input id="pdi" value="${esc(d.district||'')}"></label>
+ <label>Gender *<select id="pge">${opt(['Male','Female','Other'],d.gender)}</select></label>
+ <label>Qualification *<select id="pqu" onchange="document.getElementById('pqo').hidden=this.value!='Other'">${opt(QUALS,qs)}</select></label>
+ <label id="pqo"${qs=='Other'?'':' hidden'}>Please specify<input id="pqx" value="${esc(qo)}"></label>
+ <b style="display:block;margin-top:14px">Your exam(s) / आपकी परीक्षा</b><small class="mu">You will get notifications for these exams only. / आपको इन्हीं परीक्षाओं की नोटिफ़िकेशन मिलेंगी।</small>
+ <div class="chips" id="pex" style="margin-top:8px">${EXAMT.map(e=>`<a class="chip ${mine.includes(e[0])?'on':''}" data-x="${e[0]}" onclick="this.classList.toggle('on')">${e[1]} ${e[2]}</a>`).join('')}</div>
+ <p class="err" id="pe" style="text-align:center;margin:8px 0 0"></p><button class="p" id="psb" onclick="saveProfile()" style="width:100%;margin-top:10px">Save Changes</button></div>
  <div class="card"><b>Exam countdown</b><input id="en" placeholder="Exam ka naam" value="${esc(ex?.name||'')}"><input id="ed" type="date" value="${esc(ex?.date||'')}"><div class="row"><button class="p" onclick="saveExam()">Save</button><button class="s" onclick="J.set('exam',null);route()">Remove</button></div></div>
  <div class="card"><b>Daily goal (questions)</b><select id="gl" style="width:100%;margin:6px 0">${GOALS.map(o=>`<option value="${o}" ${o==g?"selected":""}>${o} questions per day / ${o} सवाल प्रतिदिन</option>`).join("")}</select><button class="p" onclick="saveGoal()">Save</button></div>
- ${isAdminUser()?'<div class="card"><b>Admin</b><div class="row"><a class="btnlink" href="#/admin">Batch Access</a></div></div>':''}<p id="pm" class="mu"></p>${contactHtml()}<div class="card"><b>Account delete</b><p class="mu">Aapka account, queries aur test records hat jaayenge.</p><button class="s" onclick="delAcc()">Delete account</button></div><button class="p" onclick="auth.signOut()">Logout</button>`)},
+ ${isAdminUser()?'<div class="card"><b>Admin</b><div class="row"><a class="btnlink" href="#/admin">Batch Access</a></div></div>':''}<p id="pm" class="mu"></p>${contactHtml()}<div class="card"><b>Account delete</b><p class="mu">Aapka account, queries aur test records hat jaayenge.</p><button class="s" onclick="delAcc()" style="color:#d32f2f">Delete account</button></div><button class="p" onclick="auth.signOut()">Logout</button>`)},
 };
 
 async function saveName(){const n=document.getElementById('pn').value.trim();if(!n)return;
@@ -906,12 +934,20 @@ async function saveName(){const n=document.getElementById('pn').value.trim();if(
 function saveExam(){const n=document.getElementById('en').value.trim(),d=document.getElementById('ed').value;if(!n||!d){document.getElementById('pm').textContent='Exam ka naam aur date dono bharein';return}J.set('exam',{name:n,date:d});route()}
 function saveGoal(){const n=+document.getElementById('gl').value;if(n>0){J.set('goal',n);route()}}
 
-async function sendQ(){const t=document.getElementById('qt2').value.trim();if(!t)return;
- if(t.split(/\s+/).length>100){alert('Ek doubt me 100 words tak hi likh sakte hain');return}
- if(t.length>1000){alert('Doubt bahut lamba hai (1000 characters tak)');return}
+const QMAX=100,QMAXP=5,QDAYS=20;
+const qNorm=t=>String(t||'').trim().split(/\s+/).filter(Boolean).join(' ');
+function qCount(){const e=document.getElementById('qt2');let w=e.value.trim()?e.value.trim().split(/\s+/):[];
+ if(w.length>QMAX){e.value=w.slice(0,QMAX).join(' ');w=w.slice(0,QMAX)}
+ document.getElementById('qwc').textContent=w.length+' / '+QMAX+' words (शब्द)';document.getElementById('qsb').disabled=!w.length}
+async function sendQ(){const t=qNorm(document.getElementById('qt2').value);
+ if(!t){toast('Write your doubt first. / पहले अपना डाउट लिखें।');return}
+ if(t.split(' ').length>QMAX){toast('Doubt can be at most '+QMAX+' words. / डाउट '+QMAX+' शब्दों से ज़्यादा नहीं हो सकता।');return}
+ if(t.length>1000){toast('Doubt is too long (max 1000 characters). / डाउट बहुत लंबा है।');return}
+ if((window.QPEND||0)>=QMAXP){toast('You already have '+QMAXP+' pending doubts. Send a new one after you get a reply. / आपके '+QMAXP+' डाउट पेंडिंग हैं। जवाब आने के बाद नया भेजें।');return}
+ const btn=document.getElementById('qsb');btn.disabled=true;
  const u=auth.currentUser;const d=await db.doc('students/'+u.uid).get().then(x=>x.data()||{}).catch(()=>({}));
- try{await db.collection('queries').add({uid:u.uid,studentName:d.name||'',studentEmail:u.email,text:t,reply:'',status:'open',createdAt:firebase.firestore.FieldValue.serverTimestamp(),repliedAt:null});route()}
- catch(e){alert('Doubt nahi bheja ja saka: '+e.message)}}
+ try{await db.collection('queries').add({uid:u.uid,studentName:String(d.name||'').slice(0,100),studentEmail:u.email,text:t,reply:'',status:'open',createdAt:firebase.firestore.FieldValue.serverTimestamp(),repliedAt:null});toast('Doubt sent ✅ / डाउट भेज दिया गया ✅');route()}
+ catch(e){btn.disabled=false;toast('Could not send: '+e.message)}}
 
 function saveAttempt(t,id,marks,total,answers){
  if(!id||!auth.currentUser)return;
@@ -1468,7 +1504,7 @@ async function bCheck(id){
   if(r.expired&&code){document.getElementById('lkc').value='';msg.textContent='Your access has expired. To renew: pay again, send the screenshot on Telegram / Gmail, then tap "Check Access" with the code box empty. / एक्सेस खत्म हो गया। रिन्यू करने के लिए दोबारा भुगतान करें, स्क्रीनशॉट Telegram / Gmail पर भेजें, फिर कोड बॉक्स खाली रखकर "Check Access" दबाएँ।';return}
   if(!code){let t='Request sent — send your payment screenshot on Telegram / Gmail so admin can verify. / रिक्वेस्ट भेज दी गई — वेरिफ़ाई के लिए अपनी पेमेंट का स्क्रीनशॉट Telegram / Gmail पर भेजें।';
    try{const d=await db.doc('batches/'+id).get(),n=((await db.doc('students/'+auth.currentUser.uid).get()).data()||{}).name||'',em=auth.currentUser.email.trim().toLowerCase();
-    await Promise.race([db.collection('accessRequests').doc(em+'_'+id).set({studentName:String(n).trim(),studentEmail:em,studentPhone:ph,batchId:id,batchTitle:(d.data()||{}).title||'',status:'pending',requestedAt:firebase.firestore.FieldValue.serverTimestamp()}),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))])}
+    await Promise.race([db.collection('accessRequests').doc(em+'_'+id).set({studentName:String(n).trim().slice(0,100),studentEmail:em,studentPhone:ph.slice(0,20),batchId:id,batchTitle:String((d.data()||{}).title||'').slice(0,200),status:'pending',requestedAt:firebase.firestore.FieldValue.serverTimestamp()}),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),12000))])}
    catch(e){t=e.message=='timeout'?'Request saved — it will be sent as soon as you are back online. / रिक्वेस्ट सेव हो गई — ऑनलाइन आते ही भेज दी जाएगी।':'Request could not be sent: '+e.message}
    toast(t.split(' / ')[0]);msg.textContent=t+'\n\nAfter payment, admin will give you an access code — enter that too. / भुगतान के बाद एडमिन आपको एक्सेस कोड देगा — उसे भी यहाँ डालें।'}
   else msg.textContent='Code didn’t match. Confirm your code with the admin, or wait a bit if it hasn’t been granted yet. / कोड मैच नहीं हुआ। एडमिन से कन्फ़र्म करें, या अगर अभी तक एक्सेस नहीं मिला है तो थोड़ा इंतज़ार करें।'
@@ -1487,6 +1523,21 @@ async function ppFolder(bid,fid){
   location.hash='#/pf/'+fid}
  catch(e){toast("Couldn't verify your access. Check your internet connection and try again.")}}
 
+/* ---- Profile / news / notification helpers (same data as the app) ---- */
+const STATES=['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi (NCT)','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'];
+const QUALS=['10th Pass','12th Pass','Graduate','Post Graduate','Other'];
+const EXAMT=[['exam_bank_po','🏦','Banking PO'],['exam_ssc_cgl','🧾','SSC CGL'],['exam_rrb_ntpc','🚆','RRB NTPC'],['exam_upsssc','📋','UPSSSC'],['exam_ahc_ro','⚖️','AHC RO'],['exam_uppsc','🏛️','UPPSC']];
+const nrow=x=>`<a class="card cr" href="${esc(x.link)}" target="_blank" rel="noopener">${x.image?`<img class="nimg" loading="lazy" src="${esc(x.image)}" alt="" onerror="this.outerHTML='<span class=&quot;nimg&quot;>📰</span>'">`:'<span class="nimg">📰</span>'}<span style="flex:1;min-width:0"><b style="font-size:13px">${esc(x.title)}</b><br><small class="cat" style="margin-top:2px;font-size:10.5px">${esc(x.categoryLabel)}</small></span></a>`;
+async function saveProfile(){
+ const v=i=>document.getElementById(i).value.trim(),e=document.getElementById('pe'),btn=document.getElementById('psb');
+ const name=v('pn'),st=v('pst'),di=v('pdi'),ge=v('pge'),qu=v('pqu'),qx=v('pqx');
+ if(!name||!st||!di||!ge||!qu||(qu=='Other'&&!qx)){e.textContent='Please fill in all fields. / सारी जानकारी भरें।';return}
+ e.textContent='';btn.disabled=true;
+ try{const exams=[...document.querySelectorAll('#pex .chip.on')].map(c=>c.dataset.x);
+  await db.doc('students/'+auth.currentUser.uid).set({name:name.slice(0,100),email:auth.currentUser.email,state:st,district:di,gender:ge,qualification:qu=='Other'?qx:qu,profileComplete:true,exams},{merge:true});
+  J.set('stuName',name);toast('Profile updated! / प्रोफ़ाइल अपडेट हो गई!')}
+ catch(x){e.textContent="Couldn't save. Please check your internet connection and try again."}
+ finally{btn.disabled=false}}
 /* ---- Batch page tabs (Videos / PDFs / Mocks) — same layout as the app ---- */
 function btOpenSet(id){try{return JSON.parse(sessionStorage.getItem('bo_'+id)||'[]')}catch(e){return[]}}
 function btTab(id,t){ls.set('bt_'+id,t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
