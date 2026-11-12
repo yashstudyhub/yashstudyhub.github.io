@@ -290,6 +290,105 @@ textarea#qt2{display:block;width:100%;margin:8px 0 0;font-size:13.5px;resize:ver
 :root[data-theme=dark] .btnlink{color:#081136}
 :root[data-theme=dark] .pageTitle,:root[data-theme=dark] .tmv{color:#fff}
 :root[data-theme=dark] .btab.on{color:var(--ac)}
+
+/* ===== Auto-Responsive Multi-Device Layout (Mobile / Desktop Mode / Tablet / Laptop / Widescreen) ===== */
+html,body{min-height:100vh;min-height:100dvh;overflow-x:hidden}
+.shell{min-height:100vh;min-height:100dvh}
+.wrap{max-width:1340px;margin:0 auto;padding:0 clamp(12px,2.2vw,28px)}
+.topbar{position:sticky;top:0;z-index:8}
+.ban{max-height:clamp(170px,28vw,340px)}
+
+/* Responsive Home Dashboard & List Grids */
+.hgrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+.hgrid>.card,.hgrid>.study{margin:0}
+@media(min-width:768px){.hgrid>.gyan{grid-column:1/-1}}
+.lgrid{display:grid;grid-template-columns:1fr;gap:10px;margin:10px 0}
+.lgrid>.card,.lgrid>.cr{margin:0}
+
+/* Mock Test / Quiz Split-Screen & CBT Palette Layout */
+.mbody{display:block;margin-top:8px}
+.mmain{min-width:0;flex:1}
+.mside{display:none}
+.mqsplit{display:block}
+.mqpass,.mqans{min-width:0}
+
+/* Small phones (<= 380px) */
+@media(max-width:380px){
+ body{font-size:14px}
+ .topbar{padding:10px 12px;gap:8px}.topbar img{width:40px;height:40px}.topbar b{font-size:15.5px}
+ .tiles{gap:8px}.tile{min-height:80px;padding:8px 2px}.tile .e{width:42px;height:42px;font-size:22px}.tile .l{font-size:11.5px}
+ .mtop{padding:8px;gap:6px}.mtime{font-size:15px}
+ button,input,select,textarea{padding:8px 11px}
+}
+
+/* Mobile Landscape (phones rotated horizontally) */
+@media(orientation:landscape) and (max-height:540px){
+ .topbar{padding:6px 14px;border-radius:0 0 14px 14px}.topbar img{width:34px;height:34px}.topbar b{font-size:15px}.topbar small{font-size:10px}
+ nav.bn{padding:3px 0}
+ main.content{padding-bottom:58px}
+ .mtop{padding:6px 10px}.mbar{padding:6px 10px;margin-top:8px}
+ .mqsplit.hasp{display:grid;grid-template-columns:1.05fr 1fr;gap:12px;align-items:start}
+ .mqsplit.hasp .mqpass{position:sticky;top:52px;max-height:calc(100dvh - 110px);overflow:auto}
+ .mqsplit.hasp .passage{margin-bottom:0}
+}
+
+/* Tablet (640px to 899px) */
+@media(min-width:640px){
+ .tiles{grid-template-columns:repeat(5,1fr);gap:12px}
+ .sg{grid-template-columns:repeat(6,1fr)}
+ .lgrid{grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+}
+
+/* Tablet Landscape & Compact Desktop Mode (768px+) */
+@media(min-width:768px){
+ aside.side{display:flex;flex-direction:column;gap:4px;width:92px;flex:none;background:var(--navy);padding:14px 8px;position:sticky;top:0;height:100vh;height:100dvh;overflow-y:auto;z-index:10}
+ aside.side .brand{flex-direction:column;text-align:center;padding:4px 4px 12px;gap:6px;font-size:11px;line-height:1.2}
+ aside.side .brand small{display:none}
+ aside.side a{flex-direction:column;justify-content:center;text-align:center;gap:4px;padding:10px 6px;font-size:11.5px;border-radius:12px}
+ nav.bn{display:none!important}
+ main.content{padding-bottom:28px}
+ #tsPill{bottom:20px}
+ .hgrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}
+ .mqsplit.hasp{display:grid;grid-template-columns:minmax(280px,1.08fr) minmax(280px,1fr);gap:16px;align-items:start}
+ .mqsplit.hasp .mqpass{position:sticky;top:64px;max-height:calc(100dvh - 140px);overflow:auto;padding-right:2px}
+ .mqsplit.hasp .passage{margin-bottom:0}
+ iframe.v{max-height:72vh}
+ iframe.pdf{height:calc(100dvh - 150px)}
+}
+
+/* Laptop & Desktop (1024px+) */
+@media(min-width:1024px){
+ aside.side{width:240px;padding:18px 14px}
+ aside.side .brand{flex-direction:row;text-align:left;padding:6px 8px 16px;gap:10px;font-size:15px}
+ aside.side .brand small{display:block}
+ aside.side a{flex-direction:row;justify-content:flex-start;text-align:left;gap:12px;padding:12px 14px;font-size:14.5px}
+ .mbody{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:start}
+ .mside{display:block;position:sticky;top:64px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;max-height:calc(100dvh - 90px);overflow:auto}
+ .mtop .palbtn{display:none}
+ .pal.InlinePal{display:none}
+}
+
+/* Large Desktop / Widescreen (1240px+) */
+@media(min-width:1240px){
+ .tiles{grid-template-columns:repeat(9,1fr);gap:12px}
+ .tile{min-height:104px;padding:10px 6px}
+ .lgrid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+}
+
+/* Mobile Browser "Desktop Site" Mode (coarse touch pointer on >= 768px emulated viewport) */
+@media(pointer:coarse) and (min-width:768px){
+ body{font-size:16.5px}
+ .opt{padding:14px;font-size:16px}
+ .qtext{font-size:17.5px}
+ .passage{font-size:15px}
+ button,input,select,textarea{padding:11px 15px;font-size:15.5px}
+ .chip,.days a{padding:9px 14px;font-size:14px}
+}
+:root[data-device="mobile-desktop"] body{font-size:17px}
+:root[data-device="mobile-desktop"] .opt{padding:14px 16px;font-size:16.5px}
+:root[data-device="mobile-desktop"] .qtext{font-size:18px}
+:root[data-device="mobile-desktop"] .passage{font-size:15.5px}
+:root[data-theme=dark] .mside{background:#081136;border-color:#16276a}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -844,7 +943,7 @@ async home(){
  const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
  return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
  +`<div class="tiles">${TILES.map(t=>`<a class="tile" href="#/${t[0]}">${t[0]=='revision'&&revOverview().due>0?'<i class="rdot"></i>':''}<span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
- +`<div id="soc" class="soc"></div>`+studyCard()+toolsCards()+moreCard()+boostCard()+gyanCard()
+ +`<div id="soc" class="soc"></div><div class="hgrid">`+studyCard()+toolsCards()+moreCard()+boostCard()+gyanCard()+`</div>`
  +`<div class="sec">YouTube Videos <a href="${esc(cfg.youtubeUrl)}" target="_blank" rel="noopener">Channel</a></div>`
  +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>')
  +`</div>`},
@@ -875,7 +974,7 @@ async pdf(l,t,ext=true){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[
 async pdfb(l,t){return this.pdf(l,t,false)},
 async batches(){const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).sort(ord),g=await bgranted(bs);
  const row=b=>{const on=g.has(b.id);return `<a class="card cr${on?' bgr':''}" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span>${on?'<span class="unl">✅ Unlocked</span>':'<b class="pr">₹'+esc(b.price)+'</b>'}</a>`};
- return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(bs.length?[...bs.filter(b=>g.has(b.id)),...bs.filter(b=>!g.has(b.id))].map(row).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>'))},
+ return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(bs.length?'<div class="lgrid">'+[...bs.filter(b=>g.has(b.id)),...bs.filter(b=>!g.has(b.id))].map(row).join('')+'</div>':'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>'))},
 async batch(id){
  const d=await db.doc('batches/'+id).get();if(!d.exists)return wrap(back+empty);const b=d.data();let exp=null;
  if(b.price>0&&!isAdminUser()){const r=await bchk(id,ls.get('code_'+id)||'');
@@ -897,7 +996,7 @@ async batch(id){
   +T.map(t=>`<div class="btp" data-t="${t[0]}"${t[0]==cur?'':' hidden'}>${panel[t[0]]()}</div>`).join(''))},
 async mycourse(){
  const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).filter(b=>b.price>0).sort(ord),g=await bgranted(bs),got=bs.filter(b=>g.has(b.id));
- return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?got.map(b=>`<a class="card cr" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span><span style="font-size:16px">✅</span></a>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No active course yet. Buy a batch from Paid Batches.<br>अभी कोई एक्टिव कोर्स नहीं है। Paid Batches से बैच खरीदें।</p>'))},
+ return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?'<div class="lgrid">'+got.map(b=>`<a class="card cr" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span><span style="font-size:16px">✅</span></a>`).join('')+'</div>':'<p class="mu" style="text-align:center;margin:28px 0">No active course yet. Buy a batch from Paid Batches.<br>अभी कोई एक्टिव कोर्स नहीं है। Paid Batches से बैच खरीदें।</p>'))},
 async queries(){
  const now=Date.now(),when=x=>x.createdAt&&x.createdAt.toDate?x.createdAt.toDate().getTime():now;
  const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()}))
@@ -937,7 +1036,7 @@ async progress(){const h=J.get('history',[]),m=J.get('mistakes',[]);
 async news(c){const all=['banking','ssc','up_state','sports','technology','space','defence'];
  const n=await list(db.collection('newsItems').where('category','in',c?[c]:all).orderBy('pubDate','desc').limit(30));
  const lb=x=>({up_state:'UP State',ssc:'SSC'})[x]||x[0].toUpperCase()+x.slice(1);
- return wrap(`<h2 class="pageTitle">News</h2><div class="chips"><a class="chip ${c?'':'on'}" href="#/news">All</a>${all.map(x=>`<a class="chip ${c==x?'on':''}" href="#/news/${x}">${lb(x)}</a>`).join('')}</div>`+(n.length?n.map(nrow).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No news yet — please check back later</p>'))},
+ return wrap(`<h2 class="pageTitle">News</h2><div class="chips"><a class="chip ${c?'':'on'}" href="#/news">All</a>${all.map(x=>`<a class="chip ${c==x?'on':''}" href="#/news/${x}">${lb(x)}</a>`).join('')}</div>`+(n.length?'<div class="lgrid">'+n.map(nrow).join('')+'</div>':'<p class="mu" style="text-align:center;margin:28px 0">No news yet — please check back later</p>'))},
 async ca(){
  const CAS=window.CAS=window.CAS||{mode:'daily',day:-1,topic:'all',lang:'both'};
  const head=`<h2 class="pageTitle">Current Affairs / करेंट अफेयर्स</h2><div class="modes"><button class="${CAS.mode=='daily'?'p':'s'}" onclick="caSet('mode','daily')">Daily One-Liners</button><button class="${CAS.mode=='news'?'p':'s'}" onclick="caSet('mode','news')">News</button></div>`;
@@ -957,13 +1056,13 @@ async ca(){
   +`<div class="chips">${days.map((d,i)=>`<a class="chip ${i==idx?'on':''}" onclick="caSet('day',${i})">${d.label}</a>`).join('')}</div>`
   +`<div class="chips">${topics.map(k=>`<a class="chip ${k==sel?'on':''}" onclick="caSet('topic','${k}')">${k=='all'?(CAS.lang=='hi'?'सभी':'All'):esc(caLbl(k,CAS.lang))}</a>`).join('')}</div>`
   +`<div class="chips">${[['both','Both'],['hi','हिंदी'],['en','English']].map(([k,t])=>`<a class="chip ${CAS.lang==k?'on':''}" onclick="caSet('lang','${k}')">${t}</a>`).join('')}</div>`
-  +note+(shown.length?shown.map(x=>caCard(x,CAS.lang)).join(''):empty))},
-async mocks(){const f=(await cl('mfall',db.collection('mockTestFolders'),6,['newMocksAt','newBatchesAt'])).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div>'+f.map(x=>lrow('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
+  +note+(shown.length?'<div class="lgrid">'+shown.map(x=>caCard(x,CAS.lang)).join('')+'</div>':empty))},
+async mocks(){const f=(await cl('mfall',db.collection('mockTestFolders'),6,['newMocksAt','newBatchesAt'])).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div class="lgrid">'+f.map(x=>lrow('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
 async mf(id,st){const t=(await list(db.collection('mockTests').where('folderId','==',id))).sort(ord);if(!t.length)return wrap(back+empty);
  const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''},P=t.filter(x=>sg(x)=='prelims'),M=t.filter(x=>sg(x)=='mains'),N=t.filter(x=>!sg(x)),has=P.length||M.length;
  const tt=mrow;
  const subj=(arr,sk)=>{const g={},u=[];arr.forEach(x=>{const k=(x.subject||'').trim().toLowerCase();if(!k)u.push(x);else(g[k]=g[k]||{name:x.subject.trim(),n:0}).n++});const ks=Object.keys(g);
-  return (ks.length?'<div>'+ks.map(k=>lrow('ms/'+id+'/'+sk+'.'+encodeURIComponent(k),'📚',g[k].name,g[k].n+(g[k].n==1?' test':' tests'))).join('')+'</div>':'')+(u.length?(ks.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div>'+u.map(tt).join('')+'</div>':'')};
+  return (ks.length?'<div class="lgrid">'+ks.map(k=>lrow('ms/'+id+'/'+sk+'.'+encodeURIComponent(k),'📚',g[k].name,g[k].n+(g[k].n==1?' test':' tests'))).join('')+'</div>':'')+(u.length?(ks.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div class="lgrid">'+u.map(tt).join('')+'</div>':'')};
  if(!st&&has)return wrap(back+'<div>'+(P.length?lrow('mf/'+id+'/prelims','🎯','Prelims',P.length+(P.length==1?' test':' tests')):'')+(M.length?lrow('mf/'+id+'/mains','✍️','Mains',M.length+(M.length==1?' test':' tests')):'')+'</div>'+(N.length?'<h2 class="pageTitle">Other tests</h2>'+subj(N,'none'):''));
  const arr=!st?t:st=='prelims'?P:st=='mains'?M:N,ttl=st=='prelims'?'Prelims':st=='mains'?'Mains':st=='none'?'Other tests':'';
  return wrap(back+(ttl?`<h2 class="pageTitle">${ttl}</h2>`:'')+subj(arr,st||''))},
@@ -971,7 +1070,7 @@ async ms(folderId,b){const i=String(b||'').indexOf('.'),st=i<0?'':b.slice(0,i),k
  const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
  const t=(await list(db.collection('mockTests').where('folderId','==',folderId))).filter(x=>(x.subject||'').trim().toLowerCase()==k&&(!st||(st=='none'?!sg(x):sg(x)==st))).sort(ord);
  const name=t[0]?t[0].subject.trim():'',pre=st=='prelims'?'Prelims • ':st=='mains'?'Mains • ':'';
- return wrap(back+`<h2 class="pageTitle">${esc(pre+name)}</h2>`+(t.length?'<div>'+t.map(mrow).join('')+'</div>':empty))},
+ return wrap(back+`<h2 class="pageTitle">${esc(pre+name)}</h2>`+(t.length?'<div class="lgrid">'+t.map(mrow).join('')+'</div>':empty))},
 async test(id){const d=await db.doc('mockTests/'+id).get();if(!d.exists)return wrap(back+empty);const t=d.data(),Q=t.questions||[];window.T={t,Q,id,start:Date.now(),ans:[],i:0,pal:false,done:false,hi:lang=='hi'};
  return wrap(back+`<h2 class="pageTitle">${esc(t.title)}</h2><div id="mtest"></div>`)},
 async board(id){const s=await db.collection('mockScores').doc(id).collection('scores').limit(300).get();
@@ -1048,19 +1147,22 @@ const fmtT=x=>`${Math.floor(x/60)}:${String(x%60).padStart(2,'0')}`;
 function updTimer(){const e=document.getElementById('mtime');if(!e||!window.T)return;if(T.t.durationMinutes)T.left=Math.max(0,T.t.durationMinutes*60-Math.floor((Date.now()-T.start)/1000));e.textContent='⏱ '+fmtT(T.t.durationMinutes?Math.max(0,T.left):Math.floor((Date.now()-T.start)/1000))+(T.t.durationMinutes?'':'  (no limit)');e.classList.toggle('low',!!T.t.durationMinutes&&T.left<=60)}
 function drawTest(){const s=T,Q=s.Q;if(s.done)return;const box=document.getElementById('mtest');if(!box)return;
  if(!Q.length){box.innerHTML='<div class="card"><p class="mu">Is test mein abhi koi question nahi hai.</p></div>';return}
- const q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,ng=s.t.negativeMarks||0,answered=s.ans.filter(a=>a!==null).length,opts=qOpts(q,hi);
+ const q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,ng=s.t.negativeMarks||0,answered=s.ans.filter(a=>a!==null).length,opts=qOpts(q,hi),pHtml=passageHtml(q,hi);
+ const palGrid=`<div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div>`;
  box.innerHTML=`<div class="mtop"><span id="mtime" class="mtime"></span>
- <button class="s" onclick="togglePal()" title="Questions"><span class="material-icons">grid_view</span></button>
+ <button class="s palbtn" onclick="togglePal()" title="Questions"><span class="material-icons">grid_view</span></button>
  <button class="s" onclick="toggleLang()">${hi?'English':'हिंदी'}</button>
  <button class="p" onclick="confirmSubmit()">Submit</button></div>
+ <div class="mbody"><div class="mmain">
  <div class="row mu" style="justify-content:space-between"><span>Q ${s.i+1} / ${Q.length}</span><span>+${mp}${ng?' / −'+ng:''} · Answered ${answered}/${Q.length}</span></div>
- ${s.pal?`<div class="pal"><b>Jump to question</b> <small class="mu">Green = answered</small><div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div></div>`:''}
- <div class="q">${passageHtml(q,hi)}
- <div class="row" style="justify-content:space-between;align-items:center"><span class="mu">Question ${s.i+1}</span>${bmBtn('mt',s.i)}</div>
+ ${s.pal?`<div class="pal InlinePal"><b>Jump to question</b> <small class="mu">Green = answered</small>${palGrid}</div>`:''}
+ <div class="q"><div class="mqsplit${pHtml?' hasp':''}">${pHtml?`<div class="mqpass">${pHtml}</div>`:''}<div class="mqans">
+ <div class="row" style="justify-content:space-between;align-items:center;margin-top:0"><span class="mu">Question ${s.i+1}</span>${bmBtn('mt',s.i)}</div>
  <div class="qtext">${esc(qt(q,'text',hi))}</div>
  ${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]||j+1}</span><span>${esc(o)}</span></div>`).join('')}
- </div>
- <div class="mbar"><button class="s" onclick="stepQ(-1)" ${s.i==0?'disabled':''}>Previous</button><button class="s" onclick="clearAns()">Clear</button>${s.i<Q.length-1?'<button class="p" onclick="stepQ(1)">Next</button>':'<button class="p" onclick="confirmSubmit()">Submit</button>'}</div>`;updTimer()}
+ </div></div></div>
+ <div class="mbar"><button class="s" onclick="stepQ(-1)" ${s.i==0?'disabled':''}>Previous</button><button class="s" onclick="clearAns()">Clear</button>${s.i<Q.length-1?'<button class="p" onclick="stepQ(1)">Next</button>':'<button class="p" onclick="confirmSubmit()">Submit</button>'}</div>
+ </div><aside class="mside"><b>Questions (${answered}/${Q.length})</b><br><small class="mu">Green = answered · Left = ${Q.length-answered}</small>${palGrid}</aside></div>`;updTimer()}
 function pickAns(j){T.ans[T.i]=j;drawTest()}
 function clearAns(){T.ans[T.i]=null;drawTest()}
 function stepQ(d){T.i=Math.min(Math.max(0,T.i+d),T.Q.length-1);drawTest();scrollTo(0,0)}
@@ -1153,11 +1255,11 @@ function initFq(){drawFq()}
 function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
  if(s.done){const c=s.ans.filter((a,i)=>a!==null&&a==s.Q[i].correctIndex).length,t=s.Q.length;
   el.innerHTML=`<div class="q" style="background:var(--gold);color:#081136;text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':'javascript:history.back()'}">Done</a><button class="s" onclick="ssQuiz()">Share Score Card / स्कोर कार्ड शेयर करें</button></div>`;return}
- const q=s.Q[s.i],hi=s.hi,opts=qOpts(q,hi),p=s.picked,ex=qt(q,'explanation',hi);(window.QS=window.QS||{}).fq=s.Q;(window.BMSRC=window.BMSRC||{}).fq=s.title||'';
+ const q=s.Q[s.i],hi=s.hi,opts=qOpts(q,hi),p=s.picked,ex=qt(q,'explanation',hi),pHtml=passageHtml(q,hi);(window.QS=window.QS||{}).fq=s.Q;(window.BMSRC=window.BMSRC||{}).fq=s.title||'';
  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span>${p!==null?bmBtn('fq',s.i)+' ':''}<button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button></span></div>
- <div class="q">${passageHtml(q,hi)}<div class="qtext">${esc(qt(q,'text',hi))}</div>
+ <div class="q"><div class="mqsplit${pHtml?' hasp':''}">${pHtml?`<div class="mqpass">${pHtml}</div>`:''}<div class="mqans"><div class="qtext" style="margin-top:0">${esc(qt(q,'text',hi))}</div>
  ${opts.map((o,j)=>`<div class="opt ${p!==null&&j==q.correctIndex?'okb':''} ${p===j&&j!=q.correctIndex?'nob':''}" onclick="fqPick(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}${p===j?(j==q.correctIndex?' ✓':' ✗'):''}</span></div>`).join('')}
- ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${esc(ex)}</div></div>`:''}</div>
+ ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${esc(ex)}</div></div>`:''}</div></div></div>
  <div class="mbar"><span></span><button class="p" ${p===null?'disabled':''} onclick="fqNext()">${s.i==s.Q.length-1?'Finish':'Next'}</button></div>`}
 function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
 function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
@@ -1694,5 +1796,13 @@ auth.onAuthStateChanged(async u=>{
  if(!location.hash)location.hash='#/home';
  route()});
 
+function syncViewportMode(){
+ try{
+  const h=document.documentElement,vw=window.innerWidth||h.clientWidth||360,sw=Math.min(window.screen?.width||vw,window.screen?.height||vw),coarse=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
+  const mode=(coarse&&sw<600&&vw>=768)?'mobile-desktop':vw>=1024?'desktop':vw>=640?'tablet':'mobile';
+  h.setAttribute('data-device',mode);
+ }catch(e){}
+}
+addEventListener('resize',syncViewportMode);addEventListener('orientationchange',syncViewportMode);syncViewportMode();
 spaceSync();
 </script></body></html>
