@@ -298,6 +298,20 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const yid=u=>(String(u).match(/(?:v=|youtu\.be\/|embed\/|live\/|shorts\/)([\w-]{11})/)||[])[1]||'';
 const ord=(a,b)=>(a.order??1e9)-(b.order??1e9)||(a.createdAt?.seconds||0)-(b.createdAt?.seconds||0);
 const list=async q=>(await q.get()).docs.map(d=>({id:d.id,...d.data()}));
+// Cache-first list reads (web version of the app's _cachedGet): a list is downloaded once, then served from localStorage
+// for its TTL (0 reads). It is downloaded again when the TTL ends, when the admin added new content (the 'new...At' time stamps
+// in appConfig/main, read at start-up), or when the student taps "Refresh content" in Profile. Any problem = live read.
+const MK={},CQ={},FQP='ysh_fq_';
+const tsMs=v=>v&&v.toMillis?v.toMillis():v&&typeof v.seconds=='number'?v.seconds*1000:0;
+const fqRep=function(k,v){const o=this[k];return o&&o.toDate&&typeof o.seconds=='number'?{__ts:[o.seconds,o.nanoseconds||0]}:v};
+const fqRev=(k,v)=>v&&typeof v=='object'&&Array.isArray(v.__ts)?new firebase.firestore.Timestamp(v.__ts[0],v.__ts[1]):v;
+function fqClear(){try{Object.keys(localStorage).filter(k=>k.startsWith(FQP)).forEach(k=>localStorage.removeItem(k))}catch(e){}}
+function cl(key,q,ttlH,markers){const k=FQP+key;if(CQ[k])return CQ[k];
+ const run=async()=>{const mk=Math.max(0,...(markers||[]).map(f=>MK[f]||0));let stale=null;
+  try{const raw=localStorage.getItem(k);if(raw){const m=JSON.parse(raw,fqRev),age=Date.now()-m.t;if(Array.isArray(m.d)){stale=m.d;if(age>=0&&age<ttlH*36e5&&mk<=m.m)return m.d}}}catch(e){}
+  try{const d=await list(q);try{localStorage.setItem(k,JSON.stringify({t:Date.now(),m:mk,d},fqRep))}catch(e){try{fqClear();localStorage.setItem(k,JSON.stringify({t:Date.now(),m:mk,d},fqRep))}catch(e2){}}return d}
+  catch(e){if(stale)return stale;throw e}};
+ return CQ[k]=run().finally(()=>{delete CQ[k]})}
 const ls={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}};
 const J={get:(k,d)=>{try{const v=localStorage.getItem('ysh_'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set:(k,v)=>{try{localStorage.setItem('ysh_'+k,JSON.stringify(v))}catch(e){}}};
 const dayKey=(d=new Date())=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -796,18 +810,19 @@ async syllabus(){const ex=sylExam();
  +`<p class="mu">यह आम पैटर्न पर आधारित है। नए सिलेबस के लिए आधिकारिक अधिसूचना ज़रूर देखें।</p>`)},
 async fmcq(){const ix=await fmIndex();
  if(!ix||!ix.exams?.length||!ix.sets?.length)return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">Free MCQs are not ready yet. Please check again later.</p>`);
- return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new set of 25 MCQs every week (Monday): Static GK, General Science and General Studies (syllabus-based, Hindi + English), plus the English folder (Banking PO / Clerk pattern, easy to hard). Sets older than 2 months are removed automatically. Tap ⓘ on a set to see how it was made.</p><div>`+ix.exams.map(e=>{const n=ix.sets.filter(s=>s.examId==e.id).length;return e.id=='english'?lrow('fms/english/english',e.emoji||'📖',e.name,'Banking PO / Clerk pattern · '+n+' sets'):lrow('fmx/'+e.id,e.emoji||'📝',e.name,n+' sets')}).join('')+'</div>')},
+ return wrap(`<h2 class="pageTitle">Free MCQs</h2><p class="mu">A new test of 25 MCQs every week (Monday): Static GK, General Science and General Studies (syllabus-based, Hindi + English), plus the English folder (Banking PO / Clerk pattern, easy to hard). Each test has a timer, marks and a leaderboard like a Mock Test. Tests older than 2 months are removed automatically. Tap ⓘ on a test to see how it was made.</p><div>`+ix.exams.map(e=>{const n=ix.sets.filter(s=>s.examId==e.id).length;return e.id=='english'?lrow('fms/english/english',e.emoji||'📖',e.name,'Banking PO / Clerk pattern · '+n+(n==1?' test':' tests')):lrow('fmx/'+e.id,e.emoji||'📝',e.name,n+(n==1?' test':' tests'))}).join('')+'</div>')},
 async fmx(eid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid);if(!e)return wrap(back+empty);
  const su=(ix.subjects||[]).filter(s=>eid=='english'?s.id=='english':s.id!='english');
- return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div>`+su.map(s=>lrow('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length+' sets')).join('')+'</div>')},
+ return wrap(back+`<h2 class="pageTitle">${esc(e.name)}</h2><div>`+su.map(s=>lrow('fms/'+eid+'/'+s.id,s.emoji||'📚',s.name,(n=>n+(n==1?' test':' tests'))(ix.sets.filter(x=>x.examId==eid&&x.subjectId==s.id).length))).join('')+'</div>')},
 async fms(eid,sid){const ix=await fmIndex();const e=(ix?.exams||[]).find(x=>x.id==eid),s=(ix?.subjects||[]).find(x=>x.id==sid);if(!e||!s)return wrap(back+empty);
- const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>fmStart(b).localeCompare(fmStart(a))),done=J.get('fmDone',{});
- return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span class="material-icons" style="color:${done[m.id]?'var(--okc)':'var(--mu)'}">${done[m.id]?'check_circle':'quiz'}</span> <b>${esc(fmLabel(m))}</b><br><small class="mu">${m.count} MCQs${m.source?' · '+esc(m.source):''}${done[m.id]?' · Score '+esc(done[m.id]):''}</small></a><button class="s" onclick="fmInfo('${esc(m.id)}',${sid=='english'})" title="About this set"><span class="material-icons">info_outline</span></button></div></div>`).join(''):`<p class="mu">${sid=='english'?'The English set for this week is not ready yet. A new set of 25 English MCQs arrives automatically every Monday.':'No set for this subject yet. A new set of 25 MCQs arrives automatically every Monday.'}</p>`))},
+ const sets=ix.sets.filter(x=>x.examId==eid&&x.subjectId==sid).sort((a,b)=>fmStart(b).localeCompare(fmStart(a))),st=ix.settings;
+ return wrap(back+`<h2 class="pageTitle">${esc(s.name)}</h2><div id="finfo"></div>`+(sets.length?sets.map(m=>`<div class="card"><div class="row" style="justify-content:space-between;gap:6px"><a href="#/fmq/${esc(m.id)}" style="flex:1;color:var(--tx)"><span style="font-size:22px">📝</span> <b>${esc(fmLabel(m))}</b><br><small class="mu">${esc(fmSub(m,st))}</small></a><a class="s" href="#/board/${esc(m.id)}" title="Leaderboard / लीडरबोर्ड" style="text-decoration:none;padding:8px">🏆</a><button class="s" onclick="fmInfo('${esc(m.id)}',${sid=='english'})" title="About this test"><span class="material-icons">info_outline</span></button></div></div>`).join(''):`<p class="mu">${sid=='english'?'The English test for this week is not ready yet. A new test of 25 English MCQs arrives automatically every Monday.':'No test for this subject yet. A new test of 25 MCQs arrives automatically every Monday.'}</p>`))},
 async fmq(sid){const ix=await fmIndex();const m=(ix?.sets||[]).find(x=>x.id==sid);if(!m)return wrap(back+empty);
- let set;try{set=await fmSet(sid)}catch(e){return wrap(back+'<p class="err">This set could not be opened. Check your internet and try again.</p>')}
- fmRemember(m);const e=ix.exams.find(x=>x.id==m.examId),s=ix.subjects.find(x=>x.id==m.subjectId);
- window.FQ={m,Q:set.Q,i:0,picked:null,ans:Array(set.Q.length).fill(null),hi:lang=='hi',done:false,title:(s?s.name:'')+' · '+fmLabel(m),exam:e?e.name:'',subject:s?s.name:''};(window.QS=window.QS||{}).fq=set.Q;
- return wrap(back+`<h2 class="pageTitle">${esc(FQ.title)}</h2><div id="fq"></div>`)},
+ let set;try{set=await fmSet(sid)}catch(e){return wrap(back+'<p class="err">This test could not be opened. Check your internet and try again.</p>')}
+ fmRemember(m);const sb=ix.subjects.find(x=>x.id==m.subjectId),st=ix.settings,nm=(sb?sb.name:'')+' · '+fmLabel(m);
+ const t={title:nm,questions:set.Q,durationMinutes:st.durationMinutes,marksPerQuestion:st.marksPerQuestion,negativeMarks:st.negativeMarks,subject:m.subjectId=='english'?'':(sb?sb.name:''),folderId:m.examId};
+ window.T={t,Q:set.Q,id:m.id,start:Date.now(),ans:[],i:0,pal:false,done:false,hi:lang=='hi'};
+ return wrap(back+`<h2 class="pageTitle">${esc(nm)}</h2><div id="mtest"></div>`)},
 async home(){
  const [items,banners,st]=await Promise.all([
   db.doc('appConfig/latestVideos').get().then(d=>d.data()?.items||[]).catch(()=>[]),
@@ -824,21 +839,21 @@ async home(){
  +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>')
  +`</div>`},
 async videos(){
- const [f,v]=await Promise.all([list(db.collection('videoFolders').where('batchId','==','free')),list(db.collection('videos').where('batchId','==',null))]);
+ const [f,v]=await Promise.all([cl('vfree',db.collection('videoFolders').where('batchId','==','free'),6,['newVideosAt','newBatchesAt']),cl('vnull',db.collection('videos').where('batchId','==',null),1,['newVideosAt'])]);
  f.sort(ord);const nw=x=>x.publishedAt?.seconds||x.createdAt?.seconds||0;
  const ok=v.filter(x=>!x.hidden&&yid(x.youtubeLink)&&!x.folderId).sort((a,b)=>nw(b)-nw(a));
  const auto=ok.filter(x=>x.source=='youtube_auto').slice(0,10),loose=ok.filter(x=>x.source!='youtube_auto'),vs=[...loose,...auto].sort((a,b)=>nw(b)-nw(a));
  const cnt=await Promise.all(f.map(x=>db.collection('videos').where('folderId','==',x.id).get().then(r=>r.docs.filter(d=>!d.data().hidden).length).catch(()=>null)));
  return wrap(`<h2 class="pageTitle">Video Classes</h2>`+(f.length?f.map((x,i)=>lrow('vf/'+x.id,'📁',x.name,cnt[i]==null?'':cnt[i]+(cnt[i]==1?' video':' videos'))).join(''):'')+(f.length&&vs.length?'<h3 class="subh">Videos</h3>':'')+vs.map(vrow).join('')+(f.length||vs.length?'':empty))},
-async vf(id){const v=(await list(db.collection('videos').where('folderId','==',id))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?v.map(vrow).join(''):'<p class="mu">No video in this folder yet / इस फ़ोल्डर में अभी कोई वीडियो नहीं है।</p>'))},
+async vf(id){const v=(await cl('vin_'+id,db.collection('videos').where('folderId','==',id),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?v.map(vrow).join(''):'<p class="mu">No video in this folder yet / इस फ़ोल्डर में अभी कोई वीडियो नहीं है।</p>'))},
 async play(id,t){return wrap(back+`<h2 class="pageTitle">${esc(decodeURIComponent(t||''))}</h2><iframe class="v" src="https://www.youtube.com/embed/${esc(id)}?autoplay=1&rel=0&cc_load_policy=1&playsinline=1" allow="accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe><a class="btnlink" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in YouTube</a>`)},
 async pdfs(){
  let cur=ls.get('pt')=='paid'?'paid':'free';
- const [f,bs]=await Promise.all([list(db.collection('pdfFolders').where('type','==','free')),list(db.collection('batches'))]);f.sort(ord);bs.sort(ord);
+ const [f,bs]=await Promise.all([cl('pffree',db.collection('pdfFolders').where('type','==','free'),6,['newPdfsAt','newBatchesAt']),cl('batches',db.collection('batches'),3,['newBatchesAt'])]);f.sort(ord);bs.sort(ord);
  const free=f.length?f.map(x=>lrow('pf/'+x.id,'📁',x.name)).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No free folders yet.</p>';
  const paid=bs.length?bs.map(b=>`<details class="bx" data-b="${esc(b.id)}" ontoggle="ppOpen(this)"><summary>${bico(b)}<span class="t">${esc(b.title)}</span><span class="material-icons ch">expand_more</span></summary><div class="bxb"><p class="mu" style="margin:8px 6px">Loading…</p></div></details>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>';
  return wrap(`<h2 class="pageTitle">PDF Library</h2><div class="btabs" role="tablist"><div class="btab${cur=='free'?' on':''}" data-t="free" onclick="ppTab('free')">Free</div><div class="btab${cur=='paid'?' on':''}" data-t="paid" onclick="ppTab('paid')">Paid Batch</div></div><div class="btp" data-t="free"${cur=='free'?'':' hidden'}>${free}</div><div class="btp" data-t="paid"${cur=='paid'?'':' hidden'}>${paid}</div>`)},
-async pf(id){const [fd,p]=await Promise.all([db.doc('pdfFolders/'+id).get().catch(()=>null),list(db.collection('pdfs').where('folderId','==',id))]);p.sort(ord);
+async pf(id){const [fd,p]=await Promise.all([db.doc('pdfFolders/'+id).get().catch(()=>null),cl('pin_'+id,db.collection('pdfs').where('folderId','==',id),6,['newPdfsAt','newBatchesAt'])]);p.sort(ord);
  const batch=fd&&fd.exists&&fd.data().type=='batch';
  return wrap(back+(fd&&fd.exists?`<h2 class="pageTitle">${esc(fd.data().name)}</h2>`:'')+(p.length?p.map(x=>prow(x,batch)).join(''):'<p class="mu">No PDF in this folder yet / इस फ़ोल्डर में अभी कोई PDF नहीं है।</p>'))},
 async pdf(l,t,ext=true){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/),id=m&&(m[1]||m[2]);
@@ -847,7 +862,7 @@ async pdf(l,t,ext=true){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[
  return wrap(`<h2 class="pageTitle">${esc(decodeURIComponent(t||'PDF'))}</h2><div class="pdfbar"><a href="javascript:history.back()"><span class="material-icons">arrow_back</span>Back</a><a href="javascript:void 0" onclick="document.getElementById('pdfv').src=document.getElementById('pdfv').src"><span class="material-icons">refresh</span>Reload</a>`+(ext?`<a href="${esc(u)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in browser</a><a href="${esc(dl)}" target="_blank" rel="noopener"><span class="material-icons">download</span>Download</a>`:'')+`</div>
  <iframe id="pdfv" class="pdf" src="${esc(src)}"></iframe>`)},
 async pdfb(l,t){return this.pdf(l,t,false)},
-async batches(){const bs=(await list(db.collection('batches'))).sort(ord),g=await bgranted(bs);
+async batches(){const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).sort(ord),g=await bgranted(bs);
  const row=b=>{const on=g.has(b.id);return `<a class="card cr${on?' bgr':''}" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span>${on?'<span class="unl">✅ Unlocked</span>':'<b class="pr">₹'+esc(b.price)+'</b>'}</a>`};
  return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(bs.length?[...bs.filter(b=>g.has(b.id)),...bs.filter(b=>!g.has(b.id))].map(row).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>'))},
 async batch(id){
@@ -856,7 +871,7 @@ async batch(id){
   if(!r.granted)return wrap(back+`<h2 class="pageTitle">${esc(b.title)}</h2>`+lockedView(b,id,r));
   exp=r.exp||null}
  const mo=b.mockOnly===true;
- const [vf,pf,mf]=await Promise.all([mo?[]:list(db.collection('videoFolders').where('batchId','==',id)),mo?[]:list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('mockTestFolders').where('batchIds','array-contains',id))]);
+ const [vf,pf,mf]=await Promise.all([mo?[]:cl('bvf_'+id,db.collection('videoFolders').where('batchId','==',id),6,['newVideosAt','newBatchesAt']),mo?[]:cl('bpf_'+id,db.collection('pdfFolders').where('batchIds','array-contains',id),6,['newPdfsAt','newBatchesAt']),cl('bmf_'+id,db.collection('mockTestFolders').where('batchIds','array-contains',id),6,['newMocksAt','newBatchesAt'])]);
  vf.sort(ord);pf.sort(ord);mf.sort(ord);
  const T=mo?[['mocks','Mocks',mf]]:[['videos','Videos',vf],['pdfs','PDFs',pf],['mocks','Mocks',mf]];
  let cur=ls.get('bt_'+id);if(!T.some(t=>t[0]==cur))cur=(T.find(t=>t[2].length)||T[0])[0];
@@ -868,7 +883,7 @@ async batch(id){
   +`<div class="btabs" role="tablist">${T.map(t=>`<div class="btab${t[0]==cur?' on':''}" role="tab" data-t="${t[0]}" onclick="btTab('${esc(id)}','${t[0]}')">${t[1]}</div>`).join('')}</div>`
   +T.map(t=>`<div class="btp" data-t="${t[0]}"${t[0]==cur?'':' hidden'}>${panel[t[0]]()}</div>`).join(''))},
 async mycourse(){
- const bs=(await list(db.collection('batches'))).filter(b=>b.price>0).sort(ord),g=await bgranted(bs),got=bs.filter(b=>g.has(b.id));
+ const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).filter(b=>b.price>0).sort(ord),g=await bgranted(bs),got=bs.filter(b=>g.has(b.id));
  return wrap(`<h2 class="pageTitle">My Course / मेरा कोर्स</h2>`+(got.length?got.map(b=>`<a class="card cr" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span><span style="font-size:16px">✅</span></a>`).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No active course yet. Buy a batch from Paid Batches.<br>अभी कोई एक्टिव कोर्स नहीं है। Paid Batches से बैच खरीदें।</p>'))},
 async queries(){
  const now=Date.now(),when=x=>x.createdAt&&x.createdAt.toDate?x.createdAt.toDate().getTime():now;
@@ -930,7 +945,7 @@ async ca(){
   +`<div class="chips">${topics.map(k=>`<a class="chip ${k==sel?'on':''}" onclick="caSet('topic','${k}')">${k=='all'?(CAS.lang=='hi'?'सभी':'All'):esc(caLbl(k,CAS.lang))}</a>`).join('')}</div>`
   +`<div class="chips">${[['both','Both'],['hi','हिंदी'],['en','English']].map(([k,t])=>`<a class="chip ${CAS.lang==k?'on':''}" onclick="caSet('lang','${k}')">${t}</a>`).join('')}</div>`
   +note+(shown.length?shown.map(x=>caCard(x,CAS.lang)).join(''):empty))},
-async mocks(){const f=(await list(db.collection('mockTestFolders'))).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div>'+f.map(x=>lrow('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
+async mocks(){const f=(await cl('mfall',db.collection('mockTestFolders'),6,['newMocksAt','newBatchesAt'])).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div>'+f.map(x=>lrow('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
 async mf(id,st){const t=await list(db.collection('mockTests').where('folderId','==',id));if(!t.length)return wrap(back+empty);
  const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''},P=t.filter(x=>sg(x)=='prelims'),M=t.filter(x=>sg(x)=='mains'),N=t.filter(x=>!sg(x)),has=P.length||M.length;
  const tt=mrow;
@@ -950,7 +965,8 @@ async board(id){const s=await db.collection('mockScores').doc(id).collection('sc
  const rows=s.docs.map(d=>({uid:d.id,score:d.data().score||0,timeSec:d.data().timeSec||0})).sort((a,b)=>b.score-a.score||a.timeSec-b.timeSec);
  const me=auth.currentUser.uid,my=rows.findIndex(r=>r.uid==me);
  const row=(r,i)=>`<div class="card" style="${r.uid==me?'border-color:var(--gold);background:var(--yw)':''}"><b>#${i+1}</b> ${r.uid==me?'(You)':'Student'} — <b>${r.score}</b> marks · ${Math.floor(r.timeSec/60)}m ${r.timeSec%60}s</div>`;
- return wrap(back+`<h2 class="pageTitle">Leaderboard / लीडरबोर्ड</h2>`+(rows.length?rows.slice(0,20).map(row).join('')+(my>=20?`<p class="mu">Aapka rank: #${my+1}</p>`:''):empty))},
+ const fx=(J.get('fmIndex',null)||{}).data||null,fm=fx&&(fx.sets||[]).find(x=>x.id==id),fsb=fm&&(fx.subjects||[]).find(x=>x.id==fm.subjectId);
+ return wrap(back+`<h2 class="pageTitle">Leaderboard / लीडरबोर्ड</h2>`+(fm?`<p class="mu">${esc((fsb?fsb.name:'')+' · '+fmLabel(fm))}</p>`:'')+(rows.length?rows.slice(0,20).map(row).join('')+(my>=20?`<p class="mu">Aapka rank: #${my+1}</p>`:''):empty))},
 async profile(){const d=await db.doc('students/'+auth.currentUser.uid).get().then(x=>x.data()||{}).catch(()=>({}));const ex=J.get('exam',null),g=goalVal();
  const known=QUALS.includes(d.qualification),qs=d.qualification?(known?d.qualification:'Other'):'',qo=known?'':(d.qualification||''),mine=Array.isArray(d.exams)?d.exams:[];
  const opt=(a,v)=>'<option value="">Select</option>'+a.map(x=>`<option ${x==v?'selected':''}>${esc(x)}</option>`).join('');
@@ -967,7 +983,7 @@ async profile(){const d=await db.doc('students/'+auth.currentUser.uid).get().the
  <div class="card"><b>Exam countdown</b><input id="en" placeholder="Exam ka naam" value="${esc(ex?.name||'')}"><input id="ed" type="date" value="${esc(ex?.date||'')}"><div class="row"><button class="p" onclick="saveExam()">Save</button><button class="s" onclick="J.set('exam',null);route()">Remove</button></div></div>
  <div class="card"><b>Daily goal (questions)</b><select id="gl" style="width:100%;margin:6px 0">${GOALS.map(o=>`<option value="${o}" ${o==g?"selected":""}>${o} questions per day / ${o} सवाल प्रतिदिन</option>`).join("")}</select><button class="p" onclick="saveGoal()">Save</button></div>
  <div class="card"><b>Theme / थीम</b><div class="row"><button class="s" onclick="toggleTheme();route()">${themeDark()?'☀️ Light theme':'🌙 Dark theme'}</button></div></div>
- ${isAdminUser()?'<div class="card"><b>Admin</b><div class="row"><a class="btnlink" href="#/admin">Batch Access</a></div></div>':''}<p id="pm" class="mu"></p>${contactHtml()}<div class="card"><b>Account delete</b><p class="mu">Aapka account, queries aur test records hat jaayenge.</p><button class="s" onclick="delAcc()" style="color:var(--bad)">Delete account</button></div><button class="p" onclick="auth.signOut()">Logout</button>`)},
+ ${isAdminUser()?'<div class="card"><b>Admin</b><div class="row"><a class="btnlink" href="#/admin">Batch Access &amp; Free MCQ settings</a></div></div>':''}<div class="card"><b>Refresh content / कंटेंट रिफ्रेश</b><p class="mu">Lists (videos, PDFs, batches, mock folders) are saved for a few hours to load faster. Tap to load the latest now. / लिस्ट तेज़ लोड के लिए कुछ घंटे सेव रहती हैं। नवीनतम अभी लोड करने के लिए टैप करें।</p><button class="s" onclick="fqClear();J.del&&J.del('fmIndex');try{localStorage.removeItem('ysh_fmIndex')}catch(e){}toast('Refreshed — latest content will load');">Refresh now</button></div><p id="pm" class="mu"></p>${contactHtml()}<div class="card"><b>Account delete</b><p class="mu">Aapka account, queries aur test records hat jaayenge.</p><button class="s" onclick="delAcc()" style="color:var(--bad)">Delete account</button></div><button class="p" onclick="auth.signOut()">Logout</button>`)},
 };
 
 async function saveName(){const n=document.getElementById('pn').value.trim();if(!n)return;
@@ -1044,6 +1060,7 @@ function admDefault(bid){return (window.ADM&&ADM[bid])||0}
 async function adminPage(){
  if(!isAdminUser())return wrap(back+'<div class="card">Ye page sirf admin ke liye hai.</div>');
  const [bs,reqs,grants]=await Promise.all([list(db.collection('batches')),list(db.collection('accessRequests')),list(db.collection('batchAccess').where('status','==','granted'))]);
+ const fs=fmSettings(await db.doc('appConfig/freeMcq').get().then(d=>d.data()).catch(()=>null));
  const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:id;
  window.ADM={};bs.forEach(b=>ADM[b.id]=b.validityMonths||0);
  reqs.sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0));
@@ -1056,7 +1073,15 @@ async function adminPage(){
  return wrap(`<h2 class="pageTitle">Batch Access / बैच एक्सेस</h2>
  <div class="sec">Grant Permission: Pending requests</div>${reqHtml}
  <div class="sec">Manual grant</div><div class="card"><input id="ge" type="email" placeholder="Student email"><select id="gb" style="width:100%;margin:6px 0">${batchOpts}</select><input id="gm" type="number" min="0" placeholder="Validity months (khali = batch default, 0 = lifetime)"><button class="p" onclick="admManual()">Grant access</button></div>
- <div class="sec">Granted students (${grants.length})</div>${grantHtml}`)}
+ <div class="sec">Granted students (${grants.length})</div>${grantHtml}
+ <div class="sec">Free MCQ test settings</div><div class="card"><p class="mu">Applies to every Free MCQ test (timer, marks, negative marking). Timer 0 = no timer.</p><label class="mu">Time limit (minutes, 0 = no timer)</label><input id="fsm" type="number" min="0" max="300" value="${fs.durationMinutes}"><label class="mu">Marks per question</label><input id="fsk" type="number" min="0.25" max="100" step="0.25" value="${fs.marksPerQuestion}"><label class="mu">Negative marks per wrong answer</label><input id="fsn" type="number" min="0" step="0.25" value="${fs.negativeMarks}"><button class="p" onclick="admFmSave()">Save settings</button></div>`)}
+async function admFmSave(){const mi=Math.trunc(+document.getElementById('fsm').value),mk=+document.getElementById('fsk').value,ng=+document.getElementById('fsn').value;
+ if(!(mi>=0&&mi<=300)){alert('Time limit 0 se 300 minutes ke beech hona chahiye');return}
+ if(!(mk>0&&mk<=100)){alert('Marks per question 0 se zyada aur 100 tak hona chahiye');return}
+ if(!(ng>=0)){alert('Negative marks 0 ya usse zyada hone chahiye');return}
+ try{await db.doc('appConfig/freeMcq').set({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng},{merge:true});
+  try{const c=J.get('fmIndex',null);if(c&&c.data){c.data.settings=fmSettings({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng});J.set('fmIndex',c)}}catch(e){}
+  toast('Free MCQ settings saved')}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admGrant(email,bid,months){
  email=String(email).trim().toLowerCase();if(months===undefined||months===null)months=admDefault(bid);
  const id=email+'_'+bid,code=String(100000+Math.floor(Math.random()*900000));
@@ -1081,8 +1106,12 @@ async function admExtend(id){const m=+prompt('Kitne mahine badhane hain?','1');i
 
 const FM_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function fmMonth(k){const p=String(k).split('-'),m=+p[1];return p.length==2&&m>=1&&m<=12?FM_MONTHS[m-1]+' '+p[0]:k}
+function fmSettings(r){const m=r&&typeof r=='object'?r:{},mi=Number.isFinite(+m.durationMinutes)&&m.durationMinutes!==null&&m.durationMinutes!==''?Math.trunc(+m.durationMinutes):NaN,mk=+m.marksPerQuestion,ng=+m.negativeMarks;
+ return{durationMinutes:(!(mi>=0)||mi>300)?25:mi,marksPerQuestion:(!(mk>0)||mk>100)?1:mk,negativeMarks:(!(ng>=0)||m.negativeMarks===null||m.negativeMarks==='')?0:ng}}
+async function fmFetchSettings(fb){try{const d=await db.doc('appConfig/freeMcq').get();return d.exists?fmSettings(d.data()):fmSettings(fb)}catch(e){return fmSettings(fb)}}
+function fmSub(m,st){return m.count+' questions • '+(st.durationMinutes>0?st.durationMinutes+' min':'No timer')+' • '+fmM(m.count*st.marksPerQuestion)+' marks'+(st.negativeMarks>0?' • −'+fmM(st.negativeMarks)+' negative':'')}
 async function fmIndexRaw(){const c=J.get('fmIndex',null);if(c&&Date.now()-c.at<432e5)return c.data;
- try{const d=(await db.doc('freeMcqIndex/current').get()).data();if(!d)return c?c.data:null;const data={exams:d.exams||[],subjects:d.subjects||[],sets:(d.sets||[]).filter(s=>s&&s.id&&s.examId&&s.subjectId)};J.set('fmIndex',{at:Date.now(),data});return data}
+ try{const d=(await db.doc('freeMcqIndex/current').get()).data();if(!d)return c?c.data:null;const st=await fmFetchSettings(c&&c.data&&c.data.settings);const data={exams:d.exams||[],subjects:d.subjects||[],sets:(d.sets||[]).filter(s=>s&&s.id&&s.examId&&s.subjectId),settings:st};J.set('fmIndex',{at:Date.now(),data});return data}
  catch(e){if(c)return c.data;throw e}}
 function fmGood(raw){return (raw||[]).filter(q=>q&&String(q.text||'').trim()&&Array.isArray(q.options)&&q.options.length==4&&q.correctIndex>=0&&q.correctIndex<=3)}
 async function fmSet(id){const c=J.get('fset_'+id,null);if(c&&c.Q&&c.Q.length)return c;
@@ -1101,9 +1130,9 @@ function fmWithCached(sets){try{const inIx=new Set(sets.map(s=>s.id)),ids=J.get(
  if(keep.length!=ids.length){J.set('fsetIds',keep);J.set('fmMeta',meta)}return extra.length?sets.concat(extra):sets}catch(e){return sets}}
 async function fmIndex(){const x=await fmIndexRaw();if(!x)return x;const ex=[...(x.exams||[])],su=(x.subjects||[]).filter(s=>s.id!='ca');
  if(!ex.some(e=>e.id=='english'))ex.push({id:'english',name:'English',emoji:'📖'});if(!su.some(s=>s.id=='english'))su.push({id:'english',name:'English',emoji:'📖'});
- return Object.assign({},x,{exams:ex,subjects:su,sets:fmWithCached((x.sets||[]).filter(s=>s.subjectId!='ca'))})}
+ return Object.assign({},x,{settings:fmSettings(x.settings),exams:ex,subjects:su,sets:fmWithCached((x.sets||[]).filter(s=>s.subjectId!='ca'))})}
 async function fmInfo(id,en){const box=document.getElementById('finfo');box.innerHTML='<p class="mu">Loading…</p>';
- try{const s=await fmSet(id);box.innerHTML=`<div class="card"><b>About this set</b><p class="mu">${s.sources.length?'These questions are written from official PIB (Government of India) press releases. The source is credited in each explanation. Questions can contain mistakes, so please check important facts in your textbook.':en?'These English questions follow the Banking PO / Clerk pattern (reading comprehension, cloze test, error spotting, fill in the blanks, para jumbles, sentence improvement) at easy, moderate and hard level (a new set every week). They are written by AI and checked twice for accuracy (grammar check and an independent re-solve). No book or website text is copied. Questions can still contain mistakes, so please confirm doubtful points in a grammar book.':'These questions are written by AI from the syllabus topics of this exam and checked three times for accuracy (fact-check, independent re-solve, Hindi-English match). No book or website text is copied. Questions can still contain mistakes, so please check important facts in your textbook.'}</p>${s.sources.map(x=>x.url?`<div><a href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.title)}</a></div>`:`<div>🔗 ${esc(x.title)}</div>`).join('')}</div>`}
+ try{const s=await fmSet(id);box.innerHTML=`<div class="card"><b>About this test</b><p class="mu">${s.sources.length?'These questions are written from official PIB (Government of India) press releases. The source is credited in each explanation. Questions can contain mistakes, so please check important facts in your textbook.':en?'These English questions follow the Banking PO / Clerk pattern (reading comprehension, cloze test, error spotting, fill in the blanks, para jumbles, sentence improvement) at easy, moderate and hard level (a new set every week). They are written by AI and checked twice for accuracy (grammar check and an independent re-solve). No book or website text is copied. Questions can still contain mistakes, so please confirm doubtful points in a grammar book.':'These questions are written by AI from the syllabus topics of this exam and checked three times for accuracy (fact-check, independent re-solve, Hindi-English match). No book or website text is copied. Questions can still contain mistakes, so please check important facts in your textbook.'}</p>${s.sources.map(x=>x.url?`<div><a href="${esc(x.url)}" target="_blank" rel="noopener">🔗 ${esc(x.title)}</a></div>`:`<div>🔗 ${esc(x.title)}</div>`).join('')}</div>`}
  catch(e){box.innerHTML='<p class="err">Details could not be loaded. Check your internet and try again.</p>'}}
 function initFq(){drawFq()}
 function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
@@ -1554,7 +1583,7 @@ async function bCheck(id){
 /* PDF Library: Free | Paid Batch tabs */
 function ppTab(t){ls.set('pt',t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
 async function ppOpen(el){if(!el.open||el.dataset.done)return;el.dataset.done='1';const id=el.dataset.b,body=el.querySelector('.bxb');
- try{const [a,c]=await Promise.all([list(db.collection('pdfFolders').where('batchIds','array-contains',id)),list(db.collection('pdfFolders').where('batchId','==',id))]);
+ try{const [a,c]=await Promise.all([cl('bpf_'+id,db.collection('pdfFolders').where('batchIds','array-contains',id),6,['newPdfsAt','newBatchesAt']),cl('bpf2_'+id,db.collection('pdfFolders').where('batchId','==',id),6,['newPdfsAt','newBatchesAt'])]);
   const m={};[...a,...c].forEach(x=>m[x.id]=x);const f=Object.values(m).sort(ord);
   body.innerHTML=f.length?f.map(x=>`<a class="card cr bxr" href="javascript:void 0" onclick="ppFolder('${esc(id)}','${esc(x.id)}')"><span style="font-size:22px">📁</span><span style="flex:1"><b>${esc(x.name)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):'<p class="mu" style="margin:8px 6px">No folder in this batch yet</p>'}
  catch(e){body.innerHTML='<p class="err" style="margin:8px 6px">Couldn\'t load folders.</p>'}}
@@ -1613,9 +1642,9 @@ async function btOpen(el,bid,silent){
  if(!el.open||el.dataset.done)return;el.dataset.done='1';
  const body=el.querySelector('.bxb'),k=el.dataset.k,fid=el.dataset.id,none='<p class="mu" style="margin:8px 6px">Empty</p>';
  try{
-  if(k=='v'){const v=(await list(db.collection('videos').where('folderId','==',fid))).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);
+  if(k=='v'){const v=(await cl('vin_'+fid,db.collection('videos').where('folderId','==',fid),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);
    body.innerHTML=v.length?v.map(x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/play/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">play_circle_outline</span></a>`}).join(''):none}
-  else if(k=='p'){const p=(await list(db.collection('pdfs').where('folderId','==',fid))).sort(ord);
+  else if(k=='p'){const p=(await cl('pin_'+fid,db.collection('pdfs').where('folderId','==',fid),6,['newPdfsAt','newBatchesAt'])).sort(ord);
    body.innerHTML=p.length?p.map(x=>`<a class="card cr bxr" href="#/pdfb/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:22px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):none}
   else{const t=(await list(db.collection('mockTests').where('folderId','==',fid))).sort(ord);
    const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
@@ -1641,8 +1670,8 @@ async function route(){
   if(p=='home')initHome();
   if(p=='batch'&&a)btInit(a);
   checkBell();
-  if(p=='test'||p=='revmock')initTest();
-  if(p=='fmq'||p=='revq')initFq();
+  if(p=='test'||p=='revmock'||p=='fmq')initTest();
+  if(p=='revq')initFq();
   if(p=='flash')fcInit();if(p=='timer')tsDraw();if(p=='typing')tyInit();if(p=='omr'){window.OM=null;omrInit()}if(p=='calc'&&a)calcRun();if(p=='gk')window.GK=window.GK||{cat:'all'};
   if(p=='speedplay')smInit();
   if(p=='days')idDraw();
@@ -1653,7 +1682,7 @@ async function route(){
 window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();return loginView();}
- try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim()}catch(e){}
+ try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim()['newBatchesAt','newVideosAt','newPdfsAt','newMocksAt'].forEach(k=>MK[k]=tsMs(c[k]))}catch(e){}
  if(!location.hash)location.hash='#/home';
  route()});
 
