@@ -344,6 +344,7 @@ aside.side{overflow-y:auto}
  .tiles{gap:8px}.tile .l{font-size:11.5px}
  .topbar b{font-size:15px}
 }
+.adbar{background:var(--navy);border-radius:14px;margin:10px 0;overflow:hidden;position:sticky;top:0;z-index:5}.adbar .adt{color:#fff;font-weight:700;font-size:17px;padding:14px 16px 4px}.adtabs{display:flex;overflow-x:auto;scrollbar-width:none}.adtabs a{padding:11px 14px;white-space:nowrap;color:#b8c0e8;border-bottom:3px solid transparent;cursor:pointer;font-size:14px}.adtabs a.on{color:var(--yel);border-bottom-color:var(--yel);font-weight:700}.adst{display:flex;text-align:center}.adst div{flex:1}.adst b{display:block;font-size:24px;color:var(--tx)}.adst small{color:var(--mu);font-size:12px}.adl{font-size:11px;color:var(--mu);margin:10px 0 4px;display:block}.adh{font-weight:700;font-size:15px;margin:16px 0 8px}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -1125,68 +1126,177 @@ function confirmSubmit(){if(T.done)return;const un=T.ans.filter(a=>a===null).len
 function addMonthsEnd(base,m){const b=new Date(base),ty=b.getFullYear(),tm=b.getMonth()+m,last=new Date(ty,tm+1,0).getDate();return new Date(ty,tm,Math.min(b.getDate(),last),23,59,59,999)}
 function admDefault(bid){return (window.ADM&&ADM[bid])||0}
 
-const ADT=[['stats','Stats'],['grants','Grants'],['batches','Batches'],['pdfs','PDFs'],['videos','Videos'],['mocks','Mock Tests'],['attempts','Attempts'],['branding','Branding'],['order','Home order'],['banners','Banners'],['notify','Notify'],['queries','Queries']];
+const ADT=[['stats','Stats'],['grants','Grants'],['batches','Batches'],['pdfs','PDFs'],['videos','Videos'],['mocks','Mock Tests'],['free','Free MCQs'],['attempts','Attempts'],['branding','Branding'],['banners','Banners'],['notify','Notify'],['queries','Queries']];
 const $v=id=>(document.getElementById(id)||{}).value||'';
 async function adminPage(){
  if(!isAdminUser())return wrap(back+'<div class="card">Ye page sirf admin ke liye hai.</div>');
- const t=window.ADTAB||'stats';if(t!='order')window.ADOK=0;
- const bar=`<div class="chips" style="margin:12px 0">${ADT.map(x=>`<a class="chip ${x[0]==t?'on':''}" onclick="ADTAB='${x[0]}';route()" style="cursor:pointer">${x[1]}</a>`).join('')}</div>`;
+ const t=window.ADTAB||'stats';if(t!='branding')window.ADOK=0;
+ const bar=`<div class="adbar"><div class="adt">Admin Panel</div><div class="adtabs">${ADT.map(x=>`<a class="${x[0]==t?'on':''}" onclick="ADTAB='${x[0]}';route()">${x[1]}</a>`).join('')}</div></div>`;
  if(t=='grants')return wrap(bar)+await adminGrantsPage();
- return wrap(bar+await ({videos:admContent,pdfs:admContent,queries:admQueries,banners:admBanners,notify:admNotify,stats:admStats,batches:admBatches,mocks:admMocks,attempts:admAttempts,branding:admBranding,order:admOrder}[t])(t));
+ return wrap(bar+await ({videos:admContent,pdfs:admContent,queries:admQueries,banners:admBanners,notify:admNotify,stats:admStats,batches:admBatches,mocks:admMocks,attempts:admAttempts,branding:admBranding,free:admFree}[t])(t));
 }
 async function admAdd(col,d,mark){try{await db.collection(col).add({...d,createdAt:firebase.firestore.FieldValue.serverTimestamp()});if(mark)await db.doc('appConfig/main').set({[mark]:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});try{fqClear()}catch(e){}toast('Saved ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admDel(col,id){if(!confirm('Delete? / हटाएँ?'))return;try{await db.collection(col).doc(id).delete();route()}catch(e){alert(e.message)}}
 async function admContent(t){
- const v=t=='videos',fc=v?'videoFolders':'pdfFolders',ic=v?'videos':'pdfs';
- const [bs,fs,it]=await Promise.all([list(db.collection('batches')),list(db.collection(fc)),list(db.collection(ic))]);
- const FN={};fs.forEach(f=>FN[f.id]=f.name);
- return `<div class="sec">New folder</div><div class="card"><input id="fn" placeholder="Folder name"><select id="fb" style="width:100%;margin:6px 0"><option value="free">Free (sabke liye)</option>${bs.map(b=>`<option value="${esc(b.id)}">${esc(b.title)}</option>`).join('')}</select><button class="p" onclick="admFolder('${fc}',${v})">Add folder</button></div>
- <div class="sec">Add ${v?'video':'PDF'}</div><div class="card"><select id="cf" style="width:100%;margin:6px 0">${fs.map(f=>`<option value="${esc(f.id)}">${esc(f.name)} (${esc(f.batchId||'free')})</option>`).join('')}</select><input id="ct" placeholder="Title"><input id="cl" placeholder="${v?'YouTube link':'Google Drive link'}"><button class="p" onclick="admItem('${ic}',${v})">Add</button></div>
- <div class="sec">${v?'Videos':'PDFs'} (${it.length}) / Folders (${fs.length})</div>`
- +fs.map(f=>`<div class="card row" style="justify-content:space-between"><span>📁 <b>${esc(f.name)}</b> <small class="mu">${esc(f.batchId||'free')}</small></span><button class="s" onclick="admDel('${fc}','${esc(f.id)}')">Delete</button></div>`).join('')
- +it.slice(0,100).map(x=>`<div class="card row" style="justify-content:space-between"><span style="flex:1;min-width:0"><b>${esc(x.title)}</b><br><small class="mu">${esc(FN[x.folderId]||'')}</small></span><button class="s" onclick="admDel('${ic}','${esc(x.id)}')">Delete</button></div>`).join('');
+ const v=t=='videos',fc=v?'videoFolders':'pdfFolders',ic=v?'videos':'pdfs',W=v?'video':'PDF';
+ const [bs,fs]=await Promise.all([list(db.collection('batches')),list(db.collection(fc))]);
+ const sb=window.ADB||'free',ff=fs.filter(f=>(f.batchId||'free')==sb);
+ let sf=window.ADF;if(!ff.some(f=>f.id==sf))sf=ff[0]?ff[0].id:'';window.ADF=sf;
+ const it=sf?await list(db.collection(ic).where('folderId','==',sf)):[];
+ return `<div class="adh" style="margin-top:6px">1. Which section? ${v?'(first choice = free Video Classes)':'(first choice = free PDFs)'}</div>
+ <select style="width:100%" onchange="ADB=this.value;ADF='';route()"><option value="free">${v?'Free Video Classes':'Free PDFs'}</option>${bs.map(b=>`<option value="${esc(b.id)}" ${b.id==sb?'selected':''}>${esc(b.title)}</option>`).join('')}</select>
+ <div class="adh">2. Choose a folder or create new</div>
+ ${ff.length?`<select style="width:100%" onchange="ADF=this.value;route()">${ff.map(f=>`<option value="${esc(f.id)}" ${f.id==sf?'selected':''}>${esc(f.name)}</option>`).join('')}</select>`:'<p class="mu">Is section me abhi koi folder nahi hai.</p>'}
+ <div class="row" style="margin-top:8px"><input id="fn" placeholder="New folder name" style="flex:1"><button class="p" onclick="admFolder('${fc}',${v})">Create</button></div>
+ ${sf?`<div class="adh">3. Add ${W}</div><div class="card"><span class="adl">Title</span><input id="ct" style="width:100%"><span class="adl">${v?'YouTube link':'Google Drive link'}</span><input id="cl" style="width:100%"><button class="p" style="margin-top:10px" onclick="admItem('${ic}',${v})">Add ${W}</button></div>
+ <div class="adh">${v?'Videos':'PDFs'} in this folder (${it.length})</div>`+it.map(x=>`<div class="card row" style="justify-content:space-between"><b style="flex:1;min-width:0">${esc(x.title)}</b><button class="s" onclick="admDel('${ic}','${esc(x.id)}')">Delete</button></div>`).join('')+`<button class="s" style="margin-top:6px" onclick="admDel('${fc}','${esc(sf)}')">Delete this folder</button>`:''}`;
 }
-async function admFolder(fc,v){const n=$v('fn').trim(),b=$v('fb');if(!n)return alert('Folder ka naam daalein');
- await admAdd(fc,v?{name:n,batchId:b}:{name:n,type:'general',batchId:b,batchIds:[b]})}
-async function admItem(ic,v){const f=$v('cf'),ti=$v('ct').trim(),l=$v('cl').trim();if(!f||!ti||!l)return alert('Folder, title aur link teeno daalein');
- const fd=(await db.collection(v?'videoFolders':'pdfFolders').doc(f).get()).data()||{},b=fd.batchId&&fd.batchId!='free'?fd.batchId:null;
+async function admFolder(fc,v){const n=$v('fn').trim(),b=window.ADB||'free';if(!n)return alert('Folder ka naam daalein');
+ try{const r=await db.collection(fc).add(v?{name:n,batchId:b,createdAt:firebase.firestore.FieldValue.serverTimestamp()}:{name:n,type:'general',batchId:b,batchIds:[b],createdAt:firebase.firestore.FieldValue.serverTimestamp()});window.ADF=r.id;toast('Folder created ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
+async function admItem(ic,v){const f=window.ADF,ti=$v('ct').trim(),l=$v('cl').trim();if(!f||!ti||!l)return alert('Title aur link dono daalein');
+ const b=window.ADB&&window.ADB!='free'?window.ADB:null;
  await admAdd(ic,v?{title:ti,youtubeLink:l,thumbUrl:'',batchId:b,folderId:f,source:'admin'}:{title:ti,iconUrl:'',driveLink:l,batchId:b,folderId:f},v?(b?'newBatchesAt':'newVideosAt'):(b?'newBatchesAt':'newPdfsAt'))}
+const dtf=d=>d&&d.toDate?d.toDate().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true}):'';
 async function admQueries(){
- const q=await list(db.collection('queries').orderBy('createdAt','desc').limit(60));
- return `<div class="sec">Student queries (${q.length})</div>`+(q.length?q.map(x=>`<div class="card"><b>${esc(x.studentName||'')}</b> <small class="mu">${esc(x.studentEmail||'')}</small><div style="margin:6px 0;white-space:pre-wrap">${esc(x.text)}</div>${x.reply?`<div class="mu">✅ Reply: ${esc(x.reply)}</div>`:''}<input id="qr_${esc(x.id)}" placeholder="Reply likhein" value="${esc(x.reply||'')}"><div class="row"><button class="p" onclick="admReply('${esc(x.id)}')">${x.reply?'Update reply':'Send reply'}</button><button class="s" onclick="admDel('queries','${esc(x.id)}')">Delete</button></div></div>`).join(''):'<p class="mu">No queries.</p>');
+ const f=window.AQF||'pending',ed=window.AQE||(window.AQE={});
+ const all=(await list(db.collection('queries').orderBy('createdAt','desc').limit(300))).filter(q=>!q.createdAt||Date.now()-q.createdAt.toMillis()<20*864e5);
+ const an=q=>!!String(q.reply||'').trim(),pc=all.filter(q=>!an(q)).length,sh=all.filter(q=>f=='all'||(f=='pending'?!an(q):an(q)));
+ const ch=(v,l)=>`<a class="chip" style="${f==v?'background:var(--navy);color:#fff;border-color:var(--navy)':''}" onclick="AQF='${v}';route()">${l}</a>`;
+ return `<div class="chips">${ch('pending','Pending / लंबित ('+pc+')')}${ch('answered','Answered / जवाब दिए')}${ch('all','All / सभी')}</div>
+ <p class="mu" style="font-size:12px;margin:6px 0">Doubts are deleted from Firebase automatically after 20 days.<br>डाउट 20 दिन बाद Firebase से अपने-आप हट जाते हैं।</p>`
+ +(sh.length?sh.map(q=>{const id=esc(q.id),box=!an(q)||ed[q.id];return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div style="min-width:0"><b>${esc(q.studentName||'Student')}</b><br><small class="mu" style="overflow-wrap:anywhere">${esc(q.studentEmail||'')} • ${esc(dtf(q.createdAt))}</small></div><button class="s" onclick="admQDel('${id}')">🗑️</button></div><div style="margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere">${esc(q.text)}</div>`
+  +(box?`<textarea id="qr_${id}" rows="3" maxlength="1000" placeholder="Type reply... / जवाब लिखें..." style="width:100%;background:var(--bg)">${esc(q.reply||'')}</textarea><div class="row" style="justify-content:flex-end;margin-top:6px">${ed[q.id]?`<button class="s" onclick="admQEd('${id}',0)">Cancel / रद्द करें</button>`:''}<button class="p" onclick="admReply('${id}')">${an(q)?'Update reply / जवाब अपडेट करें':'Send reply / जवाब भेजें'}</button></div>`
+  :`<div style="background:rgba(255,212,0,.14);border-radius:10px;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere">${esc(q.reply)}</div><div style="text-align:right;margin-top:4px"><button class="s" onclick="admQEd('${id}',1)">Edit reply / जवाब बदलें</button></div>`)+`</div>`}).join(''):'<p class="mu">No doubts here.</p>');
 }
-async function admReply(id){const r=$v('qr_'+id).trim();if(!r)return;try{await db.collection('queries').doc(id).set({reply:r,status:'answered',repliedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});toast('Reply sent ✅');route()}catch(e){alert(e.message)}}
+function admQEd(id,v){(window.AQE||(window.AQE={}))[id]=v?1:0;route()}
+async function admReply(id){const r=$v('qr_'+id).trim();if(!r)return alert('Write a reply first. / जवाब लिखें।');
+ try{await db.collection('queries').doc(id).update({reply:r,status:'answered',repliedAt:firebase.firestore.FieldValue.serverTimestamp()});if(window.AQE)window.AQE[id]=0;toast('Reply sent ✅ / जवाब भेज दिया');route()}catch(e){alert('Reply failed / जवाब नहीं गया: '+e.message)}}
+async function admQDel(id){if(!confirm('Delete this doubt? / डाउट हटाएँ?\nThis doubt and its reply will be removed permanently.\nयह डाउट और उसका जवाब हमेशा के लिए हट जाएगा।'))return;
+ try{await db.collection('queries').doc(id).delete();route()}catch(e){alert('Delete failed / हटाया नहीं गया: '+e.message)}}
+const ABS=()=>window.ABS||(window.ABS={i:'',b:'',l:''});
+async function admRMove(col,id,d){try{const b=bsort(await list(db.collection(col))),i=b.findIndex(x=>x.id==id),j=i+d;if(i<0||j<0||j>=b.length)return;[b[i],b[j]]=[b[j],b[i]];const w=db.batch();b.forEach((x,k)=>w.update(db.collection(col).doc(x.id),{order:k}));await w.commit();route()}catch(e){alert('Order save nahi hua: '+e.message)}}
 async function admBanners(){
- const b=await list(db.collection('banners').orderBy('order'));
- return `<div class="sec">Add banner (16:9 image URL)</div><div class="card"><input id="bi" placeholder="Image URL (https://…)"><input id="bl" placeholder="Link URL (optional)"><button class="p" onclick="admBanner(${b.length})">Add banner</button></div>`+b.map(x=>`<div class="card row" style="justify-content:space-between"><img src="${esc(x.imageUrl)}" style="width:120px;aspect-ratio:16/9;object-fit:cover;border-radius:8px"><button class="s" onclick="admDel('banners','${esc(x.id)}')">Delete</button></div>`).join('');
+ const [bs,b]=await Promise.all([list(db.collection('batches')),list(db.collection('banners')).then(bsort)]);const st=ABS(),BT={};bs.forEach(x=>BT[x.id]=x.title);
+ return `<div class="adh" style="margin-top:6px">Home Screen — auto-scroll banner slider</div><p class="mu" style="font-size:12px">16:9 landscape images look best (for example 1280×720). A new banner shows on the Home screen right away, no rebuild needed.</p>
+ <div style="aspect-ratio:16/9;border-radius:12px;border:1px solid var(--line);overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px">${st.i?`<img src="${esc(st.i)}" style="width:100%;height:100%;object-fit:cover">`:'🖼️'}</div>
+ <input style="width:100%;margin-top:8px" value="${esc(st.i)}" placeholder="Banner image URL (https://…)" onchange="ABS().i=this.value.trim();route()">
+ <select style="width:100%;margin-top:8px" onchange="ABS().b=this.value;route()"><option value="">No batch (use link below)</option>${bs.map(x=>`<option value="${esc(x.id)}" ${x.id==st.b?'selected':''}>${esc(x.title)}</option>`).join('')}</select>
+ ${st.b?'<p class="mu" style="font-size:12px">Tapping this banner opens the batch’s payment page ("Pay & Get").</p>':`<span class="adl">Link (optional — opens when the banner is tapped)</span><input style="width:100%" value="${esc(st.l)}" onchange="ABS().l=this.value.trim()">`}
+ <button class="p" style="width:100%;margin-top:12px" ${st.i?'':'disabled'} onclick="admBanner(${b.length})">Add banner</button>
+ <hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div class="adh" style="margin-top:0">Current banners</div>`
+ +(b.length?`<div class="card" style="padding:4px 10px">`+b.map((x,k)=>`<div class="row" style="padding:8px 0;${k?'border-top:1px solid var(--line)':''}"><img src="${esc(x.imageUrl)}" style="width:64px;height:36px;object-fit:cover;border-radius:6px;flex:none"><span style="flex:1;min-width:0;font-size:13px;overflow-wrap:anywhere">${x.batchId?'Pay & Get → '+esc(BT[x.batchId]||'batch (deleted?)'):esc(x.linkUrl||'(no link)')}</span><button class="s" ${k?'':'disabled'} onclick="admRMove('banners','${esc(x.id)}',-1)">↑</button><button class="s" ${k<b.length-1?'':'disabled'} onclick="admRMove('banners','${esc(x.id)}',1)">↓</button><button class="s" onclick="admDel('banners','${esc(x.id)}')">🗑️</button></div>`).join('')+`</div>`:'<p class="mu">No banner yet — add one above.</p>');
 }
-async function admBanner(n){const i=$v('bi').trim(),l=$v('bl').trim();if(!/^https:\/\//.test(i))return alert('Image URL https:// se shuru hona chahiye');await admAdd('banners',{imageUrl:i,...(l?{linkUrl:l}:{}),order:n})}
-async function admNotify(){return `<div class="sec">Send notification</div><div class="card"><input id="nt" placeholder="Title"><input id="nb" placeholder="Message"><button class="p" onclick="admNotif()">Send to all</button><p class="mu">Push delivery GitHub Actions (send-notifications) se hota hai, jaise app mein.</p></div>`}
-async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim();if(!t||!b)return alert('Title aur message daalein');try{await db.collection('notifications').add({title:t,body:b,sent:false,sentAt:firebase.firestore.FieldValue.serverTimestamp()});toast('Notification queued ✅');route()}catch(e){alert(e.message)}}
-
+async function admBanner(n){const st=ABS();if(!/^https:\/\//.test(st.i))return alert('Image URL https:// se shuru hona chahiye');
+ const d={imageUrl:st.i,order:n};if(st.b)d.batchId=st.b;else if(st.l)d.linkUrl=st.l;window.ABS=null;await admAdd('banners',d)}
+const NTOP=[["exam_bank_po", "🏦", "Banking PO", "बैंकिंग पीओ"], ["exam_ssc_cgl", "🧾", "SSC CGL", "एसएससी सीजीएल"], ["exam_rrb_ntpc", "🚆", "RRB NTPC", "आरआरबी एनटीपीसी"], ["exam_upsssc", "📋", "UPSSSC", "यूपीएसएसएससी"], ["exam_ahc_ro", "⚖️", "AHC RO", "एएचसी आरओ"], ["exam_uppsc", "🏛️", "UPPSC", "यूपीपीएससी"]];
+async function admNotify(){
+ const tp=window.ANT||'',lb=(NTOP.find(x=>x[0]==tp)||[])[2];
+ return `<div class="adh" style="margin-top:6px">Send a notification to students’ phones</div>
+ <span class="adl">Send to / किसे भेजें</span><select id="nto" style="width:100%" onchange="ANT=this.value;route()"><option value="">All students / सभी छात्र</option>${NTOP.map(x=>`<option value="${esc(x[0])}" ${x[0]==tp?'selected':''}>${esc(x[1]+' '+x[2])} students</option>`).join('')}</select>
+ <span class="adl">Notification title</span><input id="nt" style="width:100%"><span class="adl">Message</span><textarea id="nb" rows="3" style="width:100%"></textarea>
+ <button class="p" style="width:100%;margin-top:12px" onclick="admNotif()">${tp?'Send to '+esc(lb||'selected')+' students':'Send to all students'}</button>
+ <p class="mu" style="font-size:12px;margin-top:12px">It appears in the app’s Notifications list straight away. The push to phones is sent automatically by the free GitHub automation. / यह ऐप की Notifications लिस्ट में तुरंत दिखता है। फोन पर पुश GitHub ऑटोमेशन अपने-आप भेजता है।</p>`;
+}
+async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim(),tp=$v('nto');if(!t||!b)return alert('Please enter both a title and a message.');
+ try{await db.collection('notifications').add({title:t,body:b,...(tp?{topic:tp}:{}),sent:false,sentAt:firebase.firestore.FieldValue.serverTimestamp()});toast('Saved — students’ phones will get the push notification shortly.');route()}catch(e){alert('Could not send: '+e.message)}}
 async function admStats(){
- const n=c=>db.collection(c).get().then(x=>x.size).catch(()=>'–');
- const C=['students','installs','batches','videos','pdfs','mockTests','queries'],L=['Students','App installs','Batches','Videos','PDFs','Mock tests','Queries'];
- const V=await Promise.all(C.map(n));
- return `<div class="sec">Stats</div><div class="grid">${V.map((v,i)=>`<div class="mtile"><b style="font-size:22px">${v}</b><small>${L[i]}</small></div>`).join('')}</div>`;
+ const n=c=>db.collection(c).get().then(x=>x.size).catch(()=>'?');
+ const C=[['students','Students'],['installs','App installs'],['batches','Batches'],['videos','Videos'],['pdfs','PDFs'],['mockTests','Mock tests'],['queries','Queries']];
+ const V=await Promise.all(C.map(c=>n(c[0]))),col=(i)=>`<div><b>${V[i]}</b><small>${C[i][1]}</small></div>`;
+ return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><button class="s" onclick="route()">Refresh</button>`;
 }
+const bsort=a=>a.sort((x,y)=>(x.order??1e9)-(y.order??1e9));
+const admMo=m=>m>0?(m==1?'1 month':m+' months'):'Lifetime';
 async function admBatches(){
- const b=await list(db.collection('batches'));
- return `<div class="sec">New batch</div><div class="card"><input id="bt" placeholder="Batch title"><input id="bp" type="number" min="0" placeholder="Price ₹ (0 = free)"><input id="bv" type="number" min="0" placeholder="Validity months (0 = lifetime)"><input id="bu" placeholder="Icon URL (optional)"><label class="row"><input type="checkbox" id="bm" style="width:auto;margin:0"> Mock Test Series only</label><button class="p" onclick="admBatch()">Add batch</button></div><div class="sec">Batches (${b.length})</div>`
- +b.map(x=>`<div class="card row" style="justify-content:space-between"><span style="flex:1;min-width:0"><b>${esc(x.title)}</b><br><small class="mu">₹${esc(x.price)} · ${x.validityMonths?x.validityMonths+' mo':'lifetime'} · ${x.videos||0} videos · ${x.pdfs||0} PDFs${x.mockOnly?' · mock only':''}</small></span><button class="s" onclick="admDel('batches','${esc(x.id)}')">Delete</button></div>`).join('');
+ const b=bsort(await list(db.collection('batches')));
+ const ic=window.ADBI||'';
+ return `<div class="adh" style="margin-top:6px">Add new batch</div>
+ <span class="adl">Batch icon/picture</span><div class="row"><div style="width:48px;height:48px;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#fff">${ic?`<img src="${esc(ic)}" style="width:100%;height:100%;object-fit:cover">`:'🖼️'}</div><input id="bu" value="${esc(ic)}" placeholder="Image URL (https://…)" style="flex:1" onchange="ADBI=this.value.trim();route()"></div>
+ <span class="adl">Batch title</span><input id="bt" style="width:100%">
+ <span class="adl">Price (number only)</span><input id="bp" type="number" min="0" style="width:100%">
+ <span class="adl">Validity in months (empty = lifetime)</span><input id="bv" type="number" min="0" style="width:100%"><small class="mu">How long a student keeps access after you grant it, e.g. 6.</small>
+ <label class="row" style="margin:12px 0 4px;justify-content:space-between"><span><b style="font-size:14px">Mock Test Series only</b><br><small class="mu">No videos / PDFs - only mock tests. Add its folders from the Mock Tests tab.</small></span><input type="checkbox" id="bm" style="width:22px;height:22px"></label>
+ <button class="p" style="width:100%;margin-top:8px" onclick="admBatch()">Add batch</button>
+ <hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div class="adh" style="margin-top:0">Existing batches</div>`
+ +(b.length?`<div class="card" style="padding:4px 10px">`+b.map((x,k)=>`<div class="row" style="padding:8px 0;${k?'border-top:1px solid var(--line)':''}"><div style="width:40px;height:40px;border-radius:8px;overflow:hidden;background:#fff;border:1px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center">${x.iconUrl?`<img src="${esc(x.iconUrl)}" style="width:100%;height:100%;object-fit:cover">`:'?'}</div><span style="flex:1;min-width:0"><b style="font-size:13px">${esc(x.title)}</b><br><small class="mu">₹${esc(x.price)} · ${x.mockOnly?'Mock Test Series':(x.videos||0)+' videos · '+(x.pdfs||0)+' PDFs'} · ${admMo(x.validityMonths)}</small></span><button class="s" ${k?'':'disabled'} onclick="admBMove('${esc(x.id)}',-1)">↑</button><button class="s" ${k<b.length-1?'':'disabled'} onclick="admBMove('${esc(x.id)}',1)">↓</button><button class="s" onclick="admBEdit('${esc(x.id)}')">✏️</button><button class="s" onclick="admBDel('${esc(x.id)}')">🗑️</button></div>`).join('')+`</div>`:'<p class="mu">No batch yet</p>');
 }
-async function admBatch(){const t=$v('bt').trim();if(!t)return alert('Batch ka title daalein');
- await admAdd('batches',{title:t,price:Math.max(0,+$v('bp')||0),iconUrl:$v('bu').trim(),videos:0,pdfs:0,isLocked:true,validityMonths:Math.max(0,Math.floor(+$v('bv')||0)),mockOnly:document.getElementById('bm').checked},'newBatchesAt')}
+async function admBatch(){const t=$v('bt').trim(),p=Math.floor(+$v('bp')||0);if(!t||p<=0)return alert('Enter a batch title and a price greater than 0.');
+ const vt=$v('bv').trim(),vm=vt===''?0:Number(vt);if(!Number.isInteger(vm)||vm<0||vm>120)return alert('Validity must be a whole number of months (1 to 120), or leave it empty for lifetime.');
+ const u=$v('bu').trim();if(u&&!/^https:\/\//.test(u))return alert('Icon URL https:// se shuru hona chahiye');
+ const n=(await list(db.collection('batches'))).length;window.ADBI='';
+ await admAdd('batches',{title:t,price:p,iconUrl:u,videos:0,pdfs:0,isLocked:true,validityMonths:vm,mockOnly:document.getElementById('bm').checked,order:n},'newBatchesAt')}
+async function admDelAll(q){const sn=await q.get();let w=db.batch(),n=0;for(const d of sn.docs){w.delete(d.ref);if(++n>=400){await w.commit();w=db.batch();n=0}}if(n)await w.commit()}
+async function admBDel(id){const x=((await db.collection('batches').doc(id).get()).data())||{};
+ if(!confirm('Delete batch?\nDelete "'+(x.title||'')+'"? All its PDFs, videos, folders and the students’ access records will be deleted too. (A PDF folder that is also in another batch stays in that other batch.) This cannot be undone.'))return;
+ try{const seen={},fd=[];for(const q of [db.collection('pdfFolders').where('batchIds','array-contains',id),db.collection('pdfFolders').where('batchId','==',id)])(await q.get()).docs.forEach(d=>{if(!seen[d.id]){seen[d.id]=1;fd.push(d)}});
+  const keep=new Set();for(const d of fd){const o=(d.data().batchIds||[]).filter(k=>k!=id);if(o.length){keep.add(d.id);await d.ref.update({batchIds:o,batchId:o[0]})}}
+  const ps=await db.collection('pdfs').where('batchId','==',id).get();let w=db.batch(),n=0;for(const d of ps.docs){if(keep.has(d.data().folderId))continue;w.delete(d.ref);if(++n>=400){await w.commit();w=db.batch();n=0}}if(n)await w.commit();
+  for(const d of fd){if(keep.has(d.id))continue;await admDelAll(db.collection('pdfs').where('folderId','==',d.id));await d.ref.delete()}
+  for(const [c,f] of [['videos','batchId'],['videoFolders','batchId'],['accessRequests','batchId'],['batchAccess','batchId']])await admDelAll(db.collection(c).where(f,'==',id));
+  await db.collection('batches').doc(id).delete();try{fqClear()}catch(e){}toast('Batch deleted');route()}catch(e){alert('Delete failed: '+e.message)}}
+async function admBMove(id,d){try{const b=bsort(await list(db.collection('batches'))),i=b.findIndex(x=>x.id==id),j=i+d;if(i<0||j<0||j>=b.length)return;[b[i],b[j]]=[b[j],b[i]];const w=db.batch();b.forEach((x,k)=>w.update(db.collection('batches').doc(x.id),{order:k}));await w.commit();try{fqClear()}catch(e){}route()}catch(e){alert('Order save nahi hua: '+e.message)}}
+async function admBEdit(id){try{const r=await db.collection('batches').doc(id).get(),x=r.data()||{};
+ const t=prompt('Batch title',x.title||'');if(t===null)return;const pr=prompt('Price (number only)',x.price||0);if(pr===null)return;
+ const v=prompt('Validity in months (0 = lifetime)',x.validityMonths||0);if(v===null)return;const u=prompt('Icon URL (https://…)',x.iconUrl||'');if(u===null)return;
+ if(!t.trim())return alert('Title khali nahi ho sakta');if(u.trim()&&!/^https:\/\//.test(u.trim()))return alert('Icon URL https:// se shuru hona chahiye');
+ await db.collection('batches').doc(id).update({title:t.trim(),price:Math.max(0,+pr||0),validityMonths:Math.max(0,Math.floor(+v||0)),iconUrl:u.trim()});
+ await db.doc('appConfig/main').set({newBatchesAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});try{fqClear()}catch(e){}toast('Updated ✅');route()}catch(e){alert('Update nahi hua: '+e.message)}}
+const AMS=()=>window.AM||(window.AM={f:'',t:'',st:'',s:'',m:'',k:'1',n:'0',d:[],q:'',o:['','','',''],c:0,bk:'',er:[]});
+function amSync(){const A=AMS(),g=id=>document.getElementById(id);if(!g('am_t'))return;A.t=g('am_t').value;A.st=g('am_st').value;A.s=g('am_s').value;A.m=g('am_m').value;A.k=g('am_k').value;A.n=g('am_n').value;A.q=g('am_q').value;A.o=[0,1,2,3].map(i=>g('am_o'+i).value);const r=document.querySelector('input[name=amc]:checked');A.c=r?+r.value:0;A.bk=g('am_bk').value}
+const AMHR='<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">',AMST={prelims:'📘 Prelims',mains:'📕 Mains'};
 async function admMocks(){
- const [fs,ts]=await Promise.all([list(db.collection('mockTestFolders')),list(db.collection('mockTests'))]);
- const FN={};fs.forEach(f=>FN[f.id]=f.examName);
- return `<div class="sec">New exam folder</div><div class="card"><input id="mfn" placeholder="Exam name (e.g. SSC CGL)"><button class="p" onclick="admMFolder()">Add folder</button></div>
- <div class="sec">Add mock test (bulk paste)</div><div class="card"><select id="mf" style="width:100%;margin:6px 0">${fs.map(f=>`<option value="${esc(f.id)}">${esc(f.examName)}</option>`).join('')}</select><input id="mt" placeholder="Test title"><input id="ms" placeholder="Subject (optional)"><div class="row"><input id="md" type="number" min="0" placeholder="Minutes (0 = no timer)" style="flex:1"><input id="mm" type="number" min="0.25" step="0.25" value="1" style="flex:1"><input id="mn" type="number" min="0" step="0.25" value="0" style="flex:1"></div><small class="mu">Minutes · marks per question · negative marks</small><textarea id="mq" rows="9" style="width:100%;margin:6px 0" placeholder="Q: Question English || प्रश्न हिंदी\nA: option || विकल्प\nB: ...\nC: ...\nD: ...\nANS: B\nEXP: explanation (optional)"></textarea><button class="p" onclick="admMock()">Add test</button></div>
- <div class="sec">Folders (${fs.length}) / Tests (${ts.length})</div>`
- +fs.map(f=>`<div class="card row" style="justify-content:space-between"><span>📁 <b>${esc(f.examName)}</b></span><button class="s" onclick="admDel('mockTestFolders','${esc(f.id)}')">Delete</button></div>`).join('')
- +ts.slice(0,100).map(x=>`<div class="card row" style="justify-content:space-between"><span style="flex:1;min-width:0"><b>${esc(x.title)}</b><br><small class="mu">${esc(FN[x.folderId]||'')} · ${(x.questions||[]).length} Q</small></span><button class="s" onclick="admDel('mockTests','${esc(x.id)}')">Delete</button></div>`).join('');
+ const [fs,bs]=await Promise.all([list(db.collection('mockTestFolders')).then(bsort),list(db.collection('batches')).then(bsort)]);
+ const A=AMS();if(!fs.some(f=>f.id==A.f))A.f='';const F=fs.find(f=>f.id==A.f);
+ const ts=A.f?bsort(await list(db.collection('mockTests').where('folderId','==',A.f))):[];
+ const ch=F?(F.batchIds||[]):[],on=A.f?1:0;
+ return `<div class="adh" style="margin-top:6px">1. Choose an exam folder or create a new one</div>
+ <div class="row"><select style="flex:1" onchange="amSync();AMS().f=this.value;route()"><option value="">Choose folder</option>${fs.map(f=>`<option value="${esc(f.id)}" ${f.id==A.f?'selected':''}>${esc(f.examName)}</option>`).join('')}</select>${F?`<button class="s" title="Rename this folder" onclick="amRename()">✏️</button><button class="s" title="Delete this folder" onclick="amDelFolder()">🗑️</button>`:''}</div>
+ ${F?`<div style="margin:8px 0"><b style="font-size:13px">${ch.length?'Shown ONLY inside the paid batch(es) selected below':'Shown in: FREE Mock Tests (all students)'}</b><br><small class="mu">Tap a batch to add / remove it (max 3). No batch = free.</small><div class="chips">${bs.length?bs.map(b=>`<a class="chip" style="${ch.includes(b.id)?'background:var(--gold);border-color:var(--gold);font-weight:700':''}" onclick="amBatch('${esc(b.id)}')">${b.mockOnly?'📝 ':''}${esc(b.title)}</a>`).join(''):'<small class="mu">No paid batch created yet</small>'}</div></div>`:''}
+ <div class="row" style="margin-top:8px"><input id="am_nf" placeholder="New exam folder (e.g. SSC CGL)" style="flex:1"><button class="p" onclick="amNewFolder()">➕</button></div>${AMHR}
+ <div class="adh" style="margin-top:0">2. Test title, Prelims / Mains category and subject</div>
+ <input id="am_t" value="${esc(A.t)}" placeholder="e.g. SSC CGL Full Mock 1" style="width:100%"><select id="am_st" style="width:100%;margin-top:8px"><option value="">No category</option><option value="prelims" ${A.st=='prelims'?'selected':''}>${AMST.prelims}</option><option value="mains" ${A.st=='mains'?'selected':''}>${AMST.mains}</option></select>
+ <input id="am_s" value="${esc(A.s)}" placeholder="Subject (e.g. Maths)" style="width:100%;margin-top:8px"><small class="mu">The subject and category stay filled for your next test (clear it if the next test has no subject).</small>${AMHR}
+ <div class="adh" style="margin-top:0">3. Exam settings</div>
+ <div class="row"><div style="flex:1"><span class="adl">Time (minutes)</span><input id="am_m" type="number" min="1" max="300" value="${esc(A.m)}" style="width:100%"></div><div style="flex:1"><span class="adl">Marks / question</span><input id="am_k" type="number" min="0.25" step="0.25" value="${esc(A.k)}" style="width:100%"></div><div style="flex:1"><span class="adl">Negative marks</span><input id="am_n" type="number" min="0" step="0.25" value="${esc(A.n)}" style="width:100%"></div></div>
+ <small class="mu">Negative marks = cut for each wrong answer (0 means no negative marking). These settings stay filled for your next test.</small>${AMHR}
+ <div class="adh" style="margin-top:0">4a. Add questions (one at a time)</div>
+ <textarea id="am_q" rows="3" placeholder="Write the question" style="width:100%">${esc(A.q)}</textarea>
+ ${[0,1,2,3].map(i=>`<div class="row" style="margin-top:6px"><input type="radio" name="amc" value="${i}" ${A.c==i?'checked':''} style="width:20px;height:20px;flex:none"><input id="am_o${i}" value="${esc(A.o[i])}" placeholder="Option ${i+1}" style="flex:1"></div>`).join('')}
+ <small class="mu">(Tap the radio button next to the correct option)</small><button class="s" style="width:100%;margin-top:8px" onclick="amAddQ()">➕ Add question to this test</button>${AMHR}
+ <div class="adh" style="margin-top:0">4b. Bulk paste (10 to 100 questions at once)</div>
+ <p class="mu" style="font-size:12px">Every question starts with Q: then options A: B: C: D:, then ANS: (A/B/C/D). EXP: (explanation) is optional. Write English || Hindi on one line for a bilingual test. Without || the text is a single language.</p>
+ <button class="s" onclick="amSample()">📋 Copy sample format</button><textarea id="am_bk" rows="7" placeholder="Paste your questions here" style="width:100%;margin-top:8px">${esc(A.bk)}</textarea>
+ <button class="s" style="width:100%;margin-top:8px" onclick="amBulk()">Check and add to this test</button>${A.er.slice(0,12).map(e=>`<div class="err" style="font-size:12px;margin-top:4px">⚠ ${esc(e)}</div>`).join('')}${A.er.length>12?`<small class="mu">...and ${A.er.length-12} more problems</small>`:''}${AMHR}
+ <div class="adh" style="margin-top:0">Questions added so far: ${A.d.length}</div>`
+ +A.d.map((q,i)=>`<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><b style="width:26px">${i+1}</b><span style="flex:1;min-width:0"><span style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${esc(q.text)}</span><small class="mu">${q.textHi?'Hindi ✓':'English only'} • ${q.explanation?'Explanation ✓':'No explanation'}</small></span><button class="s" onclick="amDelQ(${i})">🗑️</button></div>`).join('')
+ +`<button class="p" style="width:100%;margin-top:12px;min-height:46px" onclick="amPublish()">Publish Mock Test</button>`
+ +(A.f?`${AMHR}<div class="adh" style="margin-top:0">Published tests in this folder</div>`+(ts.length?`<div class="card" style="padding:4px 10px">`+ts.map((t,k)=>`<div class="row" style="padding:8px 0;${k?'border-top:1px solid var(--line)':''}"><span style="flex:1;min-width:0"><b style="font-size:13px">${esc(t.title)}</b><br><small class="mu">${t.examStage&&AMST[t.examStage]?esc(AMST[t.examStage])+' • ':''}${t.subject?esc(t.subject)+' • ':''}${(t.questions||[]).length} questions${t.durationMinutes>0?' • '+t.durationMinutes+' min • +'+t.marksPerQuestion+' / -'+t.negativeMarks:''}</small></span><button class="s" ${k?'':'disabled'} onclick="amTMove('${esc(t.id)}',-1)">↑</button><button class="s" ${k<ts.length-1?'':'disabled'} onclick="amTMove('${esc(t.id)}',1)">↓</button><button class="s" onclick="amDelTest('${esc(t.id)}')">🗑️</button></div>`).join('')+`</div>`:'<p class="mu">No test is published in this folder yet</p>'):'');
 }
-async function admMFolder(){const n=$v('mfn').trim();if(!n)return alert('Exam ka naam daalein');await admAdd('mockTestFolders',{examName:n},'newMocksAt')}
+async function amNewFolder(){const n=$v('am_nf').trim();if(!n)return;amSync();try{const r=await db.collection('mockTestFolders').add({examName:n,batchIds:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()});AMS().f=r.id;toast('Folder created.');route()}catch(e){alert('Could not create the folder: '+e.message)}}
+async function amRename(){amSync();const id=AMS().f,cur=(await db.collection('mockTestFolders').doc(id).get()).data()||{},n=prompt('Rename exam folder',cur.examName||'');if(n===null||!n.trim())return;try{await db.collection('mockTestFolders').doc(id).update({examName:n.trim()});toast('Folder renamed.');route()}catch(e){alert('Rename failed: '+e.message)}}
+async function amDelFolder(){amSync();const id=AMS().f,cur=(await db.collection('mockTestFolders').doc(id).get()).data()||{};if(!confirm('Delete folder?\nDelete the folder "'+(cur.examName||'')+'"? All mock tests inside it will be deleted too. This cannot be undone.'))return;
+ try{await admDelAll(db.collection('mockTests').where('folderId','==',id));await db.collection('mockTestFolders').doc(id).delete();AMS().f='';try{fqClear()}catch(e){}toast('Folder deleted.');route()}catch(e){alert('Delete failed: '+e.message)}}
+async function amBatch(bid){amSync();const id=AMS().f,ref=db.collection('mockTestFolders').doc(id);try{const cur=((await ref.get()).data()||{}).batchIds||[];let nx=cur.slice();
+ if(nx.includes(bid)){nx=nx.filter(x=>x!=bid);if(!nx.length&&!confirm('Make folder free?\nNo batch will be left, so this folder becomes FREE and every student can open its tests.'))return}
+ else{if(nx.length>=3)return alert('A folder can be in at most 3 batches. Remove one first.');nx.push(bid)}
+ await ref.update({batchIds:nx});try{fqClear()}catch(e){}route()}catch(e){alert('Could not update: '+e.message)}}
+const amQ=q=>({text:q.t,options:q.o,correctIndex:q.c,textHi:q.th,optionsHi:q.oh.every(Boolean)?q.oh:[],explanation:q.e,explanationHi:q.eh,passage:'',passageHi:'',passageImage:''});
+function amAddQ(){amSync();const A=AMS();if(!A.q.trim()||A.o.some(o=>!o.trim()))return alert('Fill in the question and all four options.');
+ A.d.push(amQ({t:A.q.trim(),o:A.o.map(o=>o.trim()),c:A.c,th:'',oh:[],e:'',eh:''}));A.q='';A.o=['','','',''];A.c=0;route()}
+function amDelQ(i){amSync();AMS().d.splice(i,1);route()}
+function amSample(){const t='Q: What is 2+2? || 2+2 कितना होता है?\nA: 3 || 3\nB: 4 || 4\nC: 5 || 5\nD: 6 || 6\nANS: B\nEXP: 2+2 = 4 || 2+2 = 4';(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast('Format copied. Paste it anywhere and fill in your questions.')).catch(()=>prompt('Copy this format:',t))}
+function amBulk(){amSync();const A=AMS(),{out,err}=admParseMcq(A.bk);A.er=err.map(n=>'Question '+n+': needs Q:, all four options A: B: C: D: and ANS: (A/B/C/D)');
+ if(!out.length){if(!A.bk.trim())alert('Paste your questions first.');return route()}
+ out.forEach(q=>A.d.push(amQ(q)));if(!err.length)A.bk='';else A.bk='';toast(out.length+' questions added');route()}
+async function amPublish(){amSync();const A=AMS();if(!A.f||!A.t.trim()||!A.d.length)return alert('Folder, title, and at least 1 question are required.');
+ const mi=parseInt(A.m,10),mk=parseFloat(String(A.k).replace(',','.')),ng=parseFloat(String(A.n).replace(',','.'));
+ if(!(mi>=1&&mi<=300))return alert('Enter the test time in minutes (1 to 300).');if(!(mk>0&&mk<=100))return alert('Marks per question must be more than 0 (for example 1 or 2).');if(!(ng>=0&&ng<=mk))return alert('Negative marks must be 0 or more, and not more than the marks of a correct answer.');
+ const ts=await list(db.collection('mockTests').where('folderId','==',A.f)),d={folderId:A.f,title:A.t.trim(),questions:A.d,durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng,subject:A.s.trim(),examStage:A.st,order:ts.length};
+ if(new Blob([JSON.stringify(d)]).size>900000)return alert('This test is too big to save. Please make it with fewer questions or shorter explanations.');
+ await admAdd('mockTests',d,'newMocksAt');A.t='';A.d=[];A.er=[];route()}
+async function amTMove(id,dir){amSync();try{const b=bsort(await list(db.collection('mockTests').where('folderId','==',AMS().f))),i=b.findIndex(x=>x.id==id),j=i+dir;if(i<0||j<0||j>=b.length)return;[b[i],b[j]]=[b[j],b[i]];const w=db.batch();b.forEach((x,k)=>w.update(db.collection('mockTests').doc(x.id),{order:k}));await w.commit();try{fqClear()}catch(e){}route()}catch(e){alert('Order save nahi hua: '+e.message)}}
+async function amDelTest(id){amSync();const t=((await db.collection('mockTests').doc(id).get()).data())||{};if(!confirm('Delete test?\nDelete "'+(t.title||'')+'"? Past student attempts (in the Attempts tab) are not deleted — only the test is removed.'))return;
+ try{await db.collection('mockTests').doc(id).delete();try{fqClear()}catch(e){}route()}catch(e){alert('Delete failed: '+e.message)}}
 function admParseMcq(t){const sp=x=>{const i=x.indexOf('||');return i<0?[x.trim(),'']:[x.slice(0,i).trim(),x.slice(i+2).trim()]};
  const out=[],err=[];let q=null;const push=()=>{if(!q)return;const ok=q.o.length==4&&q.o.every(Boolean)&&q.c>=0&&q.t;if(ok)out.push(q);else err.push(out.length+err.length+1);q=null};
  for(const raw of t.split(/\r?\n/)){const l=raw.trim();let m;if(!l)continue;
@@ -1195,23 +1305,25 @@ function admParseMcq(t){const sp=x=>{const i=x.indexOf('||');return i<0?[x.trim(
   else if(q&&(m=l.match(/^ANS\s*[:.)]?\s*([A-D])/i)))q.c='ABCD'.indexOf(m[1].toUpperCase());
   else if(q&&(m=l.match(/^EXP\s*[:.)]\s*(.*)$/i)))[q.e,q.eh]=sp(m[1])}
  push();return{out,err}}
-async function admMock(){const f=$v('mf'),ti=$v('mt').trim();if(!f||!ti)return alert('Folder aur title daalein');
- const {out,err}=admParseMcq($v('mq'));if(!out.length)return alert('Koi valid question nahi mila. Format check karein (Q:, A-D:, ANS:).');
- if(err.length&&!confirm('Question '+err.join(', ')+' adhoore hain aur chhod diye jayenge. Baaki '+out.length+' save karein?'))return;
- const qs=out.map(q=>({text:q.t,options:q.o,correctIndex:q.c,textHi:q.th,optionsHi:q.oh.every(Boolean)?q.oh:[],explanation:q.e,explanationHi:q.eh,passage:'',passageHi:'',passageImage:''}));
- await admAdd('mockTests',{folderId:f,title:ti,questions:qs,durationMinutes:Math.max(0,Math.floor(+$v('md')||0)),marksPerQuestion:+$v('mm')||1,negativeMarks:+$v('mn')||0,subject:$v('ms').trim()},'newMocksAt')}
 async function admAttempts(){
- const a=await list(db.collection('mockTestAttempts').orderBy('submittedAt','desc').limit(50));
- const d=x=>x.submittedAt?x.submittedAt.toDate().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
- return `<div class="sec">Latest attempts (${a.length})</div>`+(a.length?a.map(x=>`<div class="card row" style="justify-content:space-between"><span style="flex:1;min-width:0"><b>${esc(x.studentName||x.studentEmail)}</b><br><small class="mu">${esc(x.mockTestTitle)} · ${esc(d(x))}</small></span><b>${esc(x.score)} / ${esc(x.total)}</b><button class="s" onclick="admDel('mockTestAttempts','${esc(x.id)}')">✕</button></div>`).join(''):'<p class="mu">No attempts yet.</p>');
+ let a;try{a=await list(db.collection('mockTestAttempts').orderBy('submittedAt','desc').limit(25))}catch(e){return `<p class="err">Could not load attempts: ${esc(e.message)}</p><button class="s" onclick="route()">Retry</button>`}
+ if(!a.length)return `<p class="mu">No mock test attempts yet.</p><button class="s" onclick="route()">🔄 Refresh</button>`;
+ return `<div class="row" style="justify-content:space-between;margin-bottom:6px"><span class="mu" style="font-size:12px">Latest ${a.length} attempts • auto-deleted after 30 days</span><button class="s" title="Refresh" onclick="route()">🔄</button></div>`
+ +a.map(x=>{const pl=[x.examName,x.subject].filter(Boolean).join(' › ');return `<div class="card row" style="justify-content:space-between;align-items:flex-start;margin:0 0 8px"><span style="min-width:0;flex:1"><b style="font-size:14px">${esc(x.mockTestTitle||'(test id: '+(x.mockTestId||'')+')')}</b>${x.studentName?`<br><span style="font-size:12px">${esc(x.studentName)}</span>`:''}<br><small class="mu" style="overflow-wrap:anywhere">${esc(x.studentEmail||'')}</small>${pl?`<br><small class="mu">${esc(pl)}</small>`:''}${x.submittedAt?`<br><small class="mu">${esc(dtf(x.submittedAt))}</small>`:''}</span><b style="font-size:16px;white-space:nowrap">${esc(x.score)}/${esc(x.total)}</b></div>`}).join('');
 }
-const BRF=[['appName','App name'],['tagline','Tagline'],['logoUrl','Logo URL'],['upiId','UPI ID'],['telegramUrl','Telegram URL'],['paymentTelegramUrl','Payment Telegram URL'],['paymentEmail','Payment email'],['whatsappUrl','WhatsApp URL'],['youtubeUrl','YouTube URL']];
+const BRF=[['appName','App name'],['tagline','Tagline'],['upiId','UPI ID'],['telegramUrl','Telegram URL'],['paymentTelegramUrl','Payment Telegram URL'],['paymentEmail','Payment email'],['whatsappUrl','WhatsApp URL'],['youtubeUrl','YouTube URL']];
 async function admBranding(){
- const c=(await db.doc('appConfig/main').get().then(d=>d.data()).catch(()=>null))||{};
- return `<div class="sec">Branding & contact</div><div class="card">${BRF.map(f=>`<label class="mu">${f[1]}</label><input id="br_${f[0]}" value="${esc(c[f[0]]||'')}">`).join('')}<button class="p" onclick="admBrand()">Save</button><p class="mu">Save ke baad page reload karein.</p></div>`;
+ const c=(await db.doc('appConfig/main').get().then(d=>d.data()).catch(()=>null))||{},lg=window.ALG!==undefined?window.ALG:(c.logoUrl||'');
+ return `<div class="adh" style="margin-top:6px">App logo (shown on splash screen + home header)</div>
+ <div class="row"><div style="width:64px;height:64px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none">${lg?`<img src="${esc(lg)}" style="width:100%;height:100%;object-fit:cover">`:'🎓'}</div><input id="lg" value="${esc(lg)}" placeholder="New logo URL (https://…)" style="flex:1" onchange="ALG=this.value.trim();route()"></div>
+ <button class="p" style="width:100%;margin-top:10px" onclick="admLogo()">Save logo</button>
+ <hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div class="adh" style="margin-top:0">App name, tagline, UPI ID & social links</div><p class="mu" style="font-size:12px">Changes show up in the whole app right away — no rebuild needed. Double-check the UPI ID: students pay to it.</p>
+ ${BRF.map(f=>`<span class="adl">${f[1]}</span><input id="br_${f[0]}" value="${esc(c[f[0]]||'')}" style="width:100%">`).join('')}
+ <button class="p" style="width:100%;margin-top:12px" onclick="admBrand()">Save</button>`+await admOrder();
 }
+async function admLogo(){const u=$v('lg').trim();if(!/^https:\/\//.test(u))return alert('Logo URL https:// se shuru hona chahiye');try{await db.doc('appConfig/main').set({logoUrl:u},{merge:true});window.ALG=undefined;toast('Logo saved ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admBrand(){const d={};BRF.forEach(f=>d[f[0]]=$v('br_'+f[0]).trim());
- try{await db.doc('appConfig/main').set(d,{merge:true});toast('Saved ✅')}catch(e){alert('Save nahi hua: '+e.message)}}
+ try{await db.doc('appConfig/main').set(d,{merge:true});toast('Saved ✅ — page reload karein')}catch(e){alert('Save nahi hua: '+e.message)}}
 
 const HSIDS=['study_tools','smart_study','exam_boost','more_tools','daily_gyan','youtube'],HSTITLE={study_tools:'🛠️ Study Tools',smart_study:'🚀 Smart Study',exam_boost:'🎯 Exam Boost',more_tools:'🧰 More Tools',daily_gyan:'📖 Word of the Day',youtube:'▶️ YouTube Videos'};
 function hsNorm(a){const o=[];(Array.isArray(a)?a:[]).forEach(k=>{if(HSIDS.includes(k)&&!o.includes(k))o.push(k)});HSIDS.forEach(k=>{if(!o.includes(k))o.push(k)});return o}
@@ -1231,22 +1343,27 @@ async function admOrdSave(){try{await db.doc('appConfig/main').set({homeSectionO
 async function admOrdReset(){try{await db.doc('appConfig/main').set({homeSectionOrder:HSIDS},{merge:true});window.HSO=HSIDS.slice();window.ADO=HSIDS.slice();toast('Default order ✅');route()}catch(e){alert(e.message)}}
 async function adminGrantsPage(){
  if(!isAdminUser())return wrap(back+'<div class="card">Ye page sirf admin ke liye hai.</div>');
- const [bs,reqs,grants]=await Promise.all([list(db.collection('batches')),list(db.collection('accessRequests')),list(db.collection('batchAccess').where('status','==','granted'))]);
- const fs=fmSettings(await db.doc('appConfig/freeMcq').get().then(d=>d.data()).catch(()=>null));
- const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:id;
- window.ADM={};bs.forEach(b=>ADM[b.id]=b.validityMonths||0);
- reqs.sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0));
- grants.sort((a,b)=>String(a.studentEmail).toLowerCase().localeCompare(String(b.studentEmail).toLowerCase()));
+ const [bs,reqs,grants]=await Promise.all([list(db.collection('batches')).then(bsort),list(db.collection('accessRequests')),list(db.collection('batchAccess').where('status','==','granted'))]);
+ const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:id;window.ADM={};window.ADBN={};bs.forEach(b=>{ADM[b.id]=b.validityMonths||0;ADBN[b.id]=b.title});
+ reqs.sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0));grants.sort((a,b)=>String(a.studentEmail).toLowerCase().localeCompare(String(b.studentEmail).toLowerCase()));
  const fmt=d=>d?d.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
- const reqHtml=reqs.length?reqs.map(r=>`<div class="card"><b>${esc(r.studentName||'')}</b> <span class="mu">${esc(r.studentEmail)}</span><div>${esc(r.studentPhone||'')}</div><div>Batch: <b>${esc(r.batchTitle||bt(r.batchId))}</b></div><small class="mu">${r.requestedAt?.toDate?esc(r.requestedAt.toDate().toLocaleString('en-IN')):''}</small><div class="row"><button class="p" onclick="admGrant('${esc(r.studentEmail)}','${esc(r.batchId)}')">Grant access</button><button class="s" onclick="admDismiss('${esc(r.id)}')">Dismiss</button></div></div>`).join(''):'<p class="mu">Koi pending request nahi hai.</p>';
- const batchOpts=bs.map(b=>`<option value="${esc(b.id)}">${esc(b.title)}</option>`).join('');
- const grantHtml=grants.length?grants.map(g=>{const exp=g.expiresAt;const expired=exp&&exp.toDate()<=new Date();
-  return `<div class="card"><b>${esc(g.studentEmail)}</b><div>${esc(bt(g.batchId))}</div><div>Code: <b>${esc(g.accessCode||'')}</b></div><small class="mu">${exp?(expired?'Expired on ':'Valid till ')+fmt(exp):'Lifetime access'}</small><div class="row"><button class="s" onclick="admExtend('${esc(g.id)}')">Extend</button><button class="s" onclick="admLife('${esc(g.id)}')">Make lifetime</button><button class="s" onclick="admRevoke('${esc(g.id)}')">Revoke</button></div></div>`}).join(''):'<p class="mu">Abhi koi granted student nahi hai.</p>';
- return wrap(`<h2 class="pageTitle">Batch Access / बैच एक्सेस</h2>
- <div class="sec">Grant Permission: Pending requests</div>${reqHtml}
- <div class="sec">Manual grant</div><div class="card"><input id="ge" type="email" placeholder="Student email"><select id="gb" style="width:100%;margin:6px 0">${batchOpts}</select><input id="gm" type="number" min="0" placeholder="Validity months (khali = batch default, 0 = lifetime)"><button class="p" onclick="admManual()">Grant access</button></div>
- <div class="sec">Granted students (${grants.length})</div>${grantHtml}
- <div class="sec">Free MCQ test settings</div><div class="card"><p class="mu">Applies to every Free MCQ test (timer, marks, negative marking). Timer 0 = no timer.</p><label class="mu">Time limit (minutes, 0 = no timer)</label><input id="fsm" type="number" min="0" max="300" value="${fs.durationMinutes}"><label class="mu">Marks per question</label><input id="fsk" type="number" min="0.25" max="100" step="0.25" value="${fs.marksPerQuestion}"><label class="mu">Negative marks per wrong answer</label><input id="fsn" type="number" min="0" step="0.25" value="${fs.negativeMarks}"><button class="p" onclick="admFmSave()">Save settings</button></div>`)}
+ const dm=id=>ADM[id]>0?admMo(ADM[id]).toLowerCase():'lifetime';
+ const rq=reqs.length?reqs.map(r=>`<div class="card row" style="justify-content:space-between;margin:0 0 8px"><span style="min-width:0;flex:1;overflow-wrap:anywhere"><b style="font-size:14px">${esc(r.studentName?r.studentName+' ('+r.studentEmail+')':r.studentEmail)}</b><br><small class="mu">${esc(r.batchTitle||bt(r.batchId))} • ${r.studentPhone?'📱 '+esc(r.studentPhone):'(no phone/WhatsApp number given)'}</small></span><button class="s" title="Grant access" onclick="admGrant('${esc(r.studentEmail)}','${esc(r.batchId)}',null,false,'${esc(r.studentPhone||'')}')">✅</button><button class="s" title="Dismiss (payment not received)" onclick="admDismiss('${esc(r.id)}')">❌</button></div>`).join(''):'<p class="mu">No pending requests</p>';
+ const gr=grants.length?grants.map(x=>{const e=x.expiresAt,ex=e&&e.toDate()<=new Date();return `<div class="card row" style="justify-content:space-between;margin:0 0 8px"><span style="min-width:0;flex:1;overflow-wrap:anywhere"><b style="font-size:14px">${esc(x.studentEmail)}</b><br><small class="mu">${esc(bt(x.batchId))}<br>${e?(ex?'Expired on ':'Valid till ')+esc(fmt(e)):'Lifetime'}${x.codeRequired===false?'<br>Manual grant • no code needed':''}</small></span><button class="s" title="Extend validity" onclick="admExtend('${esc(x.id)}')">📅</button><button class="s" title="Make lifetime" onclick="admLife('${esc(x.id)}')">♾️</button><button class="s" title="Take access back" style="color:var(--bad)" onclick="admRevoke('${esc(x.id)}')">🚫</button></div>`}).join(''):'<p class="mu">Nobody has access yet.</p>';
+ const hr='<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">';
+ return wrap(`<div class="adh" style="margin-top:6px">Pending requests</div><p class="mu" style="font-size:12px">The student entered their email in the app but doesn’t have access yet — grant it here in one tap.</p>${rq}${hr}
+ <div class="adh" style="margin-top:0">Manual grant</div><p class="mu" style="font-size:12px">No access code is needed here — the student just logs in with this email and the batch opens by itself. (A code is only used when the student sends an Access Request.)</p>
+ <span class="adl">Student email</span><input id="ge" type="email" style="width:100%"><span class="adl">WhatsApp/phone (optional, if you have it)</span><input id="gp" type="tel" style="width:100%">
+ <select id="gb" style="width:100%;margin-top:10px" onchange="document.getElementById('gmh').textContent=admMo(ADM[this.value]||0).toLowerCase()">${bs.length?bs.map(b=>`<option value="${esc(b.id)}">${esc(b.title)}</option>`).join(''):'<option value="">Choose a batch</option>'}</select>
+ <span class="adl">Validity in months (empty = batch default: <span id="gmh">${bs[0]?dm(bs[0].id):'lifetime'}</span>)</span><input id="gm" type="number" min="0" max="120" style="width:100%"><small class="mu">Type 0 for lifetime access.</small>
+ <button class="p" style="width:100%;margin-top:12px" onclick="admManual()">Grant access (no code needed)</button>${hr}
+ <div class="adh" style="margin-top:0">Students who have access</div><p class="mu" style="font-size:12px">Tap the red button to take access back (the student is locked out the next time they open the batch).</p>${gr}`);
+}
+async function admFree(){
+ const fs=fmSettings(await db.doc('appConfig/freeMcq').get().then(d=>d.data()).catch(()=>null));
+ return `<div class="adh" style="margin-top:6px">Free MCQ test settings</div><p class="mu" style="font-size:12px">Applies to every Free MCQ test (timer, marks, negative marking). Timer 0 = no timer.</p><span class="adl">Time limit (minutes, 0 = no timer)</span><input id="fsm" type="number" min="0" max="300" value="${fs.durationMinutes}" style="width:100%"><span class="adl">Marks per question</span><input id="fsk" type="number" min="0.25" max="100" step="0.25" value="${fs.marksPerQuestion}" style="width:100%"><span class="adl">Negative marks per wrong answer</span><input id="fsn" type="number" min="0" step="0.25" value="${fs.negativeMarks}" style="width:100%"><button class="p" style="width:100%;margin-top:12px" onclick="admFmSave()">Save settings</button>`;
+}
+
 async function admFmSave(){const mi=Math.trunc(+document.getElementById('fsm').value),mk=+document.getElementById('fsk').value,ng=+document.getElementById('fsn').value;
  if(!(mi>=0&&mi<=300)){alert('Time limit 0 se 300 minutes ke beech hona chahiye');return}
  if(!(mk>0&&mk<=100)){alert('Marks per question 0 se zyada aur 100 tak hona chahiye');return}
@@ -1254,7 +1371,7 @@ async function admFmSave(){const mi=Math.trunc(+document.getElementById('fsm').v
  try{await db.doc('appConfig/freeMcq').set({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng},{merge:true});
   try{const c=J.get('fmIndex',null);if(c&&c.data){c.data.settings=fmSettings({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng});J.set('fmIndex',c)}}catch(e){}
   toast('Free MCQ settings saved')}catch(e){alert('Save nahi hua: '+e.message)}}
-async function admGrant(email,bid,months,manual){
+async function admGrant0(email,bid,months,manual){
  email=String(email).trim().toLowerCase();if(months===undefined||months===null)months=admDefault(bid);
  const id=email+'_'+bid,code=String(100000+Math.floor(Math.random()*900000));
  const exp=months>0?addMonthsEnd(new Date(),months):null;
@@ -1267,9 +1384,12 @@ async function admGrant(email,bid,months,manual){
   route();
  }catch(e){alert('Grant nahi hua: '+e.message)}
 }
+async function admGrant(email,bid,months,manual,phone){await admGrant0(email,bid,months,manual);const ph=String(phone||'').replace(/\D/g,'');if(!ph)return;
+ try{const d=(await db.collection('batchAccess').doc(String(email).trim().toLowerCase()+'_'+bid).get()).data();if(!d||d.status!='granted')return}catch(e){return}
+ const n=ph.length==10?'91'+ph:ph;if(confirm('Student ko WhatsApp par batayein? / Tell the student on WhatsApp?'))window.open('https://wa.me/'+n+'?text='+encodeURIComponent('Hello! Aapko "'+((window.ADBN||{})[bid]||'batch')+'" ka access mil gaya hai. Same email se login karke batch kholein.'),'_blank')}
 function admManual(){const email=document.getElementById('ge').value.trim().toLowerCase(),bid=document.getElementById('gb').value,mv=document.getElementById('gm').value;
  if(!email.includes('@')){alert('Sahi email daalein');return}
- admGrant(email,bid,mv===''?admDefault(bid):Math.max(0,Math.floor(+mv)),true)}
+ admGrant(email,bid,mv===''?admDefault(bid):Math.max(0,Math.floor(+mv)),true,(document.getElementById('gp')||{}).value||'')}
 function admDismiss(id){if(!confirm('Ye request hata dein?'))return;db.collection('accessRequests').doc(id).delete().then(route).catch(e=>alert(e.message))}
 function admRevoke(id){if(!confirm('Is student ka access wapas le lein?'))return;db.collection('batchAccess').doc(id).set({status:'revoked'},{merge:true}).then(route).catch(e=>alert(e.message))}
 function admLife(id){db.collection('batchAccess').doc(id).set({expiresAt:null,validityMonths:0},{merge:true}).then(route).catch(e=>alert(e.message))}
