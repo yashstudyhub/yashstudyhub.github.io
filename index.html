@@ -345,6 +345,7 @@ aside.side{overflow-y:auto}
  .topbar b{font-size:15px}
 }
 .adbar{background:var(--navy);border-radius:14px;margin:10px 0;overflow:hidden;position:sticky;top:0;z-index:5}.adbar .adt{color:#fff;font-weight:700;font-size:17px;padding:14px 16px 4px}.adtabs{display:flex;overflow-x:auto;scrollbar-width:none}.adtabs a{padding:11px 14px;white-space:nowrap;color:#b8c0e8;border-bottom:3px solid transparent;cursor:pointer;font-size:14px}.adtabs a.on{color:var(--yel);border-bottom-color:var(--yel);font-weight:700}.adst{display:flex;text-align:center}.adst div{flex:1}.adst b{display:block;font-size:24px;color:var(--tx)}.adst small{color:var(--mu);font-size:12px}.adl{font-size:11px;color:var(--mu);margin:10px 0 4px;display:block}.adh{font-weight:700;font-size:15px;margin:16px 0 8px}
+.pdfhd{display:flex;align-items:center;gap:4px;background:var(--navy);color:#fff;border-radius:14px;padding:4px 6px;margin:8px 0;position:sticky;top:0;z-index:5}.pdfhd b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:16px}.pdfhd a{color:#fff;display:inline-flex;padding:8px;border-radius:50%;cursor:pointer}.pdfbox{position:relative}.pdfbox .pdf{height:calc(100vh - 130px);min-height:420px}.pdfblk{position:absolute;top:0;right:0;width:64px;height:56px;z-index:2}.pdfpg{position:absolute;top:0;left:0;right:0;height:3px;z-index:4;background:linear-gradient(90deg,transparent,var(--yel),transparent) 0 0/50% 100% no-repeat;animation:pdfa 1.1s linear infinite}.pdfpg[hidden],.pdfer[hidden]{display:none}.pdfer{position:absolute;inset:0;background:var(--bg,#f4f6fb);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;padding:20px;border-radius:12px;z-index:3}@keyframes pdfa{from{background-position:-100% 0}to{background-position:200% 0}}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -922,11 +923,15 @@ async pdfs(){
 async pf(id){const [fd,p]=await Promise.all([db.doc('pdfFolders/'+id).get().catch(()=>null),cl('pin_'+id,db.collection('pdfs').where('folderId','==',id),6,['newPdfsAt','newBatchesAt'])]);p.sort(ord);
  const batch=fd&&fd.exists&&fd.data().type=='batch';
  return wrap(back+(fd&&fd.exists?`<h2 class="pageTitle">${esc(fd.data().name)}</h2>`:'')+(p.length?p.map(x=>prow(x,batch)).join(''):'<p class="mu">No PDF in this folder yet / इस फ़ोल्डर में अभी कोई PDF नहीं है।</p>'))},
-async pdf(l,t,ext=true){const u=decodeURIComponent(l),m=u.match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/),id=m&&(m[1]||m[2]);
- const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u);
- const dl=id?`https://drive.google.com/uc?export=download&id=${id}`:u;
- return wrap(`<h2 class="pageTitle">${esc(decodeURIComponent(t||'PDF'))}</h2><div class="pdfbar"><a href="javascript:history.back()"><span class="material-icons">arrow_back</span>Back</a><a href="javascript:void 0" onclick="document.getElementById('pdfv').src=document.getElementById('pdfv').src"><span class="material-icons">refresh</span>Reload</a>`+(ext?`<a href="${esc(u)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in browser</a><a href="${esc(dl)}" target="_blank" rel="noopener"><span class="material-icons">download</span>Download</a>`:'')+`</div>
- <iframe id="pdfv" class="pdf" src="${esc(src)}"></iframe>`)},
+async pdf(l,t,ext=true){const u=decodeURIComponent(l).trim(),ti=decodeURIComponent(t||'PDF');let h;try{h=new URL(u)}catch(e){}
+ if(!h||!/^https?:$/.test(h.protocol)){setTimeout(()=>{alert('This PDF link is not valid. / यह PDF लिंक सही नहीं है।');history.back()},50);return wrap('<p class="mu">Invalid PDF link</p>')}
+ const g=h.host=='drive.google.com',mm=g&&h.pathname.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/),qi=g&&h.searchParams.get('id'),id=(mm&&mm[1])||(qi&&/^[\w-]+$/.test(qi)?qi:'');
+ if(!id&&(g||h.host=='docs.google.com')){setTimeout(()=>{if(ext)window.open(u,'_blank','noopener');else alert('This link cannot be opened inside the app. Ask the admin to add the PDF’s own Drive file link. / कृपया एडमिन से PDF का अपना Drive फाइल लिंक जुड़वाएँ।');history.back()},50);return wrap('<p class="mu">Opening…</p>')}
+ const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u),dl=id?`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`:u;
+ let fn=(ti.replace(/[\\/:*?"<>|]/g,'_').trim()||'Yash Study Hub PDF');if(!/\.pdf$/i.test(fn))fn+='.pdf';
+ window.pdfLoaded=false;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
+ return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b>${esc(ti)}</b><a href="${esc(dl)}" target="_blank" rel="noopener" download="${esc(fn)}" title="Download PDF"><span class="material-icons">download</span></a><a title="Reload" onclick="pdfReload()"><span class="material-icons">refresh</span></a>${ext?`<a href="${esc(u)}" target="_blank" rel="noopener" title="Open outside the app"><span class="material-icons">open_in_new</span></a>`:''}</div>
+ <div class="pdfbox"><div id="pdfpg" class="pdfpg"></div><iframe id="pdfv" class="pdf" ${ext?'':'sandbox="allow-scripts allow-same-origin allow-forms"'} src="${esc(src)}" onload="pdfOk()"></iframe>${ext?'':'<div class="pdfblk"></div>'}<div id="pdfer" class="pdfer" hidden><span class="material-icons" style="font-size:40px;opacity:.5">picture_as_pdf</span><span>Could not load this PDF. Check your internet connection and try again.<br>PDF लोड नहीं हो सका। इंटरनेट जाँचकर फिर कोशिश करें।</span><button class="p" onclick="pdfReload()">Try again</button></div></div>`)},
 async pdfb(l,t){return this.pdf(l,t,false)},
 async batches(){const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).sort(ord),g=await bgranted(bs);
  const row=b=>{const on=g.has(b.id);return `<a class="card cr${on?' bgr':''}" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span>${on?'<span class="unl">✅ Unlocked</span>':'<b class="pr">₹'+esc(b.price)+'</b>'}</a>`};
@@ -1152,7 +1157,7 @@ async function admContent(t){
  <div class="adh">${v?'Videos':'PDFs'} in this folder (${it.length})</div>`+it.map(x=>`<div class="card row" style="justify-content:space-between"><b style="flex:1;min-width:0">${esc(x.title)}</b><button class="s" onclick="admDel('${ic}','${esc(x.id)}')">Delete</button></div>`).join('')+`<button class="s" style="margin-top:6px" onclick="admDel('${fc}','${esc(sf)}')">Delete this folder</button>`:''}`;
 }
 async function admFolder(fc,v){const n=$v('fn').trim(),b=window.ADB||'free';if(!n)return alert('Folder ka naam daalein');
- try{const r=await db.collection(fc).add(v?{name:n,batchId:b,createdAt:firebase.firestore.FieldValue.serverTimestamp()}:{name:n,type:'general',batchId:b,batchIds:[b],createdAt:firebase.firestore.FieldValue.serverTimestamp()});window.ADF=r.id;toast('Folder created ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
+ try{const r=await db.collection(fc).add(v?{name:n,batchId:b,createdAt:firebase.firestore.FieldValue.serverTimestamp()}:(b=='free'?{name:n,type:'free',batchId:null,batchIds:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()}:{name:n,type:'batch',batchId:b,batchIds:[b],createdAt:firebase.firestore.FieldValue.serverTimestamp()}));window.ADF=r.id;toast('Folder created ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admItem(ic,v){const f=window.ADF,ti=$v('ct').trim(),l=$v('cl').trim();if(!f||!ti||!l)return alert('Title aur link dono daalein');
  const b=window.ADB&&window.ADB!='free'?window.ADB:null;
  await admAdd(ic,v?{title:ti,youtubeLink:l,thumbUrl:'',batchId:b,folderId:f,source:'admin'}:{title:ti,iconUrl:'',driveLink:l,batchId:b,folderId:f},v?(b?'newBatchesAt':'newVideosAt'):(b?'newBatchesAt':'newPdfsAt'))}
@@ -1921,6 +1926,8 @@ async function saveProfile(){
  finally{btn.disabled=false}}
 /* ---- Batch page tabs (Videos / PDFs / Mocks) — same layout as the app ---- */
 function btOpenSet(id){try{return JSON.parse(sessionStorage.getItem('bo_'+id)||'[]')}catch(e){return[]}}
+function pdfOk(){window.pdfLoaded=true;clearTimeout(window.pdfT);const a=document.getElementById('pdfpg'),e=document.getElementById('pdfer');if(a)a.hidden=true;if(e)e.hidden=true}
+function pdfReload(){const f=document.getElementById('pdfv');if(!f)return;window.pdfLoaded=false;const a=document.getElementById('pdfpg'),e=document.getElementById('pdfer');if(a)a.hidden=false;if(e)e.hidden=true;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{if(!window.pdfLoaded){if(e)e.hidden=false;if(a)a.hidden=true}},20000);f.src=f.src}
 function btTab(id,t){ls.set('bt_'+id,t);document.querySelectorAll('.btab').forEach(e=>e.classList.toggle('on',e.dataset.t==t));document.querySelectorAll('.btp').forEach(e=>e.hidden=e.dataset.t!=t)}
 function btInit(id){document.querySelectorAll('details.bx[open][data-k]').forEach(e=>btOpen(e,id,1))}
 async function btOpen(el,bid,silent){
