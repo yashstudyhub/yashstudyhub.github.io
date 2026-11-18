@@ -973,7 +973,7 @@ async notifications(){J.set('notifSeen',Date.now());
  const [sn,me]=await Promise.all([db.collection('notifications').where('sentAt','>',cut).orderBy('sentAt','desc').limit(50).get(),db.doc('students/'+auth.currentUser.uid).get().then(x=>x.data()||{}).catch(()=>({}))]);
  const mine=Array.isArray(me.exams)?me.exams:[];
  const items=sn.docs.map(d=>d.data()).filter(x=>!mine.length||!x.topic||mine.includes(x.topic));
- return wrap(`<h2 class="pageTitle">Notifications / सूचनाएं</h2>`+(items.length?items.map(x=>{const tg=EXAMT.find(e=>e[0]==x.topic),dt=x.sentAt?.toDate?x.sentAt.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
+ return wrap(`<h2 class="pageTitle">Notifications / सूचनाएं</h2>`+(nPerm()=="default"?`<div class="card row" style="justify-content:space-between"><span style="font-size:13px">Get alerts even when this tab is in the background. / टैब बैकग्राउंड में हो तब भी अलर्ट पाएँ।</span><button class="p" onclick="nAsk()">🔔 Turn on</button></div>`:nPerm()=="denied"?`<p class="mu" style="font-size:12px">Browser alerts are blocked. Turn them on from the site settings in your browser. / ब्राउज़र की साइट सेटिंग से अलर्ट चालू करें।</p>`:"")+(items.length?items.map(x=>{const tg=EXAMT.find(e=>e[0]==x.topic),dt=x.sentAt?.toDate?x.sentAt.toDate().toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
   return `<div class="card cr" style="align-items:flex-start"><span style="font-size:22px">🔔</span><span style="flex:1;min-width:0"><b>${esc(x.title)}</b>${tg?`<br><small class="cat" style="margin-top:2px">🎯 ${esc(tg[2])}</small>`:''}<br><span class="mu">${esc(x.body)}</span></span><small class="mu" style="font-size:10px;white-space:nowrap">${esc(dt)}</small></div>`}).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No notifications in the last 24 hours<br>पिछले 24 घंटे में कोई नोटिफ़िकेशन नहीं है</p>'))},
 async quiz(day){
  const days=[...Array(7)].map((_,i)=>dayKey(new Date(Date.now()-i*DAY)));let d=day||days[0],Q=[];
@@ -1089,7 +1089,18 @@ async function saveAttempt(t,id,correct,totalQ,marks,answers){
  try{const ref=db.collection('mockScores').doc(id).collection('scores').doc(auth.currentUser.uid),ex=await ref.get();if(ex.exists){const old=ex.data()?.score;return {first:false,counted:typeof old=='number'?old:+marks}}await ref.set({score:+marks,timeSec:secs,at:firebase.firestore.FieldValue.serverTimestamp()});return {first:true,counted:+marks}}catch(e){return {first:true,counted:+marks}}
 }
 
-async function checkBell(){try{const s=await db.collection('notifications').orderBy('sentAt','desc').limit(1).get();const x=s.docs[0]&&s.docs[0].data();const t=x&&x.sentAt&&x.sentAt.toMillis?x.sentAt.toMillis():0;const b=document.getElementById('bell');if(b)b.classList.toggle('dot',t>J.get('notifSeen',0))}catch(e){}}
+let NLIVE=null,NME=null;
+function nPerm(){return typeof Notification!='undefined'?Notification.permission:'unsupported'}
+function nAsk(){Notification.requestPermission().then(()=>route())}
+function nBanner(x){let b=document.getElementById('nbn');if(!b){b=document.createElement('div');b.id='nbn';b.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:99;width:min(92vw,420px);background:var(--navy);color:#fff;border-radius:14px;padding:12px 14px;box-shadow:0 6px 24px #0005;cursor:pointer;display:none';b.onclick=()=>{b.style.display='none';location.hash='#/notifications'};document.body.appendChild(b)}
+ b.innerHTML='<b>🔔 '+esc(x.title||'')+'</b><div style="font-size:13px;opacity:.9;margin-top:2px">'+esc(x.body||'')+'</div>';b.style.display='block';clearTimeout(b._t);b._t=setTimeout(()=>b.style.display='none',9000)}
+function startNotifWatch(){if(NLIVE||!auth.currentUser)return;
+ NLIVE=db.collection('notifications').orderBy('sentAt','desc').limit(1).onSnapshot(async sn=>{const d=sn.docs[0],x=d&&d.data(),t=x&&x.sentAt&&x.sentAt.toMillis?x.sentAt.toMillis():0;if(!t)return;
+  const seen=J.get('nShown',0);if(!seen){J.set('nShown',t);return}if(t<=seen)return;J.set('nShown',t);
+  try{if(!NME)NME=await db.doc('students/'+auth.currentUser.uid).get().then(q=>q.data()||{}).catch(()=>({}));const mine=Array.isArray(NME.exams)?NME.exams:[];if(mine.length&&x.topic&&!mine.includes(x.topic))return}catch(e){}
+  if(!location.hash.startsWith('#/notifications'))try{document.getElementById('bell')?.classList.add('dot')}catch(e){}
+  if(document.hidden&&nPerm()=='granted'){try{const n=new Notification(x.title||'Yash Study Hub',{body:x.body||'',icon:cfg.logoUrl||'logo.png'});n.onclick=()=>{window.focus();location.hash='#/notifications'}}catch(e){}}else nBanner(x)},()=>{NLIVE=null})}
+async function checkBell(){try{startNotifWatch();const s=await db.collection('notifications').orderBy('sentAt','desc').limit(1).get();const x=s.docs[0]&&s.docs[0].data();const t=x&&x.sentAt&&x.sentAt.toMillis?x.sentAt.toMillis():0;const b=document.getElementById('bell');if(b)b.classList.toggle('dot',t>J.get('notifSeen',0))}catch(e){}}
 async function delAcc(){if(!confirm('Aapka account aur saara data hat jayega. Pakka?'))return;const u=auth.currentUser,id=u.uid,em=u.email;
  try{
   const qs=await db.collection('queries').where('uid','==',id).get();
@@ -1364,11 +1375,25 @@ async function adminGrantsPage(){
  <button class="p" style="width:100%;margin-top:12px" onclick="admManual()">Grant access (no code needed)</button>${hr}
  <div class="adh" style="margin-top:0">Students who have access</div><p class="mu" style="font-size:12px">Tap the red button to take access back (the student is locked out the next time they open the batch).</p>${gr}`);
 }
+const FMREF=()=>db.collection('freeMcqIndex').doc('current');
 async function admFree(){
- const fs=fmSettings(await db.doc('appConfig/freeMcq').get().then(d=>d.data()).catch(()=>null));
- return `<div class="adh" style="margin-top:6px">Free MCQ test settings</div><p class="mu" style="font-size:12px">Applies to every Free MCQ test (timer, marks, negative marking). Timer 0 = no timer.</p><span class="adl">Time limit (minutes, 0 = no timer)</span><input id="fsm" type="number" min="0" max="300" value="${fs.durationMinutes}" style="width:100%"><span class="adl">Marks per question</span><input id="fsk" type="number" min="0.25" max="100" step="0.25" value="${fs.marksPerQuestion}" style="width:100%"><span class="adl">Negative marks per wrong answer</span><input id="fsn" type="number" min="0" step="0.25" value="${fs.negativeMarks}" style="width:100%"><button class="p" style="width:100%;margin-top:12px" onclick="admFmSave()">Save settings</button>`;
+ const [ix,st]=await Promise.all([FMREF().get().then(d=>d.data()||{}).catch(()=>({})),db.doc('appConfig/freeMcq').get().then(d=>d.data()).catch(()=>null)]);
+ const ex=(Array.isArray(ix.exams)?ix.exams:[]).filter(e=>e&&e.id),sets=Array.isArray(ix.sets)?ix.sets:[],fs=fmSettings(st),n=id=>sets.filter(x=>x&&x.examId==id).length;
+ return `<p class="mu" style="font-size:12px">Exam folders of the Free MCQs section. Students see these folders; each one gets 3 subjects (Static GK, General Science, General Studies) with a new 25-question set every WEEK. The "English" folder is built in: it gets only 25 Banking PO / Clerk English MCQs every week and cannot be removed. Sets older than 2 months are deleted automatically.</p>
+ <details class="card" style="margin-bottom:12px"><summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center"><span>⏱️ <b>Test settings (like Mock Tests)</b><br><small class="mu">${fs.durationMinutes>0?fs.durationMinutes+' min':'No timer'} • +${fs.marksPerQuestion} per correct • −${fs.negativeMarks} per wrong</small></span><span>✏️</span></summary>
+ <span class="adl">Time limit (minutes, 0 = no timer)</span><input id="fsm" type="number" min="0" max="300" value="${fs.durationMinutes}" style="width:100%"><span class="adl">Marks per question</span><input id="fsk" type="number" min="0.25" max="100" step="0.25" value="${fs.marksPerQuestion}" style="width:100%"><span class="adl">Negative marks per wrong answer</span><input id="fsn" type="number" min="0" step="0.25" value="${fs.negativeMarks}" style="width:100%"><button class="p" style="width:100%;margin-top:10px" onclick="admFmSave()">Save settings</button></details>
+ <button class="p" style="width:100%" onclick="admFmAdd()">➕ Add exam folder</button>`
+ +(ex.length?ex.map((e,k)=>`<div class="card" style="margin:8px 0 0"><div class="row"><span style="font-size:22px">${esc(e.emoji||'📁')}</span><span style="flex:1;min-width:0"><b>${esc(e.name)}</b><br><small class="mu">${n(e.id)} sets</small></span></div><div class="row" style="justify-content:flex-end;margin-top:4px"><button class="s" ${k?'':'disabled'} onclick="admFmMove('${esc(e.id)}',-1)">↑</button><button class="s" ${k<ex.length-1?'':'disabled'} onclick="admFmMove('${esc(e.id)}',1)">↓</button><button class="s" onclick="admFmEdit('${esc(e.id)}')">✏️</button><button class="s" ${e.id=='english'?'disabled':''} onclick="admFmDel('${esc(e.id)}')">🗑️</button></div></div>`).join(''):'<p class="mu" style="text-align:center;margin-top:14px">No exam folders in the database yet. The weekly run will create the default ones (SSC, UPSSSC, Railway), or add your own above.</p>');
 }
-
+async function admFmMut(fn,drop){try{await db.runTransaction(async tx=>{const sn=await tx.get(FMREF()),d=sn.data()||{},cur=(Array.isArray(d.exams)?d.exams:[]).filter(e=>e&&e.id).map(e=>({id:String(e.id),name:String(e.name||''),emoji:String(e.emoji||'')})),up={exams:fn(cur)};if(drop&&Array.isArray(d.sets))up.sets=d.sets.filter(x=>!(x&&x.examId==drop));tx.set(FMREF(),up,{merge:true})});try{J.set('fmIndex',null)}catch(e){}toast('Saved');route()}catch(e){alert('Could not save: '+e.message)}}
+async function admFmAdd(){const nm=prompt('Add exam folder — name (e.g. SSC CGL)');if(!nm||!nm.trim())return;const em=prompt('Emoji (optional)','📁')||'';
+ let b=nm.toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,24)||'exam'+Date.now().toString(36);
+ await admFmMut(cur=>{let id=b,k=2;while(cur.some(e=>e.id==id))id=b+(k++);return[...cur,{id,name:nm.trim(),emoji:em.trim()}]});}
+async function admFmEdit(id){if(!id)return;const e=((await FMREF().get()).data()||{}).exams?.find(x=>x.id==id)||{},nm=prompt('Edit exam folder — name',e.name||'');if(nm===null||!nm.trim())return;const em=prompt('Emoji',e.emoji||'');if(em===null)return;
+ await admFmMut(cur=>cur.map(x=>x.id==id?{id,name:nm.trim(),emoji:em.trim()}:x))}
+async function admFmMove(id,d){await admFmMut(cur=>{const i=cur.findIndex(x=>x.id==id),j=i+d;if(i<0||j<0||j>=cur.length)return cur;const c=cur.slice(),[it]=c.splice(i,1);c.splice(j,0,it);return c})}
+async function admFmDel(id){if(id=='english')return alert('The English folder is built in and cannot be removed.');const d=(await FMREF().get()).data()||{},e=(d.exams||[]).find(x=>x.id==id)||{},c=(d.sets||[]).filter(x=>x&&x.examId==id).length;
+ if(!confirm('Remove "'+(e.name||id)+'"?\nThis folder and its '+c+' MCQ set(s) will be deleted for all students. This cannot be undone.'))return;await admFmMut(cur=>cur.filter(x=>x.id!=id),id)}
 async function admFmSave(){const mi=Math.trunc(+document.getElementById('fsm').value),mk=+document.getElementById('fsk').value,ng=+document.getElementById('fsn').value;
  if(!(mi>=0&&mi<=300)){alert('Time limit 0 se 300 minutes ke beech hona chahiye');return}
  if(!(mk>0&&mk<=100)){alert('Marks per question 0 se zyada aur 100 tak hona chahiye');return}
