@@ -1257,8 +1257,9 @@ async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim(),tp=$v('nto')
 async function admStats(){
  const n=c=>db.collection(c).get().then(x=>x.size).catch(()=>'?');
  const C=[['students','Students'],['installs','App installs'],['batches','Batches'],['videos','Videos'],['pdfs','PDFs'],['mockTests','Mock tests'],['queries','Queries']];
+ const AO=await admActive(),aoCol=(n,l)=>`<div><b>${n}</b><small>${l}</small></div>`;
  const V=await Promise.all(C.map(c=>n(c[0]))),col=(i)=>`<div><b>${V[i]}</b><small>${C[i][1]}</small></div>`;
- return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><button class="s" onclick="route()">Refresh</button>`;
+ return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><b style="font-size:14px">🌐 Opened the Web today / आज वेब खोला</b><div class="adst" style="margin-top:10px">${aoCol(AO.t[0],'Students')}${aoCol(AO.t[1],'📱 Phone / Tablet')}${aoCol(AO.t[2],'💻 Desktop')}</div><div class="adst" style="margin-top:12px;opacity:.85">${aoCol(AO.y[0],'Yesterday: Students')}${aoCol(AO.y[1],'📱 Phone')}${aoCol(AO.y[2],'💻 Desktop')}</div><small class="mu" style="display:block;margin-top:10px;font-size:11px">Each student is counted once per day for each device type (a student who used both phone and desktop shows in both). Counting starts from this update and covers the Web only. Day = admin’s local date.</small></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><button class="s" onclick="route()">Refresh</button>`;
 }
 const bsort=a=>a.sort((x,y)=>(x.order??1e9)-(y.order??1e9));
 const admMo=m=>m>0?(m==1?'1 month':m+' months'):'Lifetime';
@@ -2176,7 +2177,7 @@ auth.onAuthStateChanged(async u=>{
  try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim();window.HSO=Array.isArray(c.homeSectionOrder)?c.homeSectionOrder:null;['newBatchesAt','newVideosAt','newPdfsAt','newMocksAt'].forEach(k=>MK[k]=tsMs(c[k]))}catch(e){}
  window.NEEDSETUP=false;
  try{const sn=await Promise.race([db.doc('students/'+u.uid).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),8000))]);const d=sn.exists?sn.data():null;
-  if(!d||!d.profileComplete){window.NEEDSETUP=true;window.SPROF=d||{}}else if(d.name)J.set('stuName',String(d.name).trim())}catch(e){}
+  if(!d||!d.profileComplete){window.NEEDSETUP=true;window.SPROF=d||{}}else if(d.name)J.set('stuName',String(d.name).trim());if(d)actPing(u.uid)}catch(e){}
  if(!window.NEEDSETUP&&!location.hash)location.hash='#/home';
  route()});
 
@@ -2291,6 +2292,15 @@ function ageVerdict(){const A=AGE,e=document.getElementById('agv');if(!e)return;
  if(minA!==null)L.push(`Latest eligible date of birth: ${ageFmt(new Date(on.getFullYear()-minA,on.getMonth(),on.getDate()))} / सबसे नई पात्र जन्म तिथि`);
  const hd=ok?'✅ Age is within the limit / उम्र सीमा के अंदर है':tooYoung?`❌ Too young by ${minA-yrs} year(s) / उम्र कम है`:`❌ Over the limit by ${yrs-allowedMax} year(s) / उम्र ज़्यादा है`;
  e.innerHTML=`<div class="agv ${ok?'agok':'agno'}"><b style="color:${ok?'var(--okc)':'var(--bad)'}">${hd}</b>${L.map(l=>`<div style="font-size:12.5px;margin-top:4px">${esc(l)}</div>`).join('')}</div>`}
+
+// ---- "Opened the Web today": one tiny write per student, per device type, per day ----
+const isPhone=()=>{try{return /Android|iPhone|iPod|iPad|Mobile|Opera Mini|IEMobile|webOS/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&Math.min(screen.width,screen.height)<820)}catch(e){return false}};
+function actPing(uid){try{const day=dayKey(),dev=isPhone()?'Mobile':'Desktop',key=uid+'|'+day+'|'+dev;if(J.get('actPing','')===key)return;
+ db.doc('students/'+uid).set({lastActiveAt:firebase.firestore.FieldValue.serverTimestamp(),lastActiveDay:day,['last'+dev+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
+async function admActive(){const cnt=q=>(q.count?q.count().get().then(a=>a.data().count):q.get().then(x=>x.size)).catch(()=>'?'),
+ y=new Date();y.setDate(y.getDate()-1);const T=dayKey(),Y=dayKey(y),st=db.collection('students'),f=(k,d)=>cnt(st.where(k,'==',d));
+ const r=await Promise.all([f('lastActiveDay',T),f('lastMobileDay',T),f('lastDesktopDay',T),f('lastActiveDay',Y),f('lastMobileDay',Y),f('lastDesktopDay',Y)]);
+ return{t:r.slice(0,3),y:r.slice(3)}}
 
 rfInit();
 </script>
