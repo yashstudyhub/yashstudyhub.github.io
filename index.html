@@ -2295,8 +2295,16 @@ function ageVerdict(){const A=AGE,e=document.getElementById('agv');if(!e)return;
 
 // ---- "Opened the Web today": one tiny write per student, per device type, per day ----
 const isPhone=()=>{try{return /Android|iPhone|iPod|iPad|Mobile|Opera Mini|IEMobile|webOS/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&Math.min(screen.width,screen.height)<820)}catch(e){return false}};
-function actPing(uid){try{const day=dayKey(),dev=isPhone()?'Mobile':'Desktop',key=uid+'|'+day+'|'+dev;if(J.get('actPing','')===key)return;
- db.doc('students/'+uid).set({lastActiveAt:firebase.firestore.FieldValue.serverTimestamp(),lastActiveDay:day,['last'+dev+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
+// Device type for the App's Admin > Stats: Phone / Tablet / Computer. A browser cannot tell a laptop from a desktop, so those two are one group.
+const devType=()=>{try{const ua=navigator.userAgent||'',pl=navigator.platform||'',touch=navigator.maxTouchPoints>1,sm=Math.min(screen.width,screen.height);
+ if(/iPad/i.test(ua)||(pl==='MacIntel'&&touch))return'Tablet';
+ if(/Android/i.test(ua)&&!/Mobile/i.test(ua))return'Tablet';
+ if(/iPhone|iPod|Android|Mobile|Opera Mini|IEMobile|webOS/i.test(ua))return'Phone';
+ if(touch&&sm<820&&!/Win|Mac/i.test(pl))return sm>=600?'Tablet':'Phone';
+ return'Computer'}catch(e){return'Computer'}};
+// Still ONE tiny write per student, per device type, per day. The old fields (lastActiveDay, lastMobileDay, lastDesktopDay) are kept for the Web admin card above; lastWebDay / lastWeb{Phone,Tablet,Computer}Day are the new ones the App's Admin > Stats reads.
+function actPing(uid){try{const day=dayKey(),t=devType(),old=t==='Computer'?'Desktop':'Mobile',key='v2|'+uid+'|'+day+'|'+t;if(J.get('actPing','')===key)return;
+ db.doc('students/'+uid).set({lastActiveAt:firebase.firestore.FieldValue.serverTimestamp(),lastActiveDay:day,['last'+old+'Day']:day,lastWebDay:day,['lastWeb'+t+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
 async function admActive(){const cnt=q=>(q.count?q.count().get().then(a=>a.data().count):q.get().then(x=>x.size)).catch(()=>'?'),
  y=new Date();y.setDate(y.getDate()-1);const T=dayKey(),Y=dayKey(y),st=db.collection('students'),f=(k,d)=>cnt(st.where(k,'==',d));
  const r=await Promise.all([f('lastActiveDay',T),f('lastMobileDay',T),f('lastDesktopDay',T),f('lastActiveDay',Y),f('lastMobileDay',Y),f('lastDesktopDay',Y)]);
