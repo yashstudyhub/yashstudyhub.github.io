@@ -1257,9 +1257,9 @@ async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim(),tp=$v('nto')
 async function admStats(){
  const n=c=>db.collection(c).get().then(x=>x.size).catch(()=>'?');
  const C=[['students','Students'],['installs','App installs'],['batches','Batches'],['videos','Videos'],['pdfs','PDFs'],['mockTests','Mock tests'],['queries','Queries']];
- const AO=await admActive(),aoCol=(n,l)=>`<div><b>${n}</b><small>${l}</small></div>`;
+ const OP=await admOpened();
  const V=await Promise.all(C.map(c=>n(c[0]))),col=(i)=>`<div><b>${V[i]}</b><small>${C[i][1]}</small></div>`;
- return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><b style="font-size:14px">🌐 Opened the Web today / आज वेब खोला</b><div class="adst" style="margin-top:10px">${aoCol(AO.t[0],'Students')}${aoCol(AO.t[1],'📱 Phone / Tablet')}${aoCol(AO.t[2],'💻 Desktop')}</div><div class="adst" style="margin-top:12px;opacity:.85">${aoCol(AO.y[0],'Yesterday: Students')}${aoCol(AO.y[1],'📱 Phone')}${aoCol(AO.y[2],'💻 Desktop')}</div><small class="mu" style="display:block;margin-top:10px;font-size:11px">Each student is counted once per day for each device type (a student who used both phone and desktop shows in both). Counting starts from this update and covers the Web only. Day = admin’s local date.</small></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><button class="s" onclick="route()">Refresh</button>`;
+ return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><div class="card" style="padding:16px"><b style="font-size:13px">📊 Students who opened today / आज कितने students ने खोला</b>${opBlk(OP,'📱 App',['Total','Phone','Tablet'],[0,1,2])}${opBlk(OP,'🌐 Web',['Total','Phone','Tablet','Desktop / Laptop'],[3,4,5,6])}<small class="mu" style="display:block;margin-top:10px;font-size:11px">Each student is counted once per day for each device type (someone who used phone and computer shows in both). A browser cannot tell a laptop from a desktop, so they are shown together. App numbers count students on the updated app; Web numbers count from the web update. Day = this device’s date.</small></div><button class="s" onclick="route()">Refresh</button>`;
 }
 const bsort=a=>a.sort((x,y)=>(x.order??1e9)-(y.order??1e9));
 const admMo=m=>m>0?(m==1?'1 month':m+' months'):'Lifetime';
@@ -2293,22 +2293,18 @@ function ageVerdict(){const A=AGE,e=document.getElementById('agv');if(!e)return;
  const hd=ok?'✅ Age is within the limit / उम्र सीमा के अंदर है':tooYoung?`❌ Too young by ${minA-yrs} year(s) / उम्र कम है`:`❌ Over the limit by ${yrs-allowedMax} year(s) / उम्र ज़्यादा है`;
  e.innerHTML=`<div class="agv ${ok?'agok':'agno'}"><b style="color:${ok?'var(--okc)':'var(--bad)'}">${hd}</b>${L.map(l=>`<div style="font-size:12.5px;margin-top:4px">${esc(l)}</div>`).join('')}</div>`}
 
-// ---- "Opened the Web today": one tiny write per student, per device type, per day ----
-const isPhone=()=>{try{return /Android|iPhone|iPod|iPad|Mobile|Opera Mini|IEMobile|webOS/i.test(navigator.userAgent)||(navigator.maxTouchPoints>1&&Math.min(screen.width,screen.height)<820)}catch(e){return false}};
-// Device type for the App's Admin > Stats: Phone / Tablet / Computer. A browser cannot tell a laptop from a desktop, so those two are one group.
-const devType=()=>{try{const ua=navigator.userAgent||'',pl=navigator.platform||'',touch=navigator.maxTouchPoints>1,sm=Math.min(screen.width,screen.height);
- if(/iPad/i.test(ua)||(pl==='MacIntel'&&touch))return'Tablet';
- if(/Android/i.test(ua)&&!/Mobile/i.test(ua))return'Tablet';
- if(/iPhone|iPod|Android|Mobile|Opera Mini|IEMobile|webOS/i.test(ua))return'Phone';
- if(touch&&sm<820&&!/Win|Mac/i.test(pl))return sm>=600?'Tablet':'Phone';
- return'Computer'}catch(e){return'Computer'}};
-// Still ONE tiny write per student, per device type, per day. The old fields (lastActiveDay, lastMobileDay, lastDesktopDay) are kept for the Web admin card above; lastWebDay / lastWeb{Phone,Tablet,Computer}Day are the new ones the App's Admin > Stats reads.
-function actPing(uid){try{const day=dayKey(),t=devType(),old=t==='Computer'?'Desktop':'Mobile',key='v2|'+uid+'|'+day+'|'+t;if(J.get('actPing','')===key)return;
- db.doc('students/'+uid).set({lastActiveAt:firebase.firestore.FieldValue.serverTimestamp(),lastActiveDay:day,['last'+old+'Day']:day,lastWebDay:day,['lastWeb'+t+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
-async function admActive(){const cnt=q=>(q.count?q.count().get().then(a=>a.data().count):q.get().then(x=>x.size)).catch(()=>'?'),
- y=new Date();y.setDate(y.getDate()-1);const T=dayKey(),Y=dayKey(y),st=db.collection('students'),f=(k,d)=>cnt(st.where(k,'==',d));
- const r=await Promise.all([f('lastActiveDay',T),f('lastMobileDay',T),f('lastDesktopDay',T),f('lastActiveDay',Y),f('lastMobileDay',Y),f('lastDesktopDay',Y)]);
- return{t:r.slice(0,3),y:r.slice(3)}}
+// ---- "Students who opened today" (same fields as the App): lastWebDay + lastWeb{Phone|Tablet|Computer}Day ----
+function webDevice(){try{const ua=navigator.userAgent||'',t=navigator.maxTouchPoints||0,sh=Math.min(screen.width,screen.height);
+ if(/iPad|Tablet|PlayBook|Silk/i.test(ua)||(/Macintosh/i.test(ua)&&t>1))return 'Tablet';
+ if(/Android/i.test(ua))return /Mobile/i.test(ua)?'Phone':'Tablet';
+ if(/iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|webOS|Mobile/i.test(ua))return 'Phone';
+ if(t>1&&sh<600)return 'Phone';if(t>1&&sh<900)return 'Tablet'}catch(e){}return 'Computer'}
+function actPing(uid){try{const day=dayKey(),ty=webDevice(),key=uid+'|'+day+'|'+ty;if(J.get('actPing','')===key)return;
+ db.doc('students/'+uid).set({lastWebDay:day,['lastWeb'+ty+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
+async function admOpened(){const cnt=q=>(q.count?q.count().get().then(a=>a.data().count):q.get().then(x=>x.size)).catch(()=>'?'),n=new Date(),T=dayKey(n),Y=dayKey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),st=db.collection('students'),
+ FL=['lastAppDay','lastAppPhoneDay','lastAppTabletDay','lastWebDay','lastWebPhoneDay','lastWebTabletDay','lastWebComputerDay'],day=d=>Promise.all(FL.map(f=>cnt(st.where(f,'==',d))));
+ return Promise.all([day(T),day(Y)])}
+const opBlk=(OP,title,labels,idx)=>`<div style="margin-top:14px"><b style="font-size:13px">${title}</b><div class="adst" style="margin-top:8px;align-items:flex-start">${idx.map((i,k)=>`<div><b>${OP[0][i]}</b><small>${labels[k]}</small></div>`).join('')}</div><small class="mu" style="display:block;margin-top:6px;font-size:11px">Yesterday / कल: ${idx.map((i,k)=>labels[k]+' '+OP[1][i]).join(' • ')}</small></div>`;
 
 rfInit();
 </script>
