@@ -1192,25 +1192,7 @@ async function adminPage(){
 }
 async function admAdd(col,d,mark){try{await db.collection(col).add({...d,createdAt:firebase.firestore.FieldValue.serverTimestamp()});if(mark)await db.doc('appConfig/main').set({[mark]:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});try{fqClear()}catch(e){}toast('Saved ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admDel(col,id){if(!confirm('Delete? / हटाएँ?'))return;try{await db.collection(col).doc(id).delete();route()}catch(e){alert(e.message)}}
-async function admContent(t){
- const v=t=='videos',fc=v?'videoFolders':'pdfFolders',ic=v?'videos':'pdfs',W=v?'video':'PDF';
- const [bs,fs]=await Promise.all([list(db.collection('batches')),list(db.collection(fc))]);
- const sb=window.ADB||'free',ff=fs.filter(f=>(f.batchId||'free')==sb);
- let sf=window.ADF;if(!ff.some(f=>f.id==sf))sf=ff[0]?ff[0].id:'';window.ADF=sf;
- const it=sf?await list(db.collection(ic).where('folderId','==',sf)):[];
- return `<div class="adh" style="margin-top:6px">1. Which section? ${v?'(first choice = free Video Classes)':'(first choice = free PDFs)'}</div>
- <select style="width:100%" onchange="ADB=this.value;ADF='';route()"><option value="free">${v?'Free Video Classes':'Free PDFs'}</option>${bs.map(b=>`<option value="${esc(b.id)}" ${b.id==sb?'selected':''}>${esc(b.title)}</option>`).join('')}</select>
- <div class="adh">2. Choose a folder or create new</div>
- ${ff.length?`<select style="width:100%" onchange="ADF=this.value;route()">${ff.map(f=>`<option value="${esc(f.id)}" ${f.id==sf?'selected':''}>${esc(f.name)}</option>`).join('')}</select>`:'<p class="mu">Is section me abhi koi folder nahi hai.</p>'}
- <div class="row" style="margin-top:8px"><input id="fn" placeholder="New folder name" style="flex:1"><button class="p" onclick="admFolder('${fc}',${v})">Create</button></div>
- ${sf?`<div class="adh">3. Add ${W}</div><div class="card"><span class="adl">Title</span><input id="ct" style="width:100%"><span class="adl">${v?'YouTube link':'Google Drive link'}</span><input id="cl" style="width:100%"><button class="p" style="margin-top:10px" onclick="admItem('${ic}',${v})">Add ${W}</button></div>
- <div class="adh">${v?'Videos':'PDFs'} in this folder (${it.length})</div>`+it.map(x=>`<div class="card row" style="justify-content:space-between"><b style="flex:1;min-width:0">${esc(x.title)}</b><button class="s" onclick="admDel('${ic}','${esc(x.id)}')">Delete</button></div>`).join('')+`<button class="s" style="margin-top:6px" onclick="admDel('${fc}','${esc(sf)}')">Delete this folder</button>`:''}`;
-}
-async function admFolder(fc,v){const n=$v('fn').trim(),b=window.ADB||'free';if(!n)return alert('Folder ka naam daalein');
- try{const r=await db.collection(fc).add(v?{name:n,batchId:b,createdAt:firebase.firestore.FieldValue.serverTimestamp()}:(b=='free'?{name:n,type:'free',batchId:null,batchIds:[],createdAt:firebase.firestore.FieldValue.serverTimestamp()}:{name:n,type:'batch',batchId:b,batchIds:[b],createdAt:firebase.firestore.FieldValue.serverTimestamp()}));window.ADF=r.id;toast('Folder created ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
-async function admItem(ic,v){const f=window.ADF,ti=$v('ct').trim(),l=$v('cl').trim();if(!f||!ti||!l)return alert('Title aur link dono daalein');
- const b=window.ADB&&window.ADB!='free'?window.ADB:null;
- await admAdd(ic,v?{title:ti,youtubeLink:l,thumbUrl:'',batchId:b,folderId:f,source:'admin'}:{title:ti,iconUrl:'',driveLink:l,batchId:b,folderId:f},v?(b?'newBatchesAt':'newVideosAt'):(b?'newBatchesAt':'newPdfsAt'))}
+async function admContent(t){return t=='videos'?admVideos():admPdfs()}
 const dtf=d=>d&&d.toDate?d.toDate().toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true}):'';
 async function admQueries(){
  const f=window.AQF||'pending',ed=window.AQE||(window.AQE={});
@@ -1255,11 +1237,14 @@ async function admNotify(){
 async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim(),tp=$v('nto');if(!t||!b)return alert('Please enter both a title and a message.');
  try{await db.collection('notifications').add({title:t,body:b,...(tp?{topic:tp}:{}),sent:false,sentAt:firebase.firestore.FieldValue.serverTimestamp()});toast('Saved — students’ phones will get the push notification shortly.');route()}catch(e){alert('Could not send: '+e.message)}}
 async function admStats(){
- const n=c=>db.collection(c).get().then(x=>x.size).catch(()=>'?');
- const C=[['students','Students'],['installs','App installs'],['batches','Batches'],['videos','Videos'],['pdfs','PDFs'],['mockTests','Mock tests'],['queries','Queries']];
- const OP=await admOpened();
- const V=await Promise.all(C.map(c=>n(c[0]))),col=(i)=>`<div><b>${V[i]}</b><small>${C[i][1]}</small></div>`;
- return `<div class="card" style="padding:16px"><div class="adst">${col(0)}${col(1)}${col(2)}</div></div><div class="card" style="padding:16px"><div class="adst">${col(3)}${col(4)}${col(5)}${col(6)}</div></div><div class="card" style="padding:16px"><b style="font-size:13px">📊 Students who opened today / आज कितने students ने खोला</b>${opBlk(OP,'📱 App',['Total','Phone','Tablet'],[0,1,2])}${opBlk(OP,'🌐 Web',['Total','Phone','Tablet','Desktop / Laptop'],[3,4,5,6])}<small class="mu" style="display:block;margin-top:10px;font-size:11px">Each student is counted once per day for each device type (someone who used phone and computer shows in both). A browser cannot tell a laptop from a desktop, so they are shown together. App numbers count students on the updated app; Web numbers count from the web update. Day = this device’s date.</small></div><button class="s" onclick="route()">Refresh</button>`;
+ const n=new Date(),y=n.getFullYear(),m=n.getMonth(),d=n.getDate(),D0=new Date(y,m,d),D6=new Date(y,m,d-6),D29=new Date(y,m,d-29),C=admCount;
+ const [S,I,A,OP]=await Promise.all([Promise.all([C('students'),C('students',[['source','==','web']]),C('students',[['createdAt','>=',D0]]),C('students',[['createdAt','>=',D6]]),C('students',[['createdAt','>=',D29]])]),C('installs'),Promise.all([C('installs',[['lastActiveAt','>=',D0]]),C('installs',[['lastActiveAt','>=',D6]]),C('installs',[['lastActiveAt','>=',D29]])]),admOpened()]);
+ const col=(v,l)=>`<div><b>${v}</b><small>${l}</small></div>`,app=(typeof S[0]=='number'&&typeof S[1]=='number')?Math.max(0,S[0]-S[1]):'?',
+ hd=(i,t)=>`<div style="font-weight:700;font-size:13px">${i} ${t}</div>`,nt=t=>`<small class="mu" style="display:block;margin-top:10px;font-size:11px">${t}</small>`;
+ return `<div class="card" style="padding:16px">${hd('👥','Registered students (App + Web)')}<div class="adst" style="margin-top:14px">${col(S[0],'Total')}${col(app,'From App')}${col(S[1],'From Web')}</div><div class="mu" style="font-size:12px;margin:14px 0 8px">New signups</div><div class="adst">${col(S[2],'Today')}${col(S[3],'Last 7 days')}${col(S[4],'Last 30 days')}</div>${nt('Counts only, no personal info. Accounts made before this update have no date, so they are in Total but not in "New signups". / पुराने अकाउंट Total में गिने जाते हैं, "New signups" में नहीं।')}</div>
+ <div class="card row" style="padding:16px;justify-content:space-between;align-items:flex-start"><div>👥<br><b style="font-size:24px">${I}</b><br><small class="mu">App installs (only counting)</small></div><button class="s" title="Refresh" onclick="route()">🔄</button></div>
+ <div class="card" style="padding:16px">${hd('⚡','Active students (phones that opened the app)')}<div class="adst" style="margin-top:14px">${col(A[0],'Today')}${col(A[1],'Last 7 days')}${col(A[2],'Last 30 days')}</div>${nt('Only phones that have opened the updated app are counted. Reinstall = counted again. / केवल अपडेटेड ऐप खोलने वाले फ़ोन गिने जाते हैं।')}</div>
+ <div class="card" style="padding:16px">${hd('📊','Students who opened today / आज कितने students ने खोला')}${opBlk(OP,'📱 App',['Total','Phone','Tablet'],[0,1,2])}${opBlk(OP,'🌐 Web',['Total','Phone','Tablet','Desktop / Laptop'],[3,4,5,6])}${nt('Each student is counted once per day for each device type (someone who used phone and computer shows in both). A browser cannot tell a laptop from a desktop, so they are shown together. App numbers count students on the updated app; Web numbers count from the web update. Day = this device’s date.')}</div>`;
 }
 const bsort=a=>a.sort((x,y)=>(x.order??1e9)-(y.order??1e9));
 const admMo=m=>m>0?(m==1?'1 month':m+' months'):'Lifetime';
@@ -1498,12 +1483,12 @@ async function admOrdReset(){try{await db.doc('appConfig/main').set({homeSection
 async function adminGrantsPage(){
  if(!isAdminUser())return wrap(back+'<div class="card">Ye page sirf admin ke liye hai.</div>');
  const [bs,reqs,grants]=await Promise.all([list(db.collection('batches')).then(bsort),list(db.collection('accessRequests')),list(db.collection('batchAccess').where('status','==','granted'))]);
- const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:id;window.ADM={};window.ADBN={};bs.forEach(b=>{ADM[b.id]=b.validityMonths||0;ADBN[b.id]=b.title});
+ const B={};bs.forEach(b=>B[b.id]=b);const bt=id=>B[id]?B[id].title:'(deleted batch)';window.ADM={};window.ADBN={};bs.forEach(b=>{ADM[b.id]=b.validityMonths||0;ADBN[b.id]=b.title});
  reqs.sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0));grants.sort((a,b)=>String(a.studentEmail).toLowerCase().localeCompare(String(b.studentEmail).toLowerCase()));
  const fmt=d=>d?d.toDate().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
  const dm=id=>ADM[id]>0?admMo(ADM[id]).toLowerCase():'lifetime';
  const rq=reqs.length?reqs.map(r=>`<div class="card row" style="justify-content:space-between;margin:0 0 8px"><span style="min-width:0;flex:1;overflow-wrap:anywhere"><b style="font-size:14px">${esc(r.studentName?r.studentName+' ('+r.studentEmail+')':r.studentEmail)}</b><br><small class="mu">${esc(r.batchTitle||bt(r.batchId))} • ${r.studentPhone?'📱 '+esc(r.studentPhone):'(no phone/WhatsApp number given)'}</small></span><button class="s" title="Grant access" onclick="admGrant('${esc(r.studentEmail)}','${esc(r.batchId)}',null,false,'${esc(r.studentPhone||'')}')">✅</button><button class="s" title="Dismiss (payment not received)" onclick="admDismiss('${esc(r.id)}')">❌</button></div>`).join(''):'<p class="mu">No pending requests</p>';
- const gr=grants.length?grants.map(x=>{const e=x.expiresAt,ex=e&&e.toDate()<=new Date();return `<div class="card row" style="justify-content:space-between;margin:0 0 8px"><span style="min-width:0;flex:1;overflow-wrap:anywhere"><b style="font-size:14px">${esc(x.studentEmail)}</b><br><small class="mu">${esc(bt(x.batchId))}<br>${e?(ex?'Expired on ':'Valid till ')+esc(fmt(e)):'Lifetime'}${x.codeRequired===false?'<br>Manual grant • no code needed':''}</small></span><button class="s" title="Extend validity" onclick="admExtend('${esc(x.id)}')">📅</button><button class="s" title="Make lifetime" onclick="admLife('${esc(x.id)}')">♾️</button><button class="s" title="Take access back" style="color:var(--bad)" onclick="admRevoke('${esc(x.id)}')">🚫</button></div>`}).join(''):'<p class="mu">Nobody has access yet.</p>';
+ const gr=grants.length?grants.map(x=>{const e=x.expiresAt,ex=e&&e.toDate()<=new Date();return `<div class="card row" style="justify-content:space-between;margin:0 0 8px"><span style="min-width:0;flex:1;overflow-wrap:anywhere"><b style="font-size:14px">${esc(x.studentEmail)}</b><br><small class="mu">${esc(bt(x.batchId))}<br>${e?(ex?'Expired on ':'Valid till ')+esc(fmt(e)):'Lifetime'}${x.codeRequired===false?'<br>Manual grant • no code needed':''}</small></span><button class="s" title="Change validity / renew" onclick="admChange('${esc(x.id)}')">📅</button><button class="s" title="Take access back" style="color:var(--bad)" onclick="admRevoke('${esc(x.id)}')">🚫</button></div>`}).join(''):'<p class="mu">Nobody has access yet.</p>';
  const hr='<hr style="border:0;border-top:1px solid var(--line);margin:22px 0">';
  return wrap(`<div class="adh" style="margin-top:6px">Pending requests</div><p class="mu" style="font-size:12px">The student entered their email in the app but doesn’t have access yet — grant it here in one tap.</p>${rq}${hr}
  <div class="adh" style="margin-top:0">Manual grant</div><p class="mu" style="font-size:12px">No access code is needed here — the student just logs in with this email and the batch opens by itself. (A code is only used when the student sends an Access Request.)</p>
@@ -1567,32 +1552,46 @@ async function admFmSave(){const mi=Math.trunc(+document.getElementById('fsm').v
  try{await db.doc('appConfig/freeMcq').set({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng},{merge:true});
   try{const c=J.get('fmIndex',null);if(c&&c.data){c.data.settings=fmSettings({durationMinutes:mi,marksPerQuestion:mk,negativeMarks:ng});J.set('fmIndex',c)}}catch(e){}
   toast('Free MCQ settings saved')}catch(e){alert('Save nahi hua: '+e.message)}}
+const admFmtD=d=>d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+function admModal(inner){admClose();const o=document.createElement('div');o.className='ysx-ov';o.id='admdlg';o.innerHTML='<div class="ysx-md">'+inner+'</div>';document.body.appendChild(o)}
+function admClose(){const o=document.getElementById('admdlg');if(o)o.remove()}
+function admCopy(t,m){try{navigator.clipboard.writeText(t).then(()=>toast(m),()=>toast('Could not copy'))}catch(e){toast('Could not copy')}}
 async function admGrant0(email,bid,months,manual){
  email=String(email).trim().toLowerCase();if(months===undefined||months===null)months=admDefault(bid);
- const id=email+'_'+bid,code=String(100000+Math.floor(Math.random()*900000));
- const exp=months>0?addMonthsEnd(new Date(),months):null;
- try{
-  const doc={studentEmail:email,batchId:bid,status:'granted',accessCode:code,grantedAt:firebase.firestore.FieldValue.serverTimestamp(),grantedBy:'admin',validityMonths:months,expiresAt:exp?firebase.firestore.Timestamp.fromDate(exp):null};
-  if(manual)doc.codeRequired=false;
-  await db.collection('batchAccess').doc(id).set(doc);
-  await db.collection('accessRequests').doc(id).delete().catch(()=>{});
-  alert(manual?('Access granted (no code needed)!\nStudent email: '+email+'\n'+(exp?'Valid till '+exp.toLocaleDateString('en-IN'):'Lifetime access')):('Access granted!\nAccess code: '+code+'\n'+(exp?'Valid till '+exp.toLocaleDateString('en-IN'):'Lifetime access')+'\n\nYe code student ko bhej dein.'));
-  route();
- }catch(e){alert('Grant nahi hua: '+e.message)}
+ const id=email+'_'+bid,code=manual?'':String(100000+Math.floor(Math.random()*900000)),exp=months>0?addMonthsEnd(new Date(),months):null;
+ try{await db.collection('batchAccess').doc(id).set({studentEmail:email,batchId:bid,status:'granted',accessCode:code,codeRequired:!manual,grantedAt:firebase.firestore.FieldValue.serverTimestamp(),grantedBy:'admin',validityMonths:months,expiresAt:exp?firebase.firestore.Timestamp.fromDate(exp):null});
+  await db.collection('accessRequests').doc(id).delete().catch(()=>{});return{code,exp}}
+ catch(e){alert('Could not grant access: '+e.message);return null}
 }
-async function admGrant(email,bid,months,manual,phone){await admGrant0(email,bid,months,manual);const ph=String(phone||'').replace(/\D/g,'');if(!ph)return;
- try{const d=(await db.collection('batchAccess').doc(String(email).trim().toLowerCase()+'_'+bid).get()).data();if(!d||d.status!='granted')return}catch(e){return}
- const n=ph.length==10?'91'+ph:ph;if(confirm('Student ko WhatsApp par batayein? / Tell the student on WhatsApp?'))window.open('https://wa.me/'+n+'?text='+encodeURIComponent('Hello! Aapko "'+((window.ADBN||{})[bid]||'batch')+'" ka access mil gaya hai. Same email se login karke batch kholein.'),'_blank')}
+async function admGrant(email,bid,months,manual,phone){
+ const r=await admGrant0(email,bid,months,manual);if(!r)return;email=String(email).trim().toLowerCase();
+ const ph=String(phone||'').trim(),dg=ph.replace(/\D/g,''),wa=dg.length==10?'91'+dg:dg,vn=r.exp?' Your access is valid till '+admFmtD(r.exp)+'.':'',vl=r.exp?'Valid till '+admFmtD(r.exp):'Lifetime access (no time limit)',
+ msg=manual?'Yash Study Hub: your batch access is ready. No code needed — just log in to the app with your email ('+email+') and open your batch.'+vn:'Yash Study Hub: your access code is '+r.code+'. Open the app, go to your batch and tap "Check Access", then enter this code with your email ('+email+').'+vn;
+ window.AGR={msg,email,wa};
+ admModal(manual?`<h3>Access granted</h3><p style="font-weight:600;margin:0 0 6px">${esc(email)}</p><p class="mu" style="font-size:12.5px">No access code is needed. The batch opens for this student as soon as they log in with this email.</p><p style="font-size:12.5px">${vl}</p>${ph?`<p class="mu" style="font-size:12px">Number: ${esc(ph)}</p>`:''}<div class="row" style="justify-content:flex-end">${wa?'<button class="s" onclick="admWa()">Tell on WhatsApp</button>':''}<button class="p" onclick="admDone()">Done</button></div>`
+ :`<h3>Access granted</h3><p class="mu" style="font-size:12.5px">${ph?'The student gave a WhatsApp/phone number — send the code with the button below (they need the email AND this code to unlock):':'The student did not give a phone/WhatsApp number — you can send the code by email (from your own email app), or any other way you can reach this student:'}</p><div style="text-align:center;margin:12px 0"><span style="display:inline-block;padding:10px 20px;border-radius:10px;background:var(--card2);font-size:22px;font-weight:700;letter-spacing:4px;color:var(--ac)">${esc(r.code)}</span></div><p style="text-align:center;font-size:12.5px">${vl}</p>${ph?`<p class="mu" style="font-size:12px">Number: ${esc(ph)}</p>`:''}<div class="row" style="justify-content:flex-end"><button class="s" onclick="admCopy('${esc(r.code)}','Code copied')">Copy code</button>${wa?'<button class="s" onclick="admWa()">Open WhatsApp</button>':'<button class="s" onclick="admMail()">Email code</button>'}<button class="p" onclick="admDone()">Done</button></div>`)}
+function admWa(){window.open('https://wa.me/'+AGR.wa+'?text='+encodeURIComponent(AGR.msg),'_blank')}
+function admMail(){const a=document.createElement('a');a.href='mailto:'+AGR.email+'?subject='+encodeURIComponent('Yash Study Hub access code')+'&body='+encodeURIComponent(AGR.msg);a.click()}
+function admDone(){admClose();route()}
 function admManual(){const email=document.getElementById('ge').value.trim().toLowerCase(),bid=document.getElementById('gb').value,mv=document.getElementById('gm').value;
  if(!email.includes('@')){alert('Sahi email daalein');return}
  admGrant(email,bid,mv===''?admDefault(bid):Math.max(0,Math.floor(+mv)),true,(document.getElementById('gp')||{}).value||'')}
 function admDismiss(id){if(!confirm('Ye request hata dein?'))return;db.collection('accessRequests').doc(id).delete().then(route).catch(e=>alert(e.message))}
-function admRevoke(id){if(!confirm('Is student ka access wapas le lein?'))return;db.collection('batchAccess').doc(id).set({status:'revoked'},{merge:true}).then(route).catch(e=>alert(e.message))}
-function admLife(id){db.collection('batchAccess').doc(id).set({expiresAt:null,validityMonths:0},{merge:true}).then(route).catch(e=>alert(e.message))}
-async function admExtend(id){const m=+prompt('Kitne mahine badhane hain?','1');if(!(m>0))return;
- try{const ref=db.collection('batchAccess').doc(id);const snap=await ref.get();const cur=snap.data()?.expiresAt?.toDate?.();const base=cur&&cur>new Date()?cur:new Date();
-  const ne=addMonthsEnd(base,m);await ref.set({expiresAt:firebase.firestore.Timestamp.fromDate(ne)},{merge:true});alert('Naya expiry: '+ne.toLocaleDateString('en-IN'));route()}
- catch(e){alert('Extend nahi hua: '+e.message)}}
+async function admRevoke(id){try{const d=(await db.collection('batchAccess').doc(id).get()).data()||{},bn=(window.ADBN||{})[d.batchId]||'(deleted batch)';
+ if(!confirm('Take access back?\n'+(d.studentEmail||id)+' will no longer be able to open "'+bn+'".'))return;
+ await db.collection('batchAccess').doc(id).set({status:'revoked'},{merge:true});toast('Access taken back');route()}catch(e){alert('Could not take access back: '+e.message)}}
+async function admChange(id){try{const d=(await db.collection('batchAccess').doc(id).get()).data();if(!d)return alert('No access record found for this student.');
+ const e=d.expiresAt&&d.expiresAt.toDate?d.expiresAt.toDate():null,ex=e&&e<=new Date(),bn=(window.ADBN||{})[d.batchId]||'(deleted batch)',dm=(window.ADM||{})[d.batchId]||0,
+ st=!e?'Now: lifetime access (no time limit).':(ex?'Now: expired on ':'Now: valid till ')+admFmtD(e)+'.';
+ window.ACG={id};
+ admModal(`<h3>Change validity</h3><p class="mu" style="font-size:12.5px;margin:0 0 6px">${esc(d.studentEmail)}<br>${esc(bn)}</p><p style="color:var(--ac);font-size:12.5px;margin:0 0 8px">${st}</p><span class="adl">Add months</span><input id="acm" type="number" min="1" max="120" value="${dm>0?dm:1}"><small class="mu">Counted from today, or from the current end date if it is still in the future.</small><p class="err" id="acme" style="font-size:12.5px;min-height:16px;margin:4px 0"></p><div class="row" style="justify-content:flex-end"><button class="s" onclick="admClose()">Cancel</button><button class="s" onclick="admChangeGo(1)">Make lifetime</button><button class="p" onclick="admChangeGo(0)">Extend</button></div>`)}catch(e){alert(e.message)}}
+async function admChangeGo(life){const id=window.ACG.id,er=document.getElementById('acme');
+ try{const ref=db.collection('batchAccess').doc(id);
+  if(life){await ref.set({expiresAt:null,validityMonths:0},{merge:true});admClose();toast('Now lifetime access');route();return}
+  const m=Number(document.getElementById('acm').value);if(!Number.isInteger(m)||m<1||m>120){er.textContent='Enter a whole number of months (1 to 120).';return}
+  const sn=await ref.get(),cur=sn.data()&&sn.data().expiresAt&&sn.data().expiresAt.toDate?sn.data().expiresAt.toDate():null,base=cur&&cur>new Date()?cur:new Date(),ne=addMonthsEnd(base,m);
+  await ref.set({expiresAt:firebase.firestore.Timestamp.fromDate(ne)},{merge:true});admClose();toast('Valid till '+admFmtD(ne));route()}
+ catch(e){alert('Could not change validity: '+e.message)}}
 
 const FM_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 function fmMonth(k){const p=String(k).split('-'),m=+p[1];return p.length==2&&m>=1&&m<=12?FM_MONTHS[m-1]+' '+p[0]:k}
@@ -2301,10 +2300,138 @@ function webDevice(){try{const ua=navigator.userAgent||'',t=navigator.maxTouchPo
  if(t>1&&sh<600)return 'Phone';if(t>1&&sh<900)return 'Tablet'}catch(e){}return 'Computer'}
 function actPing(uid){try{const day=dayKey(),ty=webDevice(),key=uid+'|'+day+'|'+ty;if(J.get('actPing','')===key)return;
  db.doc('students/'+uid).set({lastWebDay:day,['lastWeb'+ty+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
-async function admOpened(){const cnt=q=>(q.count?q.count().get().then(a=>a.data().count):q.get().then(x=>x.size)).catch(()=>'?'),n=new Date(),T=dayKey(n),Y=dayKey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),st=db.collection('students'),
- FL=['lastAppDay','lastAppPhoneDay','lastAppTabletDay','lastWebDay','lastWebPhoneDay','lastWebTabletDay','lastWebComputerDay'],day=d=>Promise.all(FL.map(f=>cnt(st.where(f,'==',d))));
+// Server-side count (1 read per 1000 matches) through Firestore's REST aggregation; falls back to a normal query if that is blocked.
+const AGG_OP={'==':'EQUAL','>=':'GREATER_THAN_OR_EQUAL'};
+const aggVal=v=>v instanceof Date?{timestampValue:v.toISOString()}:{stringValue:String(v)};
+async function admCount(col,fl){fl=fl||[];
+ try{const t=await auth.currentUser.getIdToken(),pid=firebase.app().options.projectId,f=fl.map(x=>({fieldFilter:{field:{fieldPath:x[0]},op:AGG_OP[x[1]],value:aggVal(x[2])}})),sq={from:[{collectionId:col}]};
+  if(f.length)sq.where=f.length==1?f[0]:{compositeFilter:{op:'AND',filters:f}};
+  const r=await fetch('https://firestore.googleapis.com/v1/projects/'+pid+'/databases/(default)/documents:runAggregationQuery',{method:'POST',headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({structuredAggregationQuery:{structuredQuery:sq,aggregations:[{alias:'n',count:{}}]}})});
+  if(!r.ok)throw new Error('http '+r.status);const j=await r.json();return +j[0].result.aggregateFields.n.integerValue}
+ catch(e){try{let q=db.collection(col);fl.forEach(x=>{q=q.where(x[0],x[1],x[2])});return (await q.get()).size}catch(e2){return '?'}}}
+async function admOpened(){const n=new Date(),T=dayKey(n),Y=dayKey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),
+ FL=['lastAppDay','lastAppPhoneDay','lastAppTabletDay','lastWebDay','lastWebPhoneDay','lastWebTabletDay','lastWebComputerDay'],day=d=>Promise.all(FL.map(f=>admCount('students',[[f,'==',d]])));
  return Promise.all([day(T),day(Y)])}
 const opBlk=(OP,title,labels,idx)=>`<div style="margin-top:14px"><b style="font-size:13px">${title}</b><div class="adst" style="margin-top:8px;align-items:flex-start">${idx.map((i,k)=>`<div><b>${OP[0][i]}</b><small>${labels[k]}</small></div>`).join('')}</div><small class="mu" style="display:block;margin-top:6px;font-size:11px">Yesterday / कल: ${idx.map((i,k)=>labels[k]+' '+OP[1][i]).join(' • ')}</small></div>`;
+
+// ============ Admin > PDFs / Videos (same flow, data and counters as the App) ============
+window.APS=window.APS||{pt:'free',pb:'',pf:'',vb:'',vf:''};
+const apPaid=id=>!!id&&id!=='free',SV=()=>firebase.firestore.FieldValue.serverTimestamp(),
+ apIds=f=>Array.isArray(f.batchIds)&&f.batchIds.length?f.batchIds:(f.batchId&&f.batchId!=='free'?[f.batchId]:[]),
+ apBtn=(ic,tt,js,c)=>`<button class="s" title="${tt}" ${c?`style="color:${c}"`:''} onclick="${js}">${ic}</button>`;
+async function apBump(ids,field,delta){if(!delta)return;for(const id of [...new Set(ids)]){if(!apPaid(id))continue;try{await db.collection('batches').doc(id).update({[field]:firebase.firestore.FieldValue.increment(delta)})}catch(e){}}}
+async function apMark(f){try{await db.doc('appConfig/main').set({[f]:SV()},{merge:true})}catch(e){}}
+async function apWrites(ops,chunk){chunk=chunk||400;let w=db.batch(),n=0;for(const op of ops){op(w);if(++n>=chunk){await w.commit();w=db.batch();n=0}}if(n)await w.commit()}
+async function apDelAll(q){const sn=await q.get();let w=db.batch(),n=0;for(const d of sn.docs){w.delete(d.ref);if(++n>=400){await w.commit();w=db.batch();n=0}}if(n)await w.commit();return sn.size}
+function apOrderList(key,col,arr,render,extra){window.AOL=window.AOL||{};AOL[key]=arr.map(x=>x.id);
+ return arr.map((x,k)=>`<div class="row" style="padding:6px 0;${k?'border-top:1px solid var(--line)':''}"><span style="flex:1;min-width:0">${render(x)}</span><button class="s" ${k?'':'disabled'} onclick="apMove('${col}','${key}','${esc(x.id)}',-1)">↑</button><button class="s" ${k<arr.length-1?'':'disabled'} onclick="apMove('${col}','${key}','${esc(x.id)}',1)">↓</button>${extra?extra(x):''}</div>`).join('')}
+async function apMove(col,key,id,d){try{const a=(window.AOL||{})[key]||[],i=a.indexOf(id),j=i+d;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];
+ await apWrites(a.map((x,k)=>w=>w.update(db.collection(col).doc(x),{order:k})));try{fqClear()}catch(e){}route()}catch(e){alert('Could not save the new order: '+e.message)}}
+const apHint='<small class="mu" style="display:block;margin:2px 0 6px">Use the arrows. Students see the same order.</small>';
+
+async function admPdfs(){
+ const S=APS,bs=bsort(await list(db.collection('batches'))),free=S.pt=='free';let fs=[];
+ if(free)fs=await list(db.collection('pdfFolders').where('type','==','free'));
+ else if(S.pb){const seen={};for(const q of [db.collection('pdfFolders').where('batchIds','array-contains',S.pb),db.collection('pdfFolders').where('batchId','==',S.pb)])(await q.get()).docs.forEach(d=>{if(!seen[d.id]){seen[d.id]=1;fs.push({id:d.id,...d.data()})}})}
+ fs.sort(ord);if(!fs.some(f=>f.id==S.pf))S.pf='';
+ const F=fs.find(f=>f.id==S.pf),items=S.pf?(await list(db.collection('pdfs').where('folderId','==',S.pf))).sort(ord):[],hr='<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">',
+ chip=(v,l)=>`<a class="chip ${S.pt==v?'on':''}" onclick="APS.pt='${v}';APS.pf='';route()">${l}</a>`;
+ return `<div class="adh" style="margin-top:6px">1. Choose section</div><div class="chips">${chip('free','Free PDFs')}${chip('batch','Paid Batch PDFs')}</div>
+ ${free?'':`<select style="width:100%;margin-top:8px" onchange="APS.pb=this.value;APS.pf='';route()"><option value="">Choose batch</option>${bs.map(b=>`<option value="${esc(b.id)}" ${b.id==S.pb?'selected':''}>${esc(b.title)}</option>`).join('')}</select>`}
+ ${hr}<div class="adh" style="margin-top:0">2. Choose a folder or create new</div>
+ ${(free||S.pb)?`<div class="row"><select style="flex:1" onchange="APS.pf=this.value;route()"><option value="">Choose folder</option>${fs.map(f=>`<option value="${esc(f.id)}" ${f.id==S.pf?'selected':''}>${esc(f.name)}</option>`).join('')}</select>${F?apBtn('📋','Copy this folder to other batches / Free PDFs',"apCopy('pdf')")+apBtn('✏️','Rename this folder',"apRename('pdf')")+apBtn('🗑️','Delete this folder',"apDelFolder('pdf')",'var(--bad)'):''}</div>`:'<p class="mu">Choose a batch first.</p>'}
+ ${F&&!free?`<p style="color:#e67e22;font-size:12px;font-weight:600;margin:8px 0 0">Shown ONLY inside the paid batch(es) selected below</p><small class="mu">Tap a batch to add / remove it (max 3). At least 1 batch must stay.</small><div class="chips" style="margin-top:6px">${bs.length?bs.map(b=>`<a class="chip ${apIds(F).includes(b.id)?'on':''}" onclick="apBatchTog('${esc(b.id)}')">${esc(b.title)}</a>`).join(''):'<span class="mu">No paid batch created yet</span>'}</div>`:''}
+ ${F&&free?`<label class="row" style="justify-content:space-between;margin-top:8px"><span><b style="font-size:13px">Monthly auto MCQ PDFs</b><br><small class="mu">ON: every month 20 Hindi + English MCQs per subject (Static GK, General Science, General Studies) are made as PDFs and added to this folder automatically.</small></span><input type="checkbox" style="width:22px;height:22px" ${F.autoMonthlyMcq!==false?'checked':''} onchange="apAutoMcq(this.checked)"></label>`:''}
+ ${(free||S.pb)&&fs.length>=2?`<details class="card" style="margin-top:8px"><summary><b>Change folder order</b></summary>${apHint}${apOrderList('pf','pdfFolders',fs,x=>'<b style="font-size:13px">'+esc(x.name)+'</b>')}</details>`:''}
+ <div class="row" style="margin-top:8px"><input id="apfn" placeholder="New folder name" style="flex:1"><button class="p" onclick="apCreateFolder('pdf')">＋</button></div>
+ ${hr}<div class="adh" style="margin-top:0">3. Add PDF</div>
+ <div class="card"><span class="adl">PDF title</span><input id="apt" style="width:100%"><span class="adl">Google Drive link</span><input id="apl" style="width:100%" placeholder="https://drive.google.com/…"><span class="adl">Icon image link (optional)</span><input id="api" style="width:100%" placeholder="https://…"><button class="p" style="width:100%;margin-top:10px" onclick="apAddPdf()">Add PDF</button><small class="mu" style="display:block;margin-top:6px">Uploading a file straight from the device is an App feature — here, paste a Google Drive link.</small></div>
+ ${S.pf?`${hr}<div class="adh" style="margin-top:0">Existing PDFs in this folder</div>`+(items.length?apHint+`<div class="card" style="padding:4px 10px">`+apOrderList('pi','pdfs',items,x=>`<span class="row" style="gap:8px;flex-wrap:nowrap"><span style="width:34px;height:34px;border-radius:6px;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;background:var(--card2)">${x.iconUrl?`<img src="${esc(x.iconUrl)}" style="width:100%;height:100%;object-fit:cover">`:'📄'}</span><span style="font-size:13px;overflow-wrap:anywhere">${esc(x.title)}</span></span>`,x=>apBtn('🗑️','Delete',"apDelPdf('"+esc(x.id)+"')",'var(--bad)'))+`</div>`:'<p class="mu">There is no PDF in this folder yet</p>'):''}`;
+}
+async function admVideos(){
+ const S=APS,bs=bsort(await list(db.collection('batches'))),b=S.vb||'',fs=(await list(db.collection('videoFolders').where('batchId','==',b||'free'))).sort(ord);
+ if(!fs.some(f=>f.id==S.vf))S.vf='';
+ const F=fs.find(f=>f.id==S.vf),loose=!b&&!S.vf,hr='<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">';
+ let items=[];
+ if(loose)items=(await list(db.collection('videos').where('batchId','==',null))).filter(v=>!v.hidden&&!v.folderId).sort((x,y)=>tsMs(y.createdAt)-tsMs(x.createdAt)||String(x.title||'').localeCompare(String(y.title||'')));
+ else if(S.vf)items=(await list(db.collection('videos').where('folderId','==',S.vf))).filter(v=>!v.hidden).sort(ord);
+ const tile=x=>`<span class="row" style="gap:8px;flex-wrap:nowrap"><span style="width:56px;height:34px;border-radius:6px;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;background:var(--card2)">${x.thumbUrl?`<img src="${esc(x.thumbUrl)}" style="width:100%;height:100%;object-fit:cover">`:'🎬'}</span><span style="min-width:0"><span style="font-size:13px;overflow-wrap:anywhere">${esc(x.title)}</span>${x.source=='youtube_auto'?'<br><small class="mu" style="font-size:10.5px">Auto-fetched from YouTube</small>':''}</span></span>`,
+ del=x=>apBtn(x.source=='youtube_auto'?'🙈':'🗑️',x.source=='youtube_auto'?'Hide':'Delete',"apDelVideo('"+esc(x.id)+"')",'var(--bad)');
+ return `<div class="adh" style="margin-top:6px">1. Which section? (first choice = free Video Classes)</div>
+ <select style="width:100%" onchange="APS.vb=this.value;APS.vf='';route()"><option value="">Free Video Classes</option>${bs.map(x=>`<option value="${esc(x.id)}" ${x.id==b?'selected':''}>${esc(x.title)}</option>`).join('')}</select>
+ ${hr}<div class="adh" style="margin-top:0">${b?'2. Choose a folder or create new':'2. Folder (optional for free videos) — choose or create new'}</div>
+ <div class="row"><select style="flex:1" onchange="APS.vf=this.value;route()"><option value="">${b?'Choose folder':'No folder (loose videos)'}</option>${fs.map(f=>`<option value="${esc(f.id)}" ${f.id==S.vf?'selected':''}>${esc(f.name)}</option>`).join('')}</select>${F?apBtn('📋','Copy this folder to other batches / Free Videos',"apCopy('video')")+apBtn('✏️','Rename this folder',"apRename('video')")+apBtn('🗑️','Delete this folder',"apDelFolder('video')",'var(--bad)'):''}</div>
+ ${fs.length>=2?`<details class="card" style="margin-top:8px"><summary><b>Change folder order</b></summary>${apHint}${apOrderList('vfo','videoFolders',fs,x=>'<b style="font-size:13px">'+esc(x.name)+'</b>')}</details>`:''}
+ <div class="row" style="margin-top:8px"><input id="apfn" placeholder="New folder name" style="flex:1"><button class="p" onclick="apCreateFolder('video')">＋</button></div>
+ ${hr}<div class="adh" style="margin-top:0">3. Add video</div>
+ <div class="card"><span class="adl">Video title</span><input id="apt" style="width:100%"><span class="adl">YouTube link</span><input id="apl" style="width:100%" placeholder="https://youtu.be/…"><span class="adl">Thumbnail image link (optional)</span><input id="api" style="width:100%" placeholder="https://…"><button class="p" style="width:100%;margin-top:10px" onclick="apAddVideo()">Add video</button><small class="mu" style="display:block;margin-top:6px">Uploading a video file straight from the device is an App feature — here, paste a YouTube link.</small></div>
+ ${(!b||S.vf)?`${hr}<div class="adh" style="margin-top:0">${loose?'Existing free videos (not in a folder)':'Existing videos in this folder'}</div>`+(items.length?(loose?'<small class="mu" style="display:block;margin-bottom:6px">These stay newest-first. To arrange videos by hand, put them in a folder.</small><div class="card" style="padding:4px 10px">'+items.map((x,k)=>`<div class="row" style="padding:6px 0;${k?'border-top:1px solid var(--line)':''}"><span style="flex:1;min-width:0">${tile(x)}</span>${del(x)}</div>`).join('')+'</div>':apHint+'<div class="card" style="padding:4px 10px">'+apOrderList('vi','videos',items,tile,del)+'</div>'):'<p class="mu">There is no video here yet</p>'):''}`;
+}
+
+async function apCreateFolder(kind){const n=$v('apfn').trim(),S=APS;if(!n)return;
+ try{let d;
+  if(kind=='pdf'){if(S.pt=='batch'&&!S.pb){toast('Choose a batch first.');return}d=S.pt=='free'?{name:n,type:'free',batchId:null,batchIds:[]}:{name:n,type:'batch',batchId:S.pb,batchIds:[S.pb]}}
+  else d={name:n,batchId:S.vb||'free'};
+  await db.collection(kind=='pdf'?'pdfFolders':'videoFolders').add({...d,createdAt:SV()});try{fqClear()}catch(e){}toast('Folder created.');route()}
+ catch(e){alert('Could not create the folder: '+e.message)}}
+async function apAddPdf(){const S=APS,t=$v('apt').trim(),l=$v('apl').trim(),ic=$v('api').trim();
+ if(!S.pf||!t||!l){alert('Choose a folder — title and link are both required.');return}
+ if(ic&&!/^https:\/\//.test(ic)){alert('Icon link must start with https://');return}
+ try{const F=(await db.collection('pdfFolders').doc(S.pf).get()).data()||{},paid=S.pt=='batch',ids=paid?apIds(F):[];
+  await db.collection('pdfs').add({title:t,iconUrl:ic||null,driveLink:l,batchId:paid?(F.batchId||S.pb):null,folderId:S.pf,createdAt:SV()});
+  await apBump(ids.length?ids:(paid&&S.pb?[S.pb]:[]),'pdfs',1);await apMark((ids.length?ids:(paid?[S.pb]:[])).some(apPaid)?'newBatchesAt':'newPdfsAt');
+  try{fqClear()}catch(e){}toast('PDF added.');route()}catch(e){alert('Could not add the PDF: '+e.message)}}
+async function apAddVideo(){const S=APS,b=S.vb||'',t=$v('apt').trim(),l=$v('apl').trim(),ic=$v('api').trim();
+ if(b&&!S.vf){alert('Choose a folder — title and link are both required.');return}
+ if(!t||!l){alert('Title and link are both required.');return}
+ if(ic&&!/^https:\/\//.test(ic)){alert('Thumbnail link must start with https://');return}
+ try{await db.collection('videos').add({title:t,thumbUrl:ic||null,youtubeLink:l,batchId:b||null,folderId:S.vf||null,source:'upload',createdAt:SV()});
+  await apBump([b],'videos',1);await apMark(b?'newBatchesAt':'newVideosAt');try{fqClear()}catch(e){}toast('Video added.');route()}catch(e){alert('Could not add the video: '+e.message)}}
+async function apDelPdf(id){try{const p=(await db.collection('pdfs').doc(id).get()).data()||{};if(!confirm('Delete PDF?\nDelete "'+(p.title||'')+'"?'))return;
+ const F=p.folderId?((await db.collection('pdfFolders').doc(p.folderId).get()).data()||{}):{},ids=APS.pt=='batch'?(apIds(F).length?apIds(F):[p.batchId]):[p.batchId];
+ await db.collection('pdfs').doc(id).delete();await apBump(ids,'pdfs',-1);try{fqClear()}catch(e){}toast('PDF deleted.');route()}catch(e){alert('Delete failed: '+e.message)}}
+async function apDelVideo(id){try{const v=(await db.collection('videos').doc(id).get()).data()||{},auto=v.source=='youtube_auto';
+ if(!confirm(auto?'Hide video?\n"'+(v.title||'')+'" was fetched automatically from your YouTube channel. It will be hidden from the app (it will not come back).':'Delete video?\nDelete "'+(v.title||'')+'"?'))return;
+ if(auto)await db.collection('videos').doc(id).update({hidden:true});else{await db.collection('videos').doc(id).delete();await apBump([v.batchId],'videos',-1)}
+ try{fqClear()}catch(e){}toast(auto?'Video hidden.':'Video deleted.');route()}catch(e){alert('Could not do that: '+e.message)}}
+async function apRename(kind){const S=APS,fid=kind=='pdf'?S.pf:S.vf,col=kind=='pdf'?'pdfFolders':'videoFolders';if(!fid)return;
+ try{const cur=((await db.collection(col).doc(fid).get()).data()||{}).name||'',n=prompt('Rename folder',cur);if(n===null)return;if(!n.trim()){alert('Folder name cannot be empty.');return}
+  await db.collection(col).doc(fid).update({name:n.trim()});try{fqClear()}catch(e){}toast('Folder renamed.');route()}catch(e){alert('Rename failed: '+e.message)}}
+async function apDelFolder(kind){const S=APS,pdf=kind=='pdf',fid=pdf?S.pf:S.vf,col=pdf?'pdfFolders':'videoFolders';if(!fid)return;
+ try{const F=(await db.collection(col).doc(fid).get()).data()||{};
+  if(!confirm('Delete folder?\nDelete the folder "'+(F.name||'')+'"? All '+(pdf?'PDFs':'videos')+' inside it will be deleted too. This cannot be undone.'))return;
+  const removed=await apDelAll(db.collection(pdf?'pdfs':'videos').where('folderId','==',fid));await db.collection(col).doc(fid).delete();
+  await apBump(pdf?(S.pt=='batch'?(apIds(F).length?apIds(F):[S.pb]):[]):[F.batchId],pdf?'pdfs':'videos',-removed);
+  if(pdf)S.pf='';else S.vf='';try{fqClear()}catch(e){}toast('Folder deleted.');route()}catch(e){alert('Delete failed: '+e.message)}}
+async function apBatchTog(bid){const S=APS;try{const ref=db.collection('pdfFolders').doc(S.pf),F=(await ref.get()).data()||{},ex=new Set((await db.collection('batches').get()).docs.map(d=>d.id)),old=apIds(F),next=old.filter(x=>ex.has(x));
+ if(next.includes(bid)){next.splice(next.indexOf(bid),1);if(!next.length){toast('A folder must stay in at least 1 batch. First add the new batch, then remove this one. (To remove the folder completely, use the delete icon.)',5000);return}}
+ else{if(next.length>=3){toast('A folder can be in at most 3 batches. Remove one first.',4000);return}next.push(bid)}
+ await ref.update({type:'batch',batchIds:next,batchId:next[0]});
+ const cnt=await admCount('pdfs',[['folderId','==',S.pf]]),added=next.filter(x=>!old.includes(x)),removed=old.filter(x=>!next.includes(x));
+ if(typeof cnt=='number'&&cnt>0){await apBump(added,'pdfs',cnt);await apBump(removed,'pdfs',-cnt)}
+ if(added.length)await apMark('newBatchesAt');
+ const left=S.pt=='batch'&&S.pb&&!next.includes(S.pb);if(left)S.pf='';try{fqClear()}catch(e){}
+ toast(left?'Folder moved out of this batch. Pick the other batch above to see it.':'Batches updated.',3500);route()}catch(e){alert('Could not update: '+e.message)}}
+async function apAutoMcq(on){try{await db.collection('pdfFolders').doc(APS.pf).update({autoMonthlyMcq:!!on});try{fqClear()}catch(e){}}catch(e){alert('Could not update: '+e.message);route()}}
+
+async function apCopy(kind){const S=APS,pdf=kind=='pdf',fid=pdf?S.pf:S.vf;if(!fid)return;
+ try{const F=(await db.collection(pdf?'pdfFolders':'videoFolders').doc(fid).get()).data();if(!F)return alert('The folder no longer exists.');
+  const bs=bsort(await list(db.collection('batches'))).filter(b=>!b.mockOnly),have=pdf?(F.type=='free'?['free']:apIds(F)):[F.batchId||'free'];
+  window.ACP={kind,fid,name:F.name||'',sel:[]};
+  const row=(id,l)=>{const h=have.includes(id);return `<label class="row" style="padding:3px 0"><input type="checkbox" ${h?'checked disabled':''} onchange="apCpTog('${esc(id)}')" style="width:20px;height:20px"><span>${l}${h?' <small class="mu">(already here)</small>':''}</span></label>`};
+  admModal(`<h3>Copy “${esc(F.name||'')}”</h3><p class="mu" style="font-size:12.5px">The folder and everything inside it is copied. The copy is separate — changing or deleting it never touches the original.</p>${row('free',pdf?'Free PDFs':'Free Video Classes')}${bs.length?bs.map(b=>row(b.id,esc(b.title))).join(''):'<p class="mu" style="font-size:12px">No paid batch available for this content</p>'}<div class="row" style="justify-content:flex-end;margin-top:10px"><button class="s" onclick="admClose()">Cancel</button><button class="p" id="apcgo" disabled onclick="apCpGo()">Copy</button></div>`)}
+ catch(e){alert(e.message)}}
+function apCpTog(id){const C=ACP,i=C.sel.indexOf(id);if(i<0)C.sel.push(id);else C.sel.splice(i,1);const b=document.getElementById('apcgo');b.textContent=C.sel.length?'Copy '+C.sel.length:'Copy';b.disabled=!C.sel.length}
+async function apCpGo(){const C=ACP,dest=[...new Set(C.sel)];if(!dest.length)return;admClose();toast('Copying “'+C.name+'” …',8000);
+ try{const pdf=C.kind=='pdf',fc=pdf?'pdfFolders':'videoFolders',ic=pdf?'pdfs':'videos',fs=(await db.collection(fc).doc(C.fid).get()).data();if(!fs)throw new Error('The folder no longer exists.');
+  let items=await list(db.collection(ic).where('folderId','==',C.fid));if(!pdf)items=items.filter(v=>!v.hidden);items.sort(ord);
+  for(const dst of dest){const free=dst=='free',fr=db.collection(fc).doc(),
+   ops=[w=>w.set(fr,pdf?{name:fs.name,type:free?'free':'batch',batchId:free?null:dst,batchIds:free?[]:[dst],createdAt:SV()}:{name:fs.name,batchId:free?'free':dst,createdAt:SV()})];
+   items.forEach((x,i)=>{const ref=db.collection(ic).doc();ops.push(w=>w.set(ref,pdf?{title:x.title,iconUrl:x.iconUrl||null,driveLink:x.driveLink,batchId:free?null:dst,folderId:fr.id,order:i,createdAt:SV()}:{title:x.title,thumbUrl:x.thumbUrl||null,youtubeLink:x.youtubeLink,batchId:free?null:dst,folderId:fr.id,source:'upload',order:i,createdAt:SV()}))});
+   await apWrites(ops);if(!free)await apBump([dst],ic,items.length)}
+  if(dest.some(d=>d!='free'))await apMark('newBatchesAt');if(dest.includes('free'))await apMark(pdf?'newPdfsAt':'newVideosAt');
+  try{fqClear()}catch(e){}toast('Copied “'+C.name+'” ('+items.length+' '+(pdf?'PDFs':'videos')+') to '+dest.length+' place(s).',4500);route()}
+ catch(e){alert('Copy failed: '+e.message)}}
 
 rfInit();
 </script>
