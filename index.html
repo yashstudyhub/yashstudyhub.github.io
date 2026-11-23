@@ -963,9 +963,9 @@ async pf(id){const [fd,p]=await Promise.all([db.doc('pdfFolders/'+id).get().catc
  const batch=fd&&fd.exists&&fd.data().type=='batch';
  return wrap(back+(fd&&fd.exists?`<h2 class="pageTitle">${esc(fd.data().name)}</h2>`:'')+(p.length?p.map(x=>prow(x,batch)).join(''):'<p class="mu">No PDF in this folder yet / इस फ़ोल्डर में अभी कोई PDF नहीं है।</p>'))},
 async pdf(l,t,ext=true){const u=decodeURIComponent(l).trim(),ti=decodeURIComponent(t||'PDF');let h;try{h=new URL(u)}catch(e){}
- if(!h||!/^https?:$/.test(h.protocol)){setTimeout(()=>{alert('This PDF link is not valid. / यह PDF लिंक सही नहीं है।');history.back()},50);return wrap('<p class="mu">Invalid PDF link</p>')}
+ if(!h||!/^https?:$/.test(h.protocol)){setTimeout(()=>{if(!/^#\/pdfb?\//.test(location.hash))return;alert('This PDF link is not valid. / यह PDF लिंक सही नहीं है।');history.back()},50);return wrap('<p class="mu">Invalid PDF link</p>')}
  const g=h.host=='drive.google.com',mm=g&&h.pathname.match(/\/file\/(?:u\/\d+\/)?d\/([\w-]+)/),qi=g&&h.searchParams.get('id'),id=(mm&&mm[1])||(qi&&/^[\w-]+$/.test(qi)?qi:'');
- if(!id&&(g||h.host=='docs.google.com')){setTimeout(()=>{if(ext)window.open(u,'_blank','noopener');else alert('This link cannot be opened inside the app. Ask the admin to add the PDF’s own Drive file link. / कृपया एडमिन से PDF का अपना Drive फाइल लिंक जुड़वाएँ।');history.back()},50);return wrap('<p class="mu">Opening…</p>')}
+ if(!id&&(g||h.host=='docs.google.com')){setTimeout(()=>{if(!/^#\/pdfb?\//.test(location.hash))return;if(ext)window.open(u,'_blank','noopener');else alert('This link cannot be opened inside the app. Ask the admin to add the PDF’s own Drive file link. / कृपया एडमिन से PDF का अपना Drive फाइल लिंक जुड़वाएँ।');history.back()},50);return wrap('<p class="mu">Opening…</p>')}
  const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u),dl=id?`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`:u;
  let fn=(ti.replace(/[\\/:*?"<>|]/g,'_').trim()||'Yash Study Hub PDF');if(!/\.pdf$/i.test(fn))fn+='.pdf';
  window.pdfLoaded=false;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
@@ -1001,7 +1001,7 @@ async queries(){
  const now=Date.now(),when=x=>x.createdAt&&x.createdAt.toDate?x.createdAt.toDate().getTime():now;
  const q=(await db.collection('queries').where('uid','==',auth.currentUser.uid).get()).docs.map(d=>({id:d.id,...d.data()}))
   .filter(x=>Math.floor((now-when(x))/864e5)<QDAYS).sort((a,b)=>when(b)-when(a));
- window.QPEND=q.filter(x=>!String(x.reply||'').trim()).length;J.set('qSeen',q.filter(x=>String(x.reply||'').trim()).map(x=>qKey(x.id,x)));
+ window.QPEND=q.filter(x=>!String(x.reply||'').trim()).length;J.set('qSeen',q.filter(x=>String(x.reply||'').trim()).map(x=>qKey(x.id,x)));window.QDC={t:Date.now(),v:false};
  const card=x=>{const ans=!!String(x.reply||'').trim(),dl=Math.max(0,QDAYS-Math.floor((now-when(x))/864e5)),dt=new Date(when(x)).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit',hour12:true});
   return `<div class="card"><div class="row" style="justify-content:space-between;margin:0"><b style="font-size:11.5px;color:${ans?'var(--okc)':'var(--warn)'}">${ans?'✅ Replied / जवाब आया':'⏳ Pending / लंबित'}</b><small class="mu" style="font-size:11px">${esc(dt)}</small></div><div style="margin-top:8px;font-size:13.5px;white-space:pre-line">${esc(x.text)}</div>${ans?`<div class="qrep"><b>Reply / जवाब</b><div style="font-size:13px;white-space:pre-line">${esc(x.reply)}</div></div>`:''}<small class="mu" style="display:block;margin-top:8px;font-size:10.5px">Deletes in ${dl} days / ${dl} दिन बाद डिलीट</small></div>`};
  return wrap(`<h2 class="pageTitle">Queries / सवाल</h2><div class="card"><b style="font-size:14px">Write your doubt / अपना डाउट लिखें</b><textarea id="qt2" rows="4" oninput="qCount()" placeholder="Type your question here... / यहाँ अपना सवाल लिखें..."></textarea><div class="row" style="justify-content:space-between;margin:6px 0 0"><span id="qwc" class="mu" style="font-size:12px">0 / ${QMAX} words (शब्द)</span><button class="p" id="qsb" onclick="sendQ()" disabled>Send / भेजें</button></div></div>`
@@ -2152,7 +2152,7 @@ async function btOpen(el,bid,silent){
 }
 
 async function route(){
- clearT();
+ clearT();const my=window.RT=(window.RT||0)+1;
  if(window.NEEDSETUP){setupView();return}
  tsInit();TS.screenOpen=location.hash.startsWith('#/timer');tsPill();
  if(!location.hash.startsWith('#/tracker'))window.XTE=null;
@@ -2160,32 +2160,36 @@ async function route(){
  if(!V[p]){location.hash='#/home';return}
  app.innerHTML='<p class="mu" style="padding:16px">Loading…</p>';
  showNav(p);
+ clearTimeout(window._slowT);window._slowT=setTimeout(()=>{if(my===window.RT&&/^Loading…/.test(app.innerText.trim()))app.innerHTML='<div class="wrap"><p class="mu" style="padding:16px 0">Still loading… your internet looks slow.<br>अभी लोड हो रहा है… इंटरनेट धीमा लग रहा है।</p><button class="p" onclick="route()">Try again / दोबारा कोशिश करें</button></div>'},12000);
  try{
   const body=await V[p](a,b);
+  if(my!==window.RT)return;
   app.innerHTML=(p=='home'?'':topBar())+body;
   if(p=='home'){initHome();qDot()}
   if(p=='batch'&&a)btInit(a);
   checkBell();
-  if(p=='test'||p=='revmock'||p=='fmq')initTest();
-  if(p=='revq')initFq();
+  if((p=='test'||p=='revmock'||p=='fmq')&&window.T&&document.getElementById('mtest'))initTest();
+  if(p=='revq'&&window.FQ&&document.getElementById('fq'))initFq();
   if(p=='timer')tsDraw();if(p=='saved')svInit();if(p=='flashcards')fcInit();if(p=='calc'&&a)calcRun();if(p=='gk')window.GK=window.GK||{cat:'all'};
   if(p=='speedplay')smInit();
   if(p=='days')idDraw();
   if(p=='reckoner')rrDraw();
   if(p=='age')ageInit();if(p=='mocks'||p=='pdfs'||p=='batches')cuSeen(p);
- }catch(e){app.innerHTML=topBar()+'<div class="wrap"><p class="err">Load nahi hua: '+esc(e.message)+'</p></div>'}
+ }catch(e){if(my!==window.RT)return;app.innerHTML=topBar()+'<div class="wrap"><p class="err">Load nahi hua: '+esc(e.message)+'</p></div>'}
  scrollTo(0,0)}
 
 window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();window.NEEDSETUP=false;return loginView();}
  if(window.SIGNING){try{await window.SIGNING}catch(e){}}
- try{const c=(await db.doc('appConfig/main').get()).data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim();window.HSO=Array.isArray(c.homeSectionOrder)?c.homeSectionOrder:null;['newBatchesAt','newVideosAt','newPdfsAt','newMocksAt'].forEach(k=>MK[k]=tsMs(c[k]))}catch(e){}
+ const tmo=(p,ms)=>Promise.race([p,new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),ms))]);
+ const [cr,pr]=await Promise.allSettled([tmo(db.doc('appConfig/main').get(),6000),tmo(db.doc('students/'+u.uid).get(),8000)]);
+ try{if(cr.status=='fulfilled'){const c=cr.value.data()||{};for(const k in c)if(typeof c[k]=='string'&&c[k].trim())cfg[k]=c[k].trim();window.HSO=Array.isArray(c.homeSectionOrder)?c.homeSectionOrder:null;['newBatchesAt','newVideosAt','newPdfsAt','newMocksAt'].forEach(k=>MK[k]=tsMs(c[k]))}}catch(e){}
  window.NEEDSETUP=false;
- try{const sn=await Promise.race([db.doc('students/'+u.uid).get(),new Promise((_,j)=>setTimeout(()=>j(new Error('timeout')),8000))]);const d=sn.exists?sn.data():null;
-  if(!d||!d.profileComplete){window.NEEDSETUP=true;window.SPROF=d||{}}else if(d.name)J.set('stuName',String(d.name).trim());if(d)actPing(u.uid)}catch(e){}
+ try{if(pr.status=='fulfilled'){const sn=pr.value,d=sn.exists?sn.data():null;
+  if(!d||!d.profileComplete){window.NEEDSETUP=true;window.SPROF=d||{}}else if(d.name)J.set('stuName',String(d.name).trim());if(d)actPing(u.uid)}}catch(e){}
  if(!window.NEEDSETUP&&!location.hash)location.hash='#/home';
- route()});
+ window.RDY=true;route()});
 
 spaceSync();
 
@@ -2200,7 +2204,7 @@ function rfBar(){try{const m=rfText('maintenance_message'),on=rfOn('maintenance_
  b.lastChild.textContent=m}catch(e){}}
 function rfInit(){try{if(!firebase.remoteConfig)return;const rc=firebase.remoteConfig();rc.settings.minimumFetchIntervalMillis=36e5;rc.settings.fetchTimeoutMillis=10000;rc.defaultConfig=RF.d;RF.rc=rc;
  rc.activate().then(()=>rfBar(),()=>{});
- rc.fetchAndActivate().then(ch=>{rfBar();if(ch&&auth.currentUser&&!window.NEEDSETUP&&(location.hash||'#/home').startsWith('#/home'))route()}).catch(()=>{})}catch(e){}}
+ rc.fetchAndActivate().then(ch=>{rfBar();if(ch&&window.RDY&&auth.currentUser&&!window.NEEDSETUP&&(location.hash||'#/home').startsWith('#/home'))route()}).catch(()=>{})}catch(e){}}
 const TF={mocks:'feature_mock_tests',pdfs:'feature_pdf_library',fmcq:'feature_free_mcqs',batches:'feature_batches',quiz:'feature_daily_quiz'};
 const tileOn=t=>TF[t[0]]?rfOn(TF[t[0]]):true;
 
@@ -2310,12 +2314,15 @@ function actPing(uid){try{const day=dayKey(),ty=webDevice(),key=uid+'|'+day+'|'+
 // Server-side count (1 read per 1000 matches) through Firestore's REST aggregation; falls back to a normal query if that is blocked.
 const AGG_OP={'==':'EQUAL','>=':'GREATER_THAN_OR_EQUAL'};
 const aggVal=v=>v instanceof Date?{timestampValue:v.toISOString()}:{stringValue:String(v)};
+const aggMatch=(d,f)=>{const x=d[f[0]],v=f[2];if(f[1]=='==')return x===v;const a=x&&x.toMillis?x.toMillis():x,b=v instanceof Date?v.getTime():v;return a!=null&&a>=b};
+function admDocs(col){const c=window.ADC=window.ADC||{},n=Date.now();if(!c[col]||n-c[col].t>6e4)c[col]={t:n,p:db.collection(col).get().then(q=>q.docs.map(d=>d.data()))};return c[col].p}
 async function admCount(col,fl){fl=fl||[];
- try{const t=await auth.currentUser.getIdToken(),pid=firebase.app().options.projectId,f=fl.map(x=>({fieldFilter:{field:{fieldPath:x[0]},op:AGG_OP[x[1]],value:aggVal(x[2])}})),sq={from:[{collectionId:col}]};
+ if(!window.AGGBAD){try{const t=await auth.currentUser.getIdToken(),pid=firebase.app().options.projectId,f=fl.map(x=>({fieldFilter:{field:{fieldPath:x[0]},op:AGG_OP[x[1]],value:aggVal(x[2])}})),sq={from:[{collectionId:col}]};
   if(f.length)sq.where=f.length==1?f[0]:{compositeFilter:{op:'AND',filters:f}};
   const r=await fetch('https://firestore.googleapis.com/v1/projects/'+pid+'/databases/(default)/documents:runAggregationQuery',{method:'POST',headers:{'Authorization':'Bearer '+t,'Content-Type':'application/json'},body:JSON.stringify({structuredAggregationQuery:{structuredQuery:sq,aggregations:[{alias:'n',count:{}}]}})});
-  if(!r.ok)throw new Error('http '+r.status);const j=await r.json();return +j[0].result.aggregateFields.n.integerValue}
- catch(e){try{let q=db.collection(col);fl.forEach(x=>{q=q.where(x[0],x[1],x[2])});return (await q.get()).size}catch(e2){return '?'}}}
+  if(!r.ok)throw new Error('http '+r.status);const j=await r.json();return +j[0].result.aggregateFields.n.integerValue}catch(e){window.AGGBAD=true}}
+ // server-side count is not available here: read the collection once (shared by every counter, cached 60 s) and count locally
+ try{const rows=await admDocs(col);return rows.filter(d=>fl.every(f=>aggMatch(d,f))).length}catch(e){return '?'}}
 async function admOpened(){const n=new Date(),T=dayKey(n),Y=dayKey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),
  FL=['lastAppDay','lastAppPhoneDay','lastAppTabletDay','lastWebDay','lastWebPhoneDay','lastWebTabletDay','lastWebComputerDay'],day=d=>Promise.all(FL.map(f=>admCount('students',[[f,'==',d]])));
  return Promise.all([day(T),day(Y)])}
