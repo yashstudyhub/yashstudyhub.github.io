@@ -371,23 +371,27 @@ aside.side{overflow-y:auto}
 /* ===== LANDSCAPE MODE (App jaisa) =====
    html.land JS se lagta hai: phone/tablet + landscape. 16:9 frame, left side-nav,
    mock test me question left / options right, patli top & bottom bar. */
-html.land{--lh:100vh;--lw:min(100vw,calc(var(--lh)*16/9));background:#000}
+html.land{--lh:100vh;--lw:min(100vw,calc(var(--lh)*16/9));--fh:min(var(--lh),calc(var(--lw)*9/16));--oy:calc((var(--lh) - var(--fh))/2);background:#000}
 @supports(height:100dvh){html.land{--lh:100dvh}}
-html.land body{max-width:var(--lw);margin:0 auto;background:var(--bg)}
-html.land .shell{min-height:var(--lh)}
-html.land aside.side{display:flex;flex-direction:column;gap:0;flex:none;background:var(--navy);width:68px;padding:0;height:var(--lh);position:sticky;top:0;overflow:hidden;border-right:1px solid rgba(255,255,255,.14)}
+/* Page khud scroll nahi karta (isse address bar hilti nahi aur ratio fix 16:9 rehta hai); scroll frame ke andar hota hai */
+html.land,html.land body{overflow:hidden}
+html.land body{width:var(--lw);height:var(--fh);min-height:0;margin:var(--oy) auto 0;background:var(--bg)}
+html.land .shell{height:var(--fh);min-height:0}
+html.land aside.side{display:flex;flex-direction:column;gap:0;flex:none;background:var(--navy);width:68px;padding:0;height:var(--fh);position:relative;overflow:hidden;border-right:1px solid rgba(255,255,255,.14)}
 html.land aside.side .brand{display:none}
 html.land aside.side a{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:4px 0;border-radius:0;font-size:10.5px;font-weight:500;color:#b4bbea;text-align:center}
 html.land aside.side a.on{color:var(--yel);background:rgba(255,255,255,.12);font-weight:700}
 html.land nav.bn{display:none}
-html.land main.content{padding-bottom:12px}
+html.land main.content{height:var(--fh);overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:12px}
+html.land .pdf{height:calc(var(--fh)*.78)}
+html.land .diw img{max-height:calc(var(--fh)*.62)}
 html.land .topbar{padding:6px 14px}
 html.land .topbar img{width:34px;height:34px}
-html.land #tsPill{bottom:12px;right:calc(50% - var(--lw)/2 + 12px)}
-html.land #diModal{inset:0 auto 0 50%;width:var(--lw);transform:translateX(-50%)}
+html.land #tsPill{bottom:calc(var(--oy) + 12px);right:calc(50% - var(--lw)/2 + 12px)}
+html.land #diModal{inset:var(--oy) auto auto 50%;height:var(--fh);width:var(--lw);transform:translateX(-50%)}
 html.land body.intest{overflow:hidden}
 .mttl,.mmeta2{display:none}
-html.land #mtest.live{position:fixed;top:0;left:50%;width:var(--lw);height:var(--lh);transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}
+html.land #mtest.live{position:fixed;top:var(--oy);left:50%;width:var(--lw);height:var(--fh);transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 html.land #mtest.live>.mmeta{display:none}
 html.land #mtest.live .mtop{position:static;flex:none;flex-wrap:nowrap;gap:6px;height:34px;min-height:34px;padding:0 8px 0 12px;margin:0;border-radius:0}
 html.land #mtest.live .mttl{display:block;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;font-weight:600}
@@ -402,7 +406,7 @@ html.land #mtest.live .opt{padding:8px;margin:0 0 6px;gap:10px;font-size:14px;li
 html.land #mtest.live .badge{width:26px;height:26px}
 html.land #mtest.live .qtext{font-size:15px;line-height:1.35;margin:4px 0}
 html.land #mtest.live .passage{padding:8px;margin-bottom:8px;font-size:12.5px;line-height:1.4}
-html.land #mtest.live .diw img{width:auto;max-width:100%;max-height:calc(var(--lh) - 120px)}
+html.land #mtest.live .diw img{width:auto;max-width:100%;max-height:calc(var(--fh) - 120px)}
 html.land #mtest.live .mbar{flex:none;margin:0;gap:8px;padding:2px 12px;border-radius:0}
 html.land #mtest.live .mbar button{flex:1;height:30px;min-height:30px;padding:0 4px;border-radius:8px}
 html.land #mtest.live .pal{position:absolute;top:38px;right:10px;width:min(380px,70%);max-height:calc(100% - 80px);overflow:auto;z-index:5;margin:0;box-shadow:0 8px 28px #0007}
@@ -2256,7 +2260,7 @@ async function route(){
   if(p=='reckoner')rrDraw();
   if(p=='age')ageInit();if(p=='mocks'||p=='pdfs'||p=='batches')cuSeen(p);
  }catch(e){if(my!==window.RT)return;app.innerHTML=topBar()+'<div class="wrap"><p class="err">Load nahi hua: '+esc(e.message)+'</p></div>'}
- scrollTo(0,0)}
+ scrollTo(0,0);{const mc=document.querySelector('main.content');if(mc)mc.scrollTop=0}}
 
 
 /* ---- Landscape detector (phones/tablets). Test ke liye ?land=1 laga do ---- */
