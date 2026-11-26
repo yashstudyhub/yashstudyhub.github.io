@@ -371,7 +371,8 @@ aside.side{overflow-y:auto}
 /* ===== LANDSCAPE MODE (App jaisa) =====
    html.land JS se lagta hai: phone/tablet + landscape. 16:9 frame, left side-nav,
    mock test me question left / options right, patli top & bottom bar. */
-html.land{--lh:100vh;--lw:min(100vw,calc(var(--lh)*16/9));--fh:min(var(--lh),calc(var(--lw)*9/16));--oy:calc((var(--lh) - var(--fh))/2);background:#000}
+/* --sh = phone ki POORI screen height (JS se). Frame ki chaudai = sh x 16/9, bilkul App jaisi, chahe browser ki top bar jagah le. */
+html.land{--lh:100vh;--sh:100vh;--lw:min(100vw,calc(var(--sh)*16/9));--fh:var(--lh);--oy:0px;background:#000}
 @supports(height:100dvh){html.land{--lh:100dvh}}
 /* Page khud scroll nahi karta (isse address bar hilti nahi aur ratio fix 16:9 rehta hai); scroll frame ke andar hota hai */
 html.land,html.land body{overflow:hidden}
@@ -2265,7 +2266,7 @@ async function route(){
 
 /* ---- Landscape detector (phones/tablets). Test ke liye ?land=1 laga do ---- */
 (function(){const d=document.documentElement,mq=matchMedia('(orientation:landscape)'),co=matchMedia('(pointer:coarse)');
- const f=()=>d.classList.toggle('land',(mq.matches&&co.matches)||/[?&]land=1/.test(location.search));
+ const f=()=>{const on=(mq.matches&&co.matches)||/[?&]land=1/.test(location.search),sh=Math.min(screen.width||0,screen.height||0);if(sh>0)d.style.setProperty('--sh',sh+'px');d.classList.toggle('land',on)};
  f();[mq,co].forEach(m=>m.addEventListener&&m.addEventListener('change',f));addEventListener('resize',f);addEventListener('orientationchange',f)})();
 window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
