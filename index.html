@@ -1,5 +1,5 @@
 <!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000066" id="tc"><script>try{if(localStorage.getItem("theme")==="dark"){document.documentElement.setAttribute("data-theme","dark");document.getElementById("tc").content="#0a1440"}}catch(e){}</script>
-<title>Yash Study Hub</title><link rel="icon" href="logo.png">
+<link rel="manifest" href="manifest.webmanifest"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="apple-touch-icon" href="icon-192.png"><title>Yash Study Hub</title><link rel="icon" href="logo.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
 <style>
@@ -411,6 +411,8 @@ html.land #mtest.live .diw img{width:auto;max-width:100%;max-height:calc(var(--f
 html.land #mtest.live .mbar{flex:none;margin:0;gap:8px;padding:2px 12px;border-radius:0}
 html.land #mtest.live .mbar button{flex:1;height:30px;min-height:30px;padding:0 4px;border-radius:8px}
 html.land #mtest.live .pal{position:absolute;top:38px;right:10px;width:min(380px,70%);max-height:calc(100% - 80px);overflow:auto;z-index:5;margin:0;box-shadow:0 8px 28px #0007}
+/* fadeUp animation (fill: both) transform chhod deti hai -> position:fixed apne parent ke andar kaid ho kar khisak jaata tha. Landscape me band. */
+html.land main.content>*{animation:none;transform:none}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -2266,8 +2268,11 @@ async function route(){
 
 /* ---- Landscape detector (phones/tablets). Test ke liye ?land=1 laga do ---- */
 (function(){const d=document.documentElement,mq=matchMedia('(orientation:landscape)'),co=matchMedia('(pointer:coarse)');
- const f=()=>{const on=(mq.matches&&co.matches)||/[?&]land=1/.test(location.search),sh=Math.min(screen.width||0,screen.height||0);if(sh>0)d.style.setProperty('--sh',sh+'px');d.classList.toggle('land',on)};
- f();[mq,co].forEach(m=>m.addEventListener&&m.addEventListener('change',f));addEventListener('resize',f);addEventListener('orientationchange',f)})();
+ let tried=0;const f=()=>{const on=(mq.matches&&co.matches)||/[?&]land=1/.test(location.search),sh=Math.min(screen.width||0,screen.height||0);if(sh>0)d.style.setProperty('--sh',sh+'px');d.classList.toggle('land',on);if(!on){tried=0;if(document.fullscreenElement)document.exitFullscreen().catch(()=>{})}};
+ f();[mq,co].forEach(m=>m.addEventListener&&m.addEventListener('change',f));addEventListener('resize',f);addEventListener('orientationchange',f);
+ /* Landscape me pehle tap par browser ki top bar + status bar chhupa do (fullscreen). Portrait me wapas normal. */
+ document.addEventListener('click',()=>{if(tried||!d.classList.contains('land')||document.fullscreenElement||!d.requestFullscreen)return;tried=1;d.requestFullscreen({navigationUI:'hide'}).catch(()=>{})},true);
+ try{if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}})();
 window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();window.NEEDSETUP=false;return loginView();}
