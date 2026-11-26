@@ -1244,14 +1244,42 @@ async function admNotify(){
 async function admNotif(){const t=$v('nt').trim(),b=$v('nb').trim(),tp=$v('nto');if(!t||!b)return alert('Please enter both a title and a message.');
  try{await db.collection('notifications').add({title:t,body:b,...(tp?{topic:tp}:{}),sent:false,sentAt:firebase.firestore.FieldValue.serverTimestamp()});toast('Saved — students’ phones will get the push notification shortly.');route()}catch(e){alert('Could not send: '+e.message)}}
 async function admStats(){
- const n=new Date(),y=n.getFullYear(),m=n.getMonth(),d=n.getDate(),D0=new Date(y,m,d),D6=new Date(y,m,d-6),D29=new Date(y,m,d-29),C=admCount;
- const [S,I,A,OP]=await Promise.all([Promise.all([C('students'),C('students',[['source','==','web']]),C('students',[['createdAt','>=',D0]]),C('students',[['createdAt','>=',D6]]),C('students',[['createdAt','>=',D29]])]),C('installs'),Promise.all([C('installs',[['lastActiveAt','>=',D0]]),C('installs',[['lastActiveAt','>=',D6]]),C('installs',[['lastActiveAt','>=',D29]])]),admOpened()]);
- const col=(v,l)=>`<div><b>${v}</b><small>${l}</small></div>`,app=(typeof S[0]=='number'&&typeof S[1]=='number')?Math.max(0,S[0]-S[1]):'?',
- hd=(i,t)=>`<div style="font-weight:700;font-size:13px">${i} ${t}</div>`,nt=t=>`<small class="mu" style="display:block;margin-top:10px;font-size:11px">${t}</small>`;
- return `<div class="card" style="padding:16px">${hd('👥','Registered students (App + Web)')}<div class="adst" style="margin-top:14px">${col(S[0],'Total')}${col(app,'From App')}${col(S[1],'From Web')}</div><div class="mu" style="font-size:12px;margin:14px 0 8px">New signups</div><div class="adst">${col(S[2],'Today')}${col(S[3],'Last 7 days')}${col(S[4],'Last 30 days')}</div>${nt('Counts only, no personal info. Accounts made before this update have no date, so they are in Total but not in "New signups". / पुराने अकाउंट Total में गिने जाते हैं, "New signups" में नहीं।')}</div>
- <div class="card row" style="padding:16px;justify-content:space-between;align-items:flex-start"><div>👥<br><b style="font-size:24px">${I}</b><br><small class="mu">App installs (only counting)</small></div><button class="s" title="Refresh" onclick="route()">🔄</button></div>
- <div class="card" style="padding:16px">${hd('⚡','Active students (phones that opened the app)')}<div class="adst" style="margin-top:14px">${col(A[0],'Today')}${col(A[1],'Last 7 days')}${col(A[2],'Last 30 days')}</div>${nt('Only phones that have opened the updated app are counted. Reinstall = counted again. / केवल अपडेटेड ऐप खोलने वाले फ़ोन गिने जाते हैं।')}</div>
- <div class="card" style="padding:16px">${hd('📊','Students who opened today / आज कितने students ने खोला')}${opBlk(OP,'👤 Unique students (App + Web) / कुल अलग-अलग students',['Unique','Used both App & Web'],[7,8])}${opBlk(OP,'📱 App',['Total','Phone','Tablet'],[0,1,2])}${opBlk(OP,'🌐 Web',['Total','Phone','Tablet','Desktop / Laptop'],[3,4,5,6])}${nt('Unique = one student is counted ONCE even if the same ID opened both the App and the Web (that is what you should read as “students today”). App and Web rows below count each platform separately, so a student who used both appears in both rows. / Unique में एक ही ID एक ही बार गिनी जाती है, चाहे App और Web दोनों खोले। Each student is counted once per day for each device type (someone who used phone and computer shows in both). A browser cannot tell a laptop from a desktop, so they are shown together. App numbers count students on the updated app; Web numbers count from the web update. Day = this device’s date.')}</div>`;
+ const F=window.ASF||{};window.ASF=null;const force=!!F.f,all=!!F.a,D0=asAgo(0),D6=asAgo(6),D29=asAgo(29),
+ ok=p=>p.then(v=>({v}),e=>({e:String((e&&e.message)||e)}));
+ const [B,AC,ST,IN,WN,AD]=await Promise.all([ok(asBundle(force,all)),
+  ok(asInts('active',()=>Promise.all([asC([['lastActiveAt','>=',D0]],'installs'),asC([['lastActiveAt','>=',D6]],'installs'),asC([['lastActiveAt','>=',D29]],'installs')]),6e5,force)),
+  ok(asInts('students',()=>Promise.all([asC([]),asC([['source','==','web']]),asC([['createdAt','>=',D0]]),asC([['createdAt','>=',D6]]),asC([['createdAt','>=',D29]])]),6e5,force)),
+  ok(asInts('installs',async()=>[await asC([],'installs')],6e5,force)),
+  ok(asInts('windows',asWindows,18e5,force||all)),
+  window.ASDATE?ok(asForDate(window.ASDATE)):Promise.resolve(null)]);
+ const b=B.v,T=b&&b.today,Y=b&&b.yes,v=(r,i)=>r.v&&r.v[i]!=null?r.v[i]:'?',
+ col=(x,l)=>`<div><b>${x}</b><small>${l}</small></div>`,
+ hd=(i,t)=>`<div style="font-weight:700;font-size:13px">${i} ${t}</div>`,
+ nt=t=>`<small class="mu" style="display:block;margin-top:10px;font-size:11px">${t}</small>`,
+ er=r=>r&&r.e?`<small style="display:block;margin-top:8px;font-size:11px;color:var(--warn)">Could not load the count: ${esc(r.e)}</small>`:'',
+ sv=(s,f)=>s?f(s):'?',
+ blk=(title,labels,fs,top)=>`<div style="margin-top:${top}px"><b style="font-size:13px">${title}</b><div class="adst" style="margin-top:8px;align-items:flex-start">${fs.map((f,k)=>col(sv(T,f),labels[k])).join('')}</div><small class="mu" style="display:block;margin-top:6px;font-size:11px">Yesterday / कल: ${fs.map((f,k)=>labels[k]+' '+sv(Y,f)).join(' • ')}</small></div>`,
+ tot=ST.v?ST.v[0]:0,pct=(T&&tot>0)?(asU(T)*100/tot).toFixed(1):'',
+ // 7-day trend: bars (unique students) + a small table
+ rows=b?b.rows:[],wd=d=>d.toLocaleDateString('en-US',{weekday:'short'}),lb=d=>wd(d)+', '+d.getDate()+' '+d.toLocaleDateString('en-US',{month:'short'}),u=r=>asU(r.s);
+ let trend;
+ if(!rows.length)trend='<div style="font-size:24px;font-weight:700;padding:8px 0">?</div>';
+ else{const mx=Math.max(1,...rows.map(u)),dn=rows.slice(0,-1);let sum=0,best=null;dn.forEach(r=>{sum+=u(r);if(!best||u(r)>u(best))best=r});const avg=dn.length?Math.round(sum/dn.length):0,
+  cell=(t,bold,left)=>`<div style="text-align:${left?'left':'center'};font-size:12px;${bold?'font-weight:700;color:var(--tx)':'color:var(--mu)'}">${t}</div>`,gr='display:grid;grid-template-columns:3fr 1fr 1fr 1fr;gap:4px';
+  trend=`<div style="display:flex;align-items:flex-end;height:132px">${rows.map((r,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end"><b style="font-size:12px">${u(r)}</b><div style="width:calc(100% - 12px);height:${(6+78*u(r)/mx).toFixed(1)}px;margin:2px 0 4px;border-radius:4px;background:${i==rows.length-1?'#f28c1b':'var(--ac)'}"></div><span class="mu" style="font-size:11px">${wd(r.date)}</span></div>`).join('')}</div>
+  <div style="${gr};margin-top:12px">${cell('Date',1,1)}${cell('App',1)}${cell('Web',1)}${cell('Unique',1)}</div><hr style="border:0;border-top:1px solid var(--line);margin:6px 0">
+  ${rows.slice().reverse().map((r,i)=>`<div style="${gr};padding:3px 0">${cell(lb(r.date)+(i==0?' (today)':''),0,1)}${cell(r.s[0],0)}${cell(r.s[3],0)}${cell(u(r),1)}</div>`).join('')}
+  <div style="font-size:12px;margin-top:6px;color:var(--tx70)">Average / day (finished days): ${avg}${best?` • Best day: ${lb(best.date).replace(',','')} (${u(best)})`:''}</div>`}
+ const tm=b?new Date(b.at).toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit',hour12:true}).toUpperCase():'',
+ app=ST.v?Math.max(0,ST.v[0]-ST.v[1]):'?',mn=dayKey(asAgo(44)),mx2=dayKey(D0);
+ return `<div class="row" style="justify-content:space-between;align-items:center"><small class="mu" style="font-size:11px">${b?`Updated ${tm} • about ${AS.reads} reads this session`:'Could not load / लोड नहीं हुआ'}</small><span style="white-space:nowrap"><button class="s" title="Refresh today" onclick="asRefresh()">🔄</button> <button class="s" title="Re-count all days (more reads)" onclick="if(confirm('Re-count all days? This uses more reads.'))asRefresh(1)">⋮ Re-count all days</button></span></div>
+ <div class="card" style="padding:16px">${hd('⚡','Active students (phones that opened the app)')}<div class="adst" style="margin-top:14px">${col(v(AC,0),'Today')}${col(v(AC,1),'Last 7 days')}${col(v(AC,2),'Last 30 days')}</div>${er(AC)}${nt('Only phones that have opened the updated app are counted. Reinstall = counted again. / केवल अपडेटेड ऐप खोलने वाले फ़ोन गिने जाते हैं।')}</div>
+ <div class="card" style="padding:16px">${hd('📊','Students who opened today / आज कितने students ने खोला')}${blk('👤 Unique students (App + Web) / कुल अलग-अलग students',['Unique','Both App & Web','Only App','Only Web'],[asU,s=>s[7],s=>s[0]-s[7],s=>s[3]-s[7]],14)}${pct?`<div class="mu" style="font-size:11px;margin-top:4px">Today: ${pct}% of ${tot} registered students / आज ${pct}% students</div>`:''}${blk('📱 App',['Total','Phone','Tablet'],[s=>s[0],s=>s[1],s=>s[2]],16)}${blk('🌐 Web',['Total','Phone','Tablet','Desktop / Laptop'],[s=>s[3],s=>s[4],s=>s[5],s=>s[6]],16)}${er(B)}${nt('Each student is counted once per day for each device type (someone who used phone and computer shows in both). Unique = App + Web minus the students who used both. A browser cannot tell a laptop from a desktop, so they are shown together. Day = this device’s date.')}</div>
+ <div class="card" style="padding:16px">${hd('📊','Last 7 days / पिछले 7 दिन (Unique students)')}<div style="margin-top:14px">${trend}</div>${er(B)}${nt('Finished days are counted once and saved on this device (no repeat reads). App and Web days are exact from the day each update is live. / पुराने दिन एक बार गिनकर इस डिवाइस में सेव हो जाते हैं।')}</div>
+ <div class="card" style="padding:16px">${hd('👥','Unique students: 7 / 30 days / अलग-अलग students')}<div class="mu" style="font-size:12px;margin-top:14px">Last 7 days / पिछले 7 दिन</div><div class="adst" style="margin-top:8px;align-items:flex-start">${col(v(WN,0),'Unique')}${col(v(WN,1),'App')}${col(v(WN,2),'Web')}</div><div class="mu" style="font-size:12px;margin-top:14px">Last 30 days / पिछले 30 दिन</div><div class="adst" style="margin-top:8px;align-items:flex-start">${col(v(WN,3),'Unique')}${col(v(WN,4),'App')}${col(v(WN,5),'Web')}</div>${er(WN)}${nt('Saved for 30 minutes, so opening this tab again costs no reads. Unique is never lower than App or Web.')}</div>
+ <div class="card" style="padding:16px">${hd('📅','Check any date / कोई भी तारीख देखें')}<input type="date" id="asd" min="${mn}" max="${mx2}" value="${esc(window.ASDATE||'')}" style="margin-top:10px;width:100%" onchange="asPick(this.value)"><div id="asdr">${AD?(AD.v?asAnyHtml(AD.v):er(AD)):''}</div>${nt('Works for the last 45 days. Each new date costs about 6 reads, then it is saved on this device.')}</div>
+ <div class="card" style="padding:16px">${hd('👥','Registered students (App + Web)')}<div class="adst" style="margin-top:14px">${col(v(ST,0),'Total')}${col(app,'From App')}${col(v(ST,1),'From Web')}</div><div class="mu" style="font-size:12px;margin:14px 0 8px">New signups</div><div class="adst">${col(v(ST,2),'Today')}${col(v(ST,3),'Last 7 days')}${col(v(ST,4),'Last 30 days')}</div>${er(ST)}${nt('Counts only, no personal info. Accounts made before this update have no date, so they are in Total but not in "New signups". / पुराने अकाउंट Total में गिने जाते हैं, "New signups" में नहीं।')}</div>
+ <div class="card" style="padding:16px">👥<br><b style="font-size:24px">${v(IN,0)}</b><br><small class="mu">App installs (only counting)</small>${er(IN)}</div>`;
 }
 const bsort=a=>a.sort((x,y)=>(x.order??1e9)-(y.order??1e9));
 const admMo=m=>m>0?(m==1?'1 month':m+' months'):'Lifetime';
@@ -2321,12 +2349,15 @@ function webDevice(){try{const ua=navigator.userAgent||'',t=navigator.maxTouchPo
  if(/Android/i.test(ua))return /Mobile/i.test(ua)?'Phone':'Tablet';
  if(/iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|webOS|Mobile/i.test(ua))return 'Phone';
  if(t>1&&sh<600)return 'Phone';if(t>1&&sh<900)return 'Tablet'}catch(e){}return 'Computer'}
-function actPing(uid){try{const day=dayKey(),ty=webDevice(),key=uid+'|'+day+'|'+ty;if(J.get('actPing','')===key)return;
- db.doc('students/'+uid).set({lastWebDay:day,['lastWeb'+ty+'Day']:day},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
+function actPing(uid){try{const day=dayKey(),ty=webDevice(),key=uid+'|'+day+'|'+ty+'|v2';if(J.get('actPing','')===key)return;
+ // Same as the App: besides the "last day" fields, keep a small per-day history (webDays.d20261125=true) so "Yesterday" stays correct,
+ // and lastSeenDay = last day on App OR Web (unique counts). Days older than 45 are removed in the same write.
+ const dk='d'+day.replace(/-/g,''),old='d'+dayKey(new Date(Date.now()-45*864e5)).replace(/-/g,''),DEL=firebase.firestore.FieldValue.delete();
+ db.doc('students/'+uid).set({lastWebDay:day,['lastWeb'+ty+'Day']:day,lastSeenDay:day,webDays:{[dk]:true,[old]:DEL},['web'+ty+'Days']:{[dk]:true,[old]:DEL}},{merge:true}).then(()=>J.set('actPing',key)).catch(()=>{})}catch(e){}}
 // Server-side count (1 read per 1000 matches) through Firestore's REST aggregation; falls back to a normal query if that is blocked.
 const AGG_OP={'==':'EQUAL','>=':'GREATER_THAN_OR_EQUAL'};
-const aggVal=v=>v instanceof Date?{timestampValue:v.toISOString()}:{stringValue:String(v)};
-const aggMatch=(d,f)=>{const x=d[f[0]],v=f[2];if(f[1]=='==')return x===v;const a=x&&x.toMillis?x.toMillis():x,b=v instanceof Date?v.getTime():v;return a!=null&&a>=b};
+const aggVal=v=>v instanceof Date?{timestampValue:v.toISOString()}:typeof v=='boolean'?{booleanValue:v}:{stringValue:String(v)};
+const aggMatch=(d,f)=>{const x=String(f[0]).split('.').reduce((o,k)=>o==null?o:o[k],d),v=f[2];if(f[1]=='==')return x===v;const a=x&&x.toMillis?x.toMillis():x,b=v instanceof Date?v.getTime():v;return a!=null&&a>=b};
 function admDocs(col){const c=window.ADC=window.ADC||{},n=Date.now();if(!c[col]||n-c[col].t>6e4)c[col]={t:n,p:db.collection(col).get().then(q=>q.docs.map(d=>d.data()))};return c[col].p}
 async function admCount(col,fl,mode){fl=fl||[];
  if(!window.AGGBAD){try{const t=await auth.currentUser.getIdToken(),pid=firebase.app().options.projectId,f=fl.map(x=>({fieldFilter:{field:{fieldPath:x[0]},op:AGG_OP[x[1]],value:aggVal(x[2])}})),sq={from:[{collectionId:col}]};
@@ -2335,10 +2366,49 @@ async function admCount(col,fl,mode){fl=fl||[];
   if(!r.ok)throw new Error('http '+r.status);const j=await r.json();return +j[0].result.aggregateFields.n.integerValue}catch(e){window.AGGBAD=true}}
  // server-side count is not available here: read the collection once (shared by every counter, cached 60 s) and count locally
  try{const rows=await admDocs(col);return rows.filter(d=>fl[mode=='OR'?'some':'every'](f=>aggMatch(d,f))).length}catch(e){return '?'}}
-async function admOpened(){const n=new Date(),T=dayKey(n),Y=dayKey(new Date(n.getFullYear(),n.getMonth(),n.getDate()-1)),
- FL=['lastAppDay','lastAppPhoneDay','lastAppTabletDay','lastWebDay','lastWebPhoneDay','lastWebTabletDay','lastWebComputerDay'],day=d=>Promise.all([...FL.map(f=>admCount('students',[[f,'==',d]])),admCount('students',[['lastAppDay','==',d],['lastWebDay','==',d]],'OR'),admCount('students',[['lastAppDay','==',d],['lastWebDay','==',d]])]);
- return Promise.all([day(T),day(Y)])}
-const opBlk=(OP,title,labels,idx)=>`<div style="margin-top:14px"><b style="font-size:13px">${title}</b><div class="adst" style="margin-top:8px;align-items:flex-start">${idx.map((i,k)=>`<div><b>${OP[0][i]}</b><small>${labels[k]}</small></div>`).join('')}</div><small class="mu" style="display:block;margin-top:6px;font-size:11px">Yesterday / कल: ${idx.map((i,k)=>labels[k]+' '+OP[1][i]).join(' • ')}</small></div>`;
+// ============ Admin > Stats engine (same counts, same caching as the App's AdminStatsService) ============
+// Every number is a Firestore server-side count (about 1 read per 1000 docs). Finished days are counted once and
+// kept on this device; today's numbers are kept for 5 minutes (Refresh = fetch again).
+// Stats row = [App, App phone, App tablet, Web, Web phone, Web tablet, Web computer, Both].
+const AS={reads:0},asAgo=n=>{const t=new Date();return new Date(t.getFullYear(),t.getMonth(),t.getDate()-n)},asDF=d=>'d'+d.replace(/-/g,''),
+ asD0=t=>{const d=new Date(t);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()},
+ asRd=(k,age)=>{const m=J.get(k,null);if(!m||!Array.isArray(m.v)||typeof m.t!='number')return null;if(age&&Date.now()-m.t>age)return null;return m},
+ asWr=(k,v)=>J.set(k,{t:Date.now(),v}),asU=s=>Math.max(0,s[0]+s[3]-s[7]);
+async function asC(f,col){AS.reads++;const n=await admCount(col||'students',f);if(typeof n!='number')throw new Error('count failed');return n}
+// One full day. Today: the "last day" fields are exact. Past days: per-day history (appDays.d20261125=true) and the old
+// "last day" fields are both counted and the bigger number is used.
+async function asFull(day,isToday){const f=asDF(day),
+ c=async(hm,lf)=>{if(isToday)return asC([[lf,'==',day]]);const r=await Promise.all([asC([[hm+'.'+f,'==',true]]),asC([[lf,'==',day]])]);return Math.max(r[0],r[1])};
+ const r=await Promise.all([c('appDays','lastAppDay'),c('appPhoneDays','lastAppPhoneDay'),c('appTabletDays','lastAppTabletDay'),c('webDays','lastWebDay'),c('webPhoneDays','lastWebPhoneDay'),c('webTabletDays','lastWebTabletDay'),c('webComputerDays','lastWebComputerDay'),
+  asC([['lastAppDay','==',day],['lastWebDay','==',day]]),...(isToday?[]:[asC([['appDays.'+f,'==',true],['webDays.'+f,'==',true]])])]);
+ let both=r[7];if(!isToday)both=Math.max(both,r[8]);const app=r[0],web=r[3];both=Math.max(0,Math.min(both,app,web));
+ return [app,r[1],r[2],web,r[4],r[5],r[6],both]}
+// Light version (6 reads): App, Web, Both only. Used for the older days of the 7-day trend and for "any date".
+async function asLite(day){const f=asDF(day),r=await Promise.all([asC([['appDays.'+f,'==',true]]),asC([['lastAppDay','==',day]]),asC([['webDays.'+f,'==',true]]),asC([['lastWebDay','==',day]]),asC([['appDays.'+f,'==',true],['webDays.'+f,'==',true]]),asC([['lastAppDay','==',day],['lastWebDay','==',day]])]);
+ const app=Math.max(r[0],r[1]),web=Math.max(r[2],r[3]),both=Math.max(0,Math.min(Math.max(r[4],r[5]),app,web));return [app,0,0,web,0,0,0,both]}
+// A finished day is counted once and then kept on this device (only if the count was made after that day ended).
+async function asPast(date,fullCount,force){const day=dayKey(date),key='ast2_'+day+'_'+(fullCount?'f':'l');
+ if(!force){const m=asRd(key);if(m&&asD0(m.t)>date.getTime())return m.v}
+ const s=fullCount?await asFull(day,false):await asLite(day);if(asAgo(0).getTime()>date.getTime())asWr(key,s);return s}
+// Today + yesterday + the last 7 days.
+async function asBundle(force,all){const td=asAgo(0),tk=dayKey(td);let today;const m=force?null:asRd('ast2_today_'+tk,3e5);
+ if(m)today=m.v;else{today=await asFull(tk,true);asWr('ast2_today_'+tk,today)}
+ const yes=await asPast(asAgo(1),true,all),older=await Promise.all([6,5,4,3,2].map(i=>asPast(asAgo(i),false,all)));
+ const rows=[...older.map((s,i)=>({date:asAgo(6-i),s})),{date:asAgo(1),s:yes},{date:td,s:today}];
+ return {today,yes,rows,at:(asRd('ast2_today_'+tk)||{}).t||Date.now()}}
+async function asInts(k,fetch,ttl,force){if(!force){const m=asRd('ast_'+k,ttl);if(m)return m.v}const v=await fetch();asWr('ast_'+k,v);return v}
+// [unique7, app7, web7, unique30, app30, web30] from the "last opened" fields.
+async function asWindows(){const one=async b=>{const since=dayKey(asAgo(b)),g=f=>asC([[f,'>=',since]]),r=await Promise.all([g('lastSeenDay'),g('lastAppDay'),g('lastWebDay')]);return [Math.max(r[0],r[1],r[2]),r[1],r[2]]};
+ const a=await one(6),b=await one(29);return [...a,...b]}
+// Any date of the last 45 days ("yyyy-mm-dd").
+async function asForDate(s){const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(s||'');if(!m)throw new Error('Pick a valid date');
+ const dt=new Date(+m[1],+m[2]-1,+m[3]),diff=Math.round((asAgo(0)-dt)/864e5);if(diff<0||diff>44)throw new Error('Pick a date from the last 45 days');
+ return diff<=0?asFull(dayKey(dt),true):asPast(dt,diff==1,false)}
+const asAnyHtml=s=>`<div class="adst" style="margin-top:14px">${[['Unique',asU(s)],['App',s[0]],['Web',s[3]],['Both',s[7]]].map(x=>`<div><b>${x[1]}</b><small>${x[0]}</small></div>`).join('')}</div>`;
+async function asPick(s){window.ASDATE=s||'';const el=document.getElementById('asdr');if(!el)return;if(!s){el.innerHTML='';return}
+ el.innerHTML='<div class="mu" style="margin-top:14px;font-size:12px">... / लोड हो रहा है</div>';
+ try{el.innerHTML=asAnyHtml(await asForDate(s))}catch(e){el.innerHTML=`<small style="display:block;margin-top:8px;font-size:11px;color:var(--warn)">Could not load the count: ${esc(e.message||e)}</small>`}}
+function asRefresh(all){window.ASF={f:1,a:!!all};route()}
 
 // ============ Admin > PDFs / Videos (same flow, data and counters as the App) ============
 window.APS=window.APS||{pt:'free',pb:'',pf:'',vb:'',vf:''};
