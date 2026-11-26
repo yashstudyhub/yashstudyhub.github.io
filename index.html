@@ -391,7 +391,7 @@ html.land .topbar img{width:34px;height:34px}
 html.land #tsPill{bottom:calc(var(--oy) + 12px);right:calc(50% - var(--lw)/2 + 12px)}
 html.land #diModal{inset:var(--oy) auto auto 50%;height:var(--fh);width:var(--lw);transform:translateX(-50%)}
 html.land body.intest{overflow:hidden}
-.mttl,.mmeta2{display:none}
+.mttl,.mqn{display:none}
 html.land #mtest.live{position:fixed;top:var(--oy);left:50%;width:var(--lw);height:var(--fh);transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;background:var(--bg);overflow:hidden;padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left)}
 html.land #mtest.live>.mmeta{display:none}
 html.land #mtest.live .mtop{position:static;flex:none;flex-wrap:nowrap;gap:6px;height:34px;min-height:34px;padding:0 8px 0 12px;margin:0;border-radius:0}
@@ -402,7 +402,16 @@ html.land #mtest.live .mtop button.s{padding:0 6px}
 html.land #mtest.live .mq{flex:1;min-height:0;display:flex;margin:0;padding:0;border:0;border-radius:0;background:transparent}
 html.land #mtest.live .qcol{flex:1;min-width:0;overflow-y:auto;padding:6px 12px 6px 14px;-webkit-overflow-scrolling:touch}
 html.land #mtest.live .ocol{flex:none;width:clamp(200px,32%,300px);overflow-y:auto;padding:6px 12px 6px 10px;border-left:1px solid rgba(11,18,64,.2);-webkit-overflow-scrolling:touch}
-html.land #mtest.live .mmeta2{display:block;color:var(--mu);font-size:12px;margin-bottom:2px}
+/* Landscape: "Q 1/15 • +1 / −0.25" ab upar blue patti me hai (question ke upar ki jagah bachi -> question upar, neeche zyada white space) */
+html.land #mtest.live .mqn{display:block;flex:none;white-space:nowrap;font-size:12.5px;font-weight:600;color:#cdd5ff;margin:0 4px 0 2px}
+html.land #mtest.live .mqn .mans{font-weight:400;opacity:.85}
+@media(max-width:760px){html.land #mtest.live .mqn .mans{display:none}}
+/* "Question N" label hata di (Q number ab bar me); bookmark star ab question ke corner me, alag line nahi leta */
+html.land #mtest.live .qhd{position:relative;height:0;margin:0;overflow:visible;z-index:2}
+html.land #mtest.live .qhd>.mu{display:none}
+html.land #mtest.live .qhd .bmb{position:absolute;top:-2px;right:0;height:26px;min-height:26px;padding:0 8px;font-size:16px;display:inline-flex;align-items:center}
+html.land #mtest.live .qcol .qtext{padding-right:40px}
+html.land #mtest.live .qcol>.qhd:first-child+.qtext{margin-top:0}
 html.land #mtest.live .opt{padding:8px;margin:0 0 6px;gap:10px;font-size:14px;line-height:1.3;align-items:flex-start}
 html.land #mtest.live .badge{width:26px;height:26px}
 html.land #mtest.live .qtext{font-size:15px;line-height:1.35;margin:4px 0}
@@ -1213,14 +1222,14 @@ function drawTest(){const s=T,Q=s.Q;if(s.done)return;const box=document.getEleme
  if(!Q.length){box.innerHTML='<div class="card"><p class="mu">Is test mein abhi koi question nahi hai.</p></div>';return}
  const q=Q[s.i],hi=s.hi,mp=s.t.marksPerQuestion||1,ng=s.t.negativeMarks||0,answered=s.ans.filter(a=>a!==null).length,opts=qOpts(q,hi);
  box.classList.add('live');document.body.classList.add('intest');
- box.innerHTML=`<div class="mtop"><span class="mttl">${esc(s.t.title||'')}</span><span id="mtime" class="mtime"></span>
+ box.innerHTML=`<div class="mtop"><span class="mttl">${esc(s.t.title||'')}</span><span class="mqn">Q ${s.i+1}/${Q.length} • +${mp}${ng?' / −'+ng:''}<span class="mans"> • ${answered}/${Q.length} answered</span></span><span id="mtime" class="mtime"></span>
  <button class="s" onclick="togglePal()" title="Questions"><span class="material-icons">grid_view</span></button>
  <button class="s" onclick="toggleLang()">${hi?'English':'हिंदी'}</button>
  <button class="p" onclick="confirmSubmit()">Submit</button></div>
  <div class="row mu mmeta" style="justify-content:space-between"><span>Q ${s.i+1} / ${Q.length}</span><span>+${mp}${ng?' / −'+ng:''} · Answered ${answered}/${Q.length}</span></div>
  ${s.pal?`<div class="pal"><b>Jump to question</b> <small class="mu">Green = answered</small><div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div></div>`:''}
- <div class="q mq"><div class="qcol"><div class="mmeta2">Q ${s.i+1}/${Q.length} • +${mp}${ng?' / −'+ng:''} • ${answered}/${Q.length} answered</div>${passageHtml(q,hi)}
- <div class="row" style="justify-content:space-between;align-items:center"><span class="mu">Question ${s.i+1}</span>${bmBtn('mt',s.i)}</div>
+ <div class="q mq"><div class="qcol">${passageHtml(q,hi)}
+ <div class="row qhd" style="justify-content:space-between;align-items:center"><span class="mu">Question ${s.i+1}</span>${bmBtn('mt',s.i)}</div>
  <div class="qtext">${esc(qt(q,'text',hi))}</div></div>
  <div class="ocol">${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]||j+1}</span><span>${esc(o)}</span></div>`).join('')}</div>
  </div>
