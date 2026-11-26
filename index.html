@@ -422,6 +422,14 @@ html.land #mtest.live .mbar button{flex:1;height:30px;min-height:30px;padding:0 
 html.land #mtest.live .pal{position:absolute;top:38px;right:10px;width:min(380px,70%);max-height:calc(100% - 80px);overflow:auto;z-index:5;margin:0;box-shadow:0 8px 28px #0007}
 /* fadeUp animation (fill: both) transform chhod deti hai -> position:fixed apne parent ke andar kaid ho kar khisak jaata tha. Landscape me band. */
 html.land main.content>*{animation:none;transform:none}
+.msup{font-size:.72em;line-height:0;vertical-align:super;font-weight:600}
+.mf{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.05;margin:0 2px;font-size:.86em}
+.mf>.mn{padding:0 3px 1px;border-bottom:1.3px solid currentColor}
+.mf>.md{padding:1px 3px 0}
+.mr{display:inline-flex;align-items:stretch;vertical-align:baseline;margin:0 1px}
+.mr>.msym{display:inline-flex;align-items:flex-end;line-height:1;font-size:1.08em;padding-right:1px}
+.mr>.msym .mcube{font-size:.58em;line-height:1;align-self:flex-start;margin-right:-3px;margin-top:1px;font-weight:700}
+.mr>.mrad{border-top:1.3px solid currentColor;padding:0 3px 0 2px;line-height:1.15}
 </style></head><body>
 <div class="shell">
  <aside class="side" id="side"></aside>
@@ -437,6 +445,129 @@ if(typeof firebase==='undefined'){document.getElementById('app').innerHTML='<div
 firebase.initializeApp({apiKey:"AIzaSyDSAvRzTNcXVENKNSUe0LqwuHLNZHRtHh0",authDomain:"yash-study-hub-450d2.firebaseapp.com",projectId:"yash-study-hub-450d2",storageBucket:"yash-study-hub-450d2.firebasestorage.app",messagingSenderId:"782647828219",appId:"1:782647828219:web:bd86accdd0eeffed165a5e"});
 const auth=firebase.auth(),db=firebase.firestore(),app=document.getElementById('app');
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const _SUP_MAP={'\u2070':'0','\u00B9':'1','\u00B2':'2','\u00B3':'3','\u2074':'4','\u2075':'5','\u2076':'6','\u2077':'7','\u2078':'8','\u2079':'9','\u207A':'+','\u207B':'-','\u207D':'(','\u207E':')'};
+const _MATH_RE=/[\^√∛\u00B2\u00B3\u00B9\u2070\u2074-\u2079\u207A\u207B\u207D\u207E*\/]|>=|<=|!=|\b(?:sqrt|cbrt)\s*\(| - /i;
+function _mBal(s,openIdx){
+ let d=0;
+ for(let i=openIdx;i<s.length;i++){
+  if(s[i]==='(')d++;
+  else if(s[i]===')'){d--;if(d===0)return i;}
+ }
+ return -1;
+}
+function _mNorm(s){
+ return s
+  .replace(/>=/g,'≥').replace(/<=/g,'≤').replace(/!=/g,'≠')
+  .replace(/([\d\)\u00B2\u00B3\u00B9%])\s*\*\s*([\d\(√∛a-zA-Z?])/g,'$1 × $2')
+  .replace(/([\d\)\u00B2\u00B3\u00B9%])\s+\/\s+([\d\(√∛?])/g,'$1 ÷ $2')
+  .replace(/([\d\)\u00B2\u00B3\u00B9%])\s+-\s+([\d\(√∛?])/g,'$1 − $2');
+}
+function _mDen(s,idx){
+ if(idx>=s.length)return null;
+ if(s[idx]==='('){
+  const e=_mBal(s,idx);
+  if(e>idx+1&&s[e+1]!=='/')return {raw:s.slice(idx+1,e),end:e+1};
+  return null;
+ }
+ const nm=s.slice(idx).match(/^(\d+(?:\.\d+)?)(?![\/\d])/);
+ if(nm)return {raw:nm[1],end:idx+nm[1].length};
+ const vm=s.slice(idx).match(/^([a-zA-Z])(?![a-zA-Z\/\d])/);
+ if(vm)return {raw:vm[1],end:idx+1,isVar:true};
+ return null;
+}
+function _mParse(s,depth){
+ if(!s)return '';
+ if(depth>4)return esc(s);
+ let out='',i=0,n=s.length;
+ while(i<n){
+  // 1. cbrt(...) / sqrt(...)
+  const fn=s.slice(i).match(/^(cbrt|sqrt)\s*\(/i);
+  if(fn&&(i===0||!/[a-zA-Z0-9_]/.test(s[i-1]))){
+   const op=i+fn[0].length-1,cl=_mBal(s,op);
+   if(cl>op){
+    const isC=fn[1].toLowerCase()==='cbrt';
+    out+=`<span class="mr"><span class="msym">${isC?'<span class="mcube">3</span>':''}√</span><span class="mrad">${_mParse(s.slice(op+1,cl),depth+1)}</span></span>`;
+    i=cl+1;continue;
+   }
+  }
+  // 2. √ / ∛
+  if(s[i]==='√'||s[i]==='∛'){
+   const isC=s[i]==='∛';
+   let j=i+1;while(j<n&&s[j]===' ')j++;
+   if(s[j]==='('){
+    const cl=_mBal(s,j);
+    if(cl>j){
+     out+=`<span class="mr"><span class="msym">${isC?'<span class="mcube">3</span>':''}√</span><span class="mrad">${_mParse(s.slice(j+1,cl),depth+1)}</span></span>`;
+     i=cl+1;continue;
+    }
+   }
+   const rm=s.slice(j).match(/^(\d+(?:\.\d+)?|[a-zA-Z](?![a-zA-Z]))/);
+   if(rm){
+    out+=`<span class="mr"><span class="msym">${isC?'<span class="mcube">3</span>':''}√</span><span class="mrad">${esc(rm[1])}</span></span>`;
+    i=j+rm[1].length;continue;
+   }
+  }
+  // 3. Parenthesized numerator fraction: (...)/den
+  if(s[i]==='('){
+   const cl=_mBal(s,i);
+   if(cl>i+1&&s[cl+1]==='/'){
+    const den=_mDen(s,cl+2);
+    if(den){
+     out+=`<span class="mf"><span class="mn">${_mParse(s.slice(i+1,cl),depth+1)}</span><span class="md">${_mParse(den.raw,depth+1)}</span></span>`;
+     i=den.end;continue;
+    }
+   }
+  }
+  // 4. Numeric or single-var numerator fraction: num/den (skip dates dd/mm/yyyy and words PO/Clerk, km/hr)
+  if((i===0||!/[a-zA-Z0-9_\/.]/.test(s[i-1]))){
+   const nf=s.slice(i).match(/^(\d+(?:\.\d+)?)\//);
+   if(nf){
+    const den=_mDen(s,i+nf[0].length);
+    if(den){
+     out+=`<span class="mf"><span class="mn">${esc(nf[1])}</span><span class="md">${_mParse(den.raw,depth+1)}</span></span>`;
+     i=den.end;continue;
+    }
+   }
+   const vf=s.slice(i).match(/^([xyzabcpqrnk])\//);
+   if(vf){
+    const den=_mDen(s,i+2);
+    if(den&&(!den.isVar||/^[xyzabcpqrnk]$/.test(den.raw))){
+     out+=`<span class="mf"><span class="mn">${esc(vf[1])}</span><span class="md">${_mParse(den.raw,depth+1)}</span></span>`;
+     i=den.end;continue;
+    }
+   }
+  }
+  // 5. Caret powers: ^(...) or ^-2 or ^n
+  if(s[i]==='^'){
+   if(s[i+1]==='('){
+    const cl=_mBal(s,i+1);
+    if(cl>i+1){
+     out+=`<sup class="msup">${_mParse(s.slice(i+2,cl),depth+1)}</sup>`;
+     i=cl+1;continue;
+    }
+   }
+   const pm=s.slice(i+1).match(/^([+-]?\d+(?:\.\d+)?|[a-zA-Z](?![a-zA-Z]))/);
+   if(pm){
+    out+=`<sup class="msup">${esc(pm[1])}</sup>`;
+    i+=1+pm[1].length;continue;
+   }
+  }
+  // 6. Unicode superscripts: ² ³ ⁴ ...
+  if(_SUP_MAP[s[i]]){
+   let sup='';
+   while(i<n&&_SUP_MAP[s[i]]){sup+=_SUP_MAP[s[i]];i++;}
+   out+=`<sup class="msup">${esc(sup)}</sup>`;
+   continue;
+  }
+  out+=esc(s[i]);i++;
+ }
+ return out;
+}
+function mathHtml(s){
+ const t=String(s??'');
+ if(!t||!_MATH_RE.test(t))return esc(t);
+ return _mParse(_mNorm(t),0);
+}
 const yid=u=>(String(u).match(/(?:v=|youtu\.be\/|embed\/|live\/|shorts\/)([\w-]{11})/)||[])[1]||'';
 const ord=(a,b)=>(a.order??1e9)-(b.order??1e9)||(tsMs(a.createdAt)-tsMs(b.createdAt))||String(a.title||a.name||a.examName||'').toLowerCase().localeCompare(String(b.title||b.name||b.examName||'').toLowerCase());
 const list=async q=>(await q.get()).docs.map(d=>({id:d.id,...d.data()}));
@@ -495,7 +626,7 @@ function svDraw(){const el=document.getElementById('svb');if(!el)return;const al
 function svShown(){const all=bmAll(),q=SV.q.trim().toLowerCase();return all.map((b,ix)=>({b,ix})).filter(({b})=>!q||String(b.q.text).toLowerCase().includes(q)||String(b.q.textHi||'').toLowerCase().includes(q)||String(b.src||'').toLowerCase().includes(q))}
 function svList(){const el=document.getElementById('svl');if(!el)return;const all=bmAll(),sh=svShown(),hi=SV.hi,n=document.getElementById('svn');if(n)n.textContent=all.length+' saved / सेव • tap a question to see the answer / जवाब देखने के लिए टैप करें';
  el.innerHTML=sh.length?sh.map(({b,ix})=>{const q=b.q,open=SV.open[b.k],opts=qOpts(q,hi),ex=qt(q,'explanation',hi),d=b.t?new Date(b.t).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
-  return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:8px"><div style="flex:1;cursor:pointer" onclick="svTog(${ix})"><b>${esc(qt(q,'text',hi))}</b><br><small class="mu">${esc(b.src||'')}${b.src&&d?' · ':''}${d}</small></div><button class="s" onclick="svDel(${ix})" title="Remove / हटाएँ">🗑</button></div>${open?`<div style="margin-top:8px">${passageHtml(q,hi)}${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''}"><span class="badge">${'ABCD'[j]||j+1}</span><span>${esc(o)}</span></div>`).join('')}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`:''}</div>`}).join(''):'<p class="mu" style="text-align:center">No matching questions.<br>कोई सवाल नहीं मिला।</p>'}
+  return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:8px"><div style="flex:1;cursor:pointer" onclick="svTog(${ix})"><b>${mathHtml(qt(q,'text',hi))}</b><br><small class="mu">${esc(b.src||'')}${b.src&&d?' · ':''}${d}</small></div><button class="s" onclick="svDel(${ix})" title="Remove / हटाएँ">🗑</button></div>${open?`<div style="margin-top:8px">${passageHtml(q,hi)}${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''}"><span class="badge">${'ABCD'[j]||j+1}</span><span>${mathHtml(o)}</span></div>`).join('')}${ex?`<p class="mu">💡 ${mathHtml(ex)}</p>`:''}</div>`:''}</div>`}).join(''):'<p class="mu" style="text-align:center">No matching questions.<br>कोई सवाल नहीं मिला।</p>'}
 function svTog(ix){const b=bmAll()[ix];if(!b)return;SV.open[b.k]=!SV.open[b.k];svList()}
 function svDel(ix){const L=bmAll();if(!L[ix])return;L.splice(ix,1);J.set('bmk',L);toast('Removed / हटा दिया');svDraw()}
 function svClear(){if(!confirm('Remove all saved questions? / सब सेव सवाल हटाएँ?'))return;J.set('bmk',[]);svDraw()}
@@ -873,17 +1004,17 @@ const diNormUrl=u=>{let s=String(u||'').trim();if(!s)return '';const gh=s.match(
 const diUrl=q=>{if(!q)return '';let u=diNormUrl(q.passageImage||q.imageUrl||q.image||q.diImage||q.graphImage||q.img||'');if(!u){for(const f of [q.passage,q.passageHi,q.text,q.textHi]){if(typeof f=='string'){const m=f.match(/^IMG\s*[:=]\s*(https?:\/\/\S+)/im);if(m){u=diNormUrl(m[1]);if(u)break}}}}return u};
 function diFallback(im){if(!im)return;const u=im.getAttribute('src')||'';if(!im.dataset.fb){const jsd=u.match(/^https?:\/\/cdn\.jsdelivr\.net\/gh\/([^/@]+)\/([^/@]+)@([^/]+)\/(.+)$/i);if(jsd){im.dataset.fb='1';im.src=`https://raw.githubusercontent.com/${jsd[1]}/${jsd[2]}/${jsd[3]}/${jsd[4]}`;return}const raw=u.match(/^https?:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\/(.+)$/i);if(raw){im.dataset.fb='1';im.src=`https://cdn.jsdelivr.net/gh/${raw[1]}/${raw[2]}@${raw[3]}/${raw[4]}`;return}}if(im.parentElement)im.parentElement.innerHTML='<div class="dierr">⚠️ Graph image could not be loaded — check your internet connection.<br>ग्राफ़ इमेज लोड नहीं हो सकी — इंटरनेट चेक करें।</div>'}
 const diImg=u=>{const s=diNormUrl(u);if(!s)return '';return `<div class="diw" data-u="${esc(s)}" onclick="openDiZoom(this.dataset.u)" title="Tap to zoom / ज़ूम करने के लिए टैप करें"><img src="${esc(s)}" alt="DI Graph" loading="lazy" onerror="diFallback(this)"><span class="diz"><span class="material-icons" style="font-size:14px">zoom_in</span>Zoom</span></div>`};
-const passageHtml=(q,hi)=>{const p=qt(q,'passage',hi),img=diUrl(q);if(!p&&!img)return '';return `<div class="passage">${p?`<div>${esc(p)}</div>`:''}${img?diImg(img):''}</div>`};
+const passageHtml=(q,hi)=>{const p=qt(q,'passage',hi),img=diUrl(q);if(!p&&!img)return '';return `<div class="passage">${p?`<div>${mathHtml(p)}</div>`:''}${img?diImg(img):''}</div>`};
 function openDiZoom(u){if(!u)return;const old=document.getElementById('diModal');if(old)old.remove();const m=document.createElement('div');m.id='diModal';m.dataset.z='1';
  m.innerHTML=`<div class="ditop"><b>📊 Graph / DI Image <small style="font-weight:400;opacity:.8">(Tap image or button to zoom)</small></b><div class="row" style="margin:0"><button class="s" style="color:#fff;border-color:#fff6;background:#ffffff22;padding:6px 12px" onclick="zoomDiStep()" id="dizb">🔍 1x</button><button class="p" style="padding:6px 12px" onclick="document.getElementById('diModal').remove()">✕ Close</button></div></div><div class="dibody" onclick="if(event.target===this)document.getElementById('diModal').remove()"><img id="dizi" src="${esc(u)}" alt="DI Graph" onerror="diFallback(this)" onclick="zoomDiStep()"></div>`;
  document.body.appendChild(m)}
 function zoomDiStep(){const m=document.getElementById('diModal'),im=document.getElementById('dizi'),bt=document.getElementById('dizb');if(!m||!im)return;const cur=+(m.dataset.z||1),nx=cur===1?1.75:cur===1.75?2.5:1;m.dataset.z=String(nx);im.style.width=nx===1?'auto':(nx*100)+'%';im.style.maxWidth=nx===1?'100%':'none';im.style.maxHeight=nx===1?'100%':'none';if(bt)bt.textContent='🔍 '+nx+'x'}
-function qHtml(Q,prefix,hi){window.QS=window.QS||{};QS[prefix]=Q;return Q.map((q,i)=>`<div class="q">${passageHtml(q,hi)}<b>${i+1}. ${esc(qt(q,'text',hi))}</b>`+qOpts(q,hi).map((o,j)=>`<label><input type="radio" name="${prefix}${i}" value="${j}">${esc(o)}</label>`).join('')+`<div id="${prefix}x${i}"></div></div>`).join('')}
+function qHtml(Q,prefix,hi){window.QS=window.QS||{};QS[prefix]=Q;return Q.map((q,i)=>`<div class="q">${passageHtml(q,hi)}<b>${i+1}. ${mathHtml(qt(q,'text',hi))}</b>`+qOpts(q,hi).map((o,j)=>`<label><input type="radio" name="${prefix}${i}" value="${j}">${mathHtml(o)}</label>`).join('')+`<div id="${prefix}x${i}"></div></div>`).join('')}
 function grade(Q,prefix,mp,ng,hi){let s=0,c=0,w=0;const ans=[];(window.QS=window.QS||{})[prefix]=Q;(window.BMSRC=window.BMSRC||{})[prefix]=(window.BMSRC||{})[prefix]||(document.querySelector('.pageTitle')||{}).textContent||'Quiz';
  Q.forEach((q,i)=>{const r=document.querySelector(`input[name=${prefix}${i}]:checked`),a=r?+r.value:null;ans.push(a);
   document.querySelectorAll(`input[name=${prefix}${i}]`).forEach(e=>{e.disabled=true;const p=e.parentElement;if(+e.value==q.correctIndex)p.classList.add('ok');else if(+e.value==a)p.classList.add('no')});
   if(a!==null){if(a==q.correctIndex){c++;s+=mp}else{w++;s-=ng}}
-  const ex=qt(q,'explanation',hi),bx=document.getElementById(prefix+'x'+i);if(bx)bx.innerHTML=bmBtn(prefix,i)+(ex?'<p class="mu">💡 '+esc(ex)+'</p>':'')});
+  const ex=qt(q,'explanation',hi),bx=document.getElementById(prefix+'x'+i);if(bx)bx.innerHTML=bmBtn(prefix,i)+(ex?'<p class="mu">💡 '+mathHtml(ex)+'</p>':'')});
  return {s,c,w,ans}}
 
 const CA_TOPICS={"national": ["National", "राष्ट्रीय"], "international": ["International", "अंतर्राष्ट्रीय"], "states": ["State News", "राज्य समाचार"], "economy": ["Economy", "अर्थव्यवस्था"], "banking": ["Banking & Finance", "बैंकिंग व वित्त"], "trade": ["Trade & Commerce", "व्यापार व वाणिज्य"], "polity": ["Polity & Governance", "राजव्यवस्था"], "schemes": ["Schemes", "योजनाएं"], "appointments": ["Appointments", "नियुक्तियां"], "awards": ["Awards", "पुरस्कार"], "sports": ["Sports", "खेल"], "days": ["Important Days", "महत्वपूर्ण दिवस"], "summits": ["Summits & Conferences", "सम्मेलन व बैठकें"], "mou": ["Agreements & MoUs", "समझौते व एमओयू"], "reports": ["Reports & Indices", "रिपोर्ट व सूचकांक"], "books": ["Books & Authors", "पुस्तकें व लेखक"], "obituary": ["Obituary", "निधन"], "defence": ["Defence", "रक्षा"], "security": ["Internal Security", "आंतरिक सुरक्षा"], "science_tech": ["Science & Tech", "विज्ञान व तकनीक"], "space": ["Space", "अंतरिक्ष"], "environment": ["Environment", "पर्यावरण"], "energy": ["Energy & Power", "ऊर्जा"], "agriculture": ["Agriculture", "कृषि"], "health": ["Health", "स्वास्थ्य"], "education": ["Education", "शिक्षा"], "infrastructure": ["Railways & Infra", "रेलवे व अवसंरचना"], "culture": ["Culture & Heritage", "संस्कृति व विरासत"], "misc": ["Others", "अन्य"]};
@@ -1230,8 +1361,8 @@ function drawTest(){const s=T,Q=s.Q;if(s.done)return;const box=document.getEleme
  ${s.pal?`<div class="pal"><b>Jump to question</b> <small class="mu">Green = answered</small><div class="pgrid">${Q.map((_,k)=>`<button class="pn ${s.ans[k]!==null?'ans':''} ${k==s.i?'cur':''}" onclick="jumpTo(${k})">${k+1}</button>`).join('')}</div></div>`:''}
  <div class="q mq"><div class="qcol">${passageHtml(q,hi)}
  <div class="row qhd" style="justify-content:space-between;align-items:center"><span class="mu">Question ${s.i+1}</span>${bmBtn('mt',s.i)}</div>
- <div class="qtext">${esc(qt(q,'text',hi))}</div></div>
- <div class="ocol">${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]||j+1}</span><span>${esc(o)}</span></div>`).join('')}</div>
+ <div class="qtext">${mathHtml(qt(q,'text',hi))}</div></div>
+ <div class="ocol">${opts.map((o,j)=>`<div class="opt ${s.ans[s.i]==j?'sel':''}" onclick="pickAns(${j})"><span class="badge">${'ABCD'[j]||j+1}</span><span>${mathHtml(o)}</span></div>`).join('')}</div>
  </div>
  <div class="mbar"><button class="s" onclick="stepQ(-1)" ${s.i==0?'disabled':''}>Previous</button><button class="s" onclick="clearAns()">Clear</button>${s.i<Q.length-1?'<button class="p" onclick="stepQ(1)">Next</button>':'<button class="p" onclick="confirmSubmit()">Submit</button>'}</div>`;updTimer()}
 function pickAns(j){T.ans[T.i]=j;drawTest()}
@@ -1720,9 +1851,9 @@ function drawFq(){const s=FQ,el=document.getElementById('fq');if(!el)return;
   el.innerHTML=`<div class="q" style="background:var(--gold);color:#081136;text-align:center"><div style="font-size:40px;font-weight:800">${c} / ${t}</div><div>Correct answers / सही जवाब</div></div><div class="row"><a class="btnlink" href="${s.mode=='rev'||s.mode=='extra'?'#/revision':'javascript:history.back()'}">Done</a><button class="s" onclick="ssQuiz()">Share Score Card / स्कोर कार्ड शेयर करें</button></div>`;return}
  const q=s.Q[s.i],hi=s.hi,opts=qOpts(q,hi),p=s.picked,ex=qt(q,'explanation',hi);(window.QS=window.QS||{}).fq=s.Q;(window.BMSRC=window.BMSRC||{}).fq=s.title||'';
  el.innerHTML=`<div class="row" style="justify-content:space-between"><span class="mu">Question ${s.i+1} / ${s.Q.length}</span><span>${p!==null?bmBtn('fq',s.i)+' ':''}<button class="s" onclick="fqLang()">${hi?'English':'हिंदी'}</button></span></div>
- <div class="q">${passageHtml(q,hi)}<div class="qtext">${esc(qt(q,'text',hi))}</div>
- ${opts.map((o,j)=>`<div class="opt ${p!==null&&j==q.correctIndex?'okb':''} ${p===j&&j!=q.correctIndex?'nob':''}" onclick="fqPick(${j})"><span class="badge">${'ABCD'[j]}</span><span>${esc(o)}${p===j?(j==q.correctIndex?' ✓':' ✗'):''}</span></div>`).join('')}
- ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${esc(ex)}</div></div>`:''}</div>
+ <div class="q">${passageHtml(q,hi)}<div class="qtext">${mathHtml(qt(q,'text',hi))}</div>
+ ${opts.map((o,j)=>`<div class="opt ${p!==null&&j==q.correctIndex?'okb':''} ${p===j&&j!=q.correctIndex?'nob':''}" onclick="fqPick(${j})"><span class="badge">${'ABCD'[j]}</span><span>${mathHtml(o)}${p===j?(j==q.correctIndex?' ✓':' ✗'):''}</span></div>`).join('')}
+ ${p!==null&&ex?`<div class="rep"><b style="color:var(--ac)">Explanation</b><div>${mathHtml(ex)}</div></div>`:''}</div>
  <div class="mbar"><span></span><button class="p" ${p===null?'disabled':''} onclick="fqNext()">${s.i==s.Q.length-1?'Finish':'Next'}</button></div>`}
 function fqPick(j){if(FQ.picked!==null)return;FQ.picked=j;FQ.ans[FQ.i]=j;drawFq()}
 function fqLang(){lang=lang=='hi'?'en':'hi';FQ.hi=lang=='hi';drawFq()}
@@ -1965,7 +2096,7 @@ function smFinish(){if(SM.fin||SM.phase=='result')return;SM.fin=true;clearT();co
 function smDraw(){const el=document.getElementById('smp');if(!el)return;
  if(SM.phase=='count'){el.innerHTML=`<div style="text-align:center;padding:30px 0"><div class="mu">Get ready / तैयार हो जाओ</div><div style="font-size:96px;font-weight:800;color:var(--ac)">${SM.count}</div><div class="mu">${SM.rapid?'Solve as many as you can in 60 seconds<br>60 सेकंड में जितने हो सकें हल करो':'Solve 20 questions as fast as you can<br>20 सवाल जितनी तेज़ी से हो सके हल करो'}</div></div>`;return}
  if(SM.phase=='play'){const a=SM.correct+SM.wrong;el.innerHTML=`<div class="row" style="justify-content:space-between"><span><span class="chip" style="border-color:var(--okc);color:var(--okc)">✓ ${SM.correct}</span> <span class="chip" style="border-color:var(--bad);color:var(--bad)">✗ ${SM.wrong}</span></span><b id="smtime" style="font-size:24px;color:var(--ac)"></b></div><div class="bar"><i id="smbar" style="width:100%"></i></div>${SM.rapid?'':`<small class="mu">Q ${Math.min(a+1,20)} / 20</small>`}
- <div style="text-align:center;font-size:clamp(30px,9vw,52px);font-weight:800;margin:26px 0">${esc(SM.q.text)}</div><div class="smopts">${SM.q.options.map((o,i)=>`<div class="smo ${SM.picked!==null?(i==SM.q.correct?'okb':i==SM.picked?'nob':''):''}" onclick="smPick(${i})">${esc(o)}</div>`).join('')}</div><p class="mu" style="text-align:center">Wrong answer = 2s penalty / गलत जवाब = 2 सेकंड की सज़ा</p>`;smTime();return}
+ <div style="text-align:center;font-size:clamp(30px,9vw,52px);font-weight:800;margin:26px 0">${mathHtml(SM.q.text)}</div><div class="smopts">${SM.q.options.map((o,i)=>`<div class="smo ${SM.picked!==null?(i==SM.q.correct?'okb':i==SM.picked?'nob':''):''}" onclick="smPick(${i})">${mathHtml(o)}</div>`).join('')}</div><p class="mu" style="text-align:center">Wrong answer = 2s penalty / गलत जवाब = 2 सेकंड की सज़ा</p>`;smTime();return}
  const a=SM.correct+SM.wrong,acc=a?Math.round(SM.correct*100/a):0,per=a?(SM.secs/a).toFixed(1):'—';
  el.innerHTML=`<div class="card" style="text-align:center">${SM.newBest?'<b style="color:var(--warn)">🏆 New best! / नया रिकॉर्ड!</b>':''}<div style="font-size:56px;font-weight:800;color:var(--ac)">${SM.rapid?SM.correct:SM.correct+' / 20'}</div><div class="mu">${SM.rapid?'correct in 60 sec / 60 सेकंड में सही':`correct in ${SM.secs}s (with penalties) / ${SM.secs} सेकंड में (सज़ा सहित)`}</div></div>
  <div class="grid"><div class="card"><small class="mu">Accuracy<br>सटीकता</small><div style="font-size:22px;font-weight:800">${acc}%</div></div><div class="card"><small class="mu">Wrong<br>गलत</small><div style="font-size:22px;font-weight:800">${SM.wrong}</div></div><div class="card"><small class="mu">Sec / question<br>सेकंड / सवाल</small><div style="font-size:22px;font-weight:800">${per}</div></div></div>
@@ -2063,7 +2194,7 @@ function ssDaily(){const r=window.QR;if(!r)return;scoreShare({title:'Daily Quiz'
 function drawReview(){const s=window.T;if(!s||!s.done)return;const Q=s.Q,hi=s.hi,el=document.getElementById('mrev'),lb=document.getElementById('mrevl');if(lb)lb.textContent=hi?'English':'हिंदी';if(!el)return;
  el.innerHTML=Q.map((q,i)=>{const a=s.ans[i],opts=qOpts(q,hi),ex=qt(q,'explanation',hi),p=qt(q,'passage',hi),img=diUrl(q),prev=i>0?Q[i-1]:null,samePrev=!!(prev&&qt(prev,'passage',hi)===p&&diUrl(prev)===img&&(p||img));
   const pBox=!samePrev?passageHtml(q,hi):(img?`<div style="margin-bottom:8px"><button class="s" style="padding:5px 10px;font-size:12px" data-u="${esc(img)}" onclick="openDiZoom(this.dataset.u)">📊 View DI Graph / ग्राफ़ देखें</button></div>`:'');
-  return `<div class="q">${pBox}<div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:8px"><b>${i+1}. ${esc(qt(q,'text',hi))}</b>${bmBtn('mt',i)}</div>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]||j+1}</span><span>${esc(o)}</span></div>`).join('')}${a===null?'<div class="ylab mu">Not attempted / अनुत्तरित</div>':a==q.correctIndex?'<div class="ylab" style="color:var(--okc)">✔ Your answer is correct</div>':'<div class="ylab" style="color:var(--bad)">✘ Your answer: '+('ABCD'[a]||a+1)+' · Correct: '+('ABCD'[q.correctIndex]||q.correctIndex+1)+'</div>'}${ex?`<p class="mu">💡 ${esc(ex)}</p>`:''}</div>`}).join('')}
+  return `<div class="q">${pBox}<div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:8px"><b>${i+1}. ${mathHtml(qt(q,'text',hi))}</b>${bmBtn('mt',i)}</div>${opts.map((o,j)=>`<div class="opt ${j==q.correctIndex?'okb':''} ${a==j&&j!=q.correctIndex?'nob':''}"><span class="badge">${'ABCD'[j]||j+1}</span><span>${mathHtml(o)}</span></div>`).join('')}${a===null?'<div class="ylab mu">Not attempted / अनुत्तरित</div>':a==q.correctIndex?'<div class="ylab" style="color:var(--okc)">✔ Your answer is correct</div>':'<div class="ylab" style="color:var(--bad)">✘ Your answer: '+('ABCD'[a]||a+1)+' · Correct: '+('ABCD'[q.correctIndex]||q.correctIndex+1)+'</div>'}${ex?`<p class="mu">💡 ${mathHtml(ex)}</p>`:''}</div>`}).join('')}
 function revLang(){if(!window.T)return;lang=lang=='hi'?'en':'hi';T.hi=lang=='hi';drawReview()}
 function submitTest(){if(!T||T.done)return;const auto=!!T.t.durationMinutes&&T.left<=0,secs=Math.max(1,Math.round((Date.now()-T.start)/1000));clearT();const s=T,t=s.t,Q=s.Q,hi=s.hi;s.done=true;{const m=document.getElementById('mtest');if(m)m.classList.remove('live');document.body.classList.remove('intest');}
  (window.BMSRC=window.BMSRC||{}).mt=t.title||'';const mp=t.marksPerQuestion||1,ng=t.negativeMarks||0;let c=0,w=0,m=0;
