@@ -2107,7 +2107,11 @@ async function bchk(id,code){
  const em=String(auth.currentUser.email||'').trim().toLowerCase();
  try{const sn=await db.doc(`batchAccess/${em}_${id}`).get(),a=sn.exists?sn.data():null;
   if(!a||a.status!='granted')return{};
-  if(a.codeRequired!==false){const sc=String(a.accessCode||'').trim();if(!sc||sc!=String(code||'').trim())return{}}
+  /* Same login ID = same access on App and Web. The access code is only stored on the
+     device where it was typed (App: phone, Web: this browser), so a batch bought / unlocked
+     in the App has no code in the Web browser. This record is readable ONLY by the account
+     whose email is in the document id (Firestore rules: isMyAccessId), and it is 'granted'
+     by the admin, so the logged-in email is enough — no code needed on Web. */
   const exp=a.expiresAt?a.expiresAt.toDate():null;
   if(exp&&new Date()>=exp)return{expired:true,exp};
   return{granted:true,exp}
