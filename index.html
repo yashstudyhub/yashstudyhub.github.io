@@ -440,10 +440,12 @@ html.land main.content>*{animation:none;transform:none}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-remote-config-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 if(typeof firebase==='undefined'){document.getElementById('app').innerHTML='<div class="box"><h2>Ye page sahi tarike se nahi khul raha</h2><p class="mu">Is file ko phone ke file viewer me mat kholo. Website ka link Chrome browser me kholo.</p></div>';throw new Error('firebase not loaded');}
 firebase.initializeApp({apiKey:"AIzaSyDSAvRzTNcXVENKNSUe0LqwuHLNZHRtHh0",authDomain:"yash-study-hub-450d2.firebaseapp.com",projectId:"yash-study-hub-450d2",storageBucket:"yash-study-hub-450d2.firebasestorage.app",messagingSenderId:"782647828219",appId:"1:782647828219:web:bd86accdd0eeffed165a5e"});
 const auth=firebase.auth(),db=firebase.firestore(),app=document.getElementById('app');
+try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const _SUP_MAP={'\u2070':'0','\u00B9':'1','\u00B2':'2','\u00B3':'3','\u2074':'4','\u2075':'5','\u2076':'6','\u2077':'7','\u2078':'8','\u2079':'9','\u207A':'+','\u207B':'-','\u207D':'(','\u207E':')'};
 const _MATH_RE=/[\^√∛\u00B2\u00B3\u00B9\u2070\u2074-\u2079\u207A\u207B\u207D\u207E*\/]|>=|<=|!=|\b(?:sqrt|cbrt)\s*\(| - /i;
@@ -569,6 +571,8 @@ function mathHtml(s){
  return _mParse(_mNorm(t),0);
 }
 const yid=u=>(String(u).match(/(?:v=|youtu\.be\/|embed\/|live\/|shorts\/)([\w-]{11})/)||[])[1]||'';
+const isDirectVid=u=>/^https?:\/\//i.test(String(u||''))&&!yid(u)&&(/\.(mp4|webm|mov|m4v)(\?|$)/i.test(u)||/firebasestorage\.googleapis\.com/i.test(u));
+const hasVid=u=>!!(yid(u)||isDirectVid(u));
 const ord=(a,b)=>(a.order??1e9)-(b.order??1e9)||(tsMs(a.createdAt)-tsMs(b.createdAt))||String(a.title||a.name||a.examName||'').toLowerCase().localeCompare(String(b.title||b.name||b.examName||'').toLowerCase());
 const list=async q=>(await q.get()).docs.map(d=>({id:d.id,...d.data()}));
 // Cache-first list reads (web version of the app's _cachedGet): a list is downloaded once, then served from localStorage
@@ -1132,13 +1136,15 @@ async home(){
 async videos(){
  const [f,v]=await Promise.all([cl('vfree',db.collection('videoFolders').where('batchId','==','free'),6,['newVideosAt','newBatchesAt']),cl('vnull',db.collection('videos').where('batchId','==',null),1,['newVideosAt'])]);
  f.sort(ord);const nw=x=>x.publishedAt?.seconds||x.createdAt?.seconds||0;
- const ok=v.filter(x=>!x.hidden&&yid(x.youtubeLink)&&!x.folderId).sort((a,b)=>nw(b)-nw(a));
+ const ok=v.filter(x=>!x.hidden&&hasVid(x.youtubeLink)&&!x.folderId).sort((a,b)=>nw(b)-nw(a));
  const auto=ok.filter(x=>x.source=='youtube_auto').slice(0,10),loose=ok.filter(x=>x.source!='youtube_auto'),vs=[...loose,...auto].sort((a,b)=>nw(b)-nw(a));
  const cnt=await Promise.all(f.map(x=>db.collection('videos').where('folderId','==',x.id).get().then(r=>r.docs.filter(d=>!d.data().hidden).length).catch(()=>null)));
  return wrap(`<h2 class="pageTitle">Video Classes</h2>`+(f.length?f.map((x,i)=>lrow('vf/'+x.id,'📁',x.name,cnt[i]==null?'':cnt[i]+(cnt[i]==1?' video':' videos'))).join(''):'')+(f.length&&vs.length?'<h3 class="subh">Videos</h3>':'')+vs.map(vrow).join('')+(f.length||vs.length?'':empty))},
-async vf(id){const v=(await cl('vin_'+id,db.collection('videos').where('folderId','==',id),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?v.map(vrow).join(''):'<p class="mu">No video in this folder yet / इस फ़ोल्डर में अभी कोई वीडियो नहीं है।</p>'))},
+async vf(id){const v=(await cl('vin_'+id,db.collection('videos').where('folderId','==',id),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&hasVid(x.youtubeLink)).sort(ord);return wrap(back+(v.length?v.map(vrow).join(''):'<p class="mu">No video in this folder yet / इस फ़ोल्डर में अभी कोई वीडियो नहीं है।</p>'))},
 async play(id,t,ext=true){return wrap(back+`<h2 class="pageTitle">${esc(decodeURIComponent(t||''))}</h2><iframe class="v" src="https://www.youtube.com/embed/${esc(id)}?autoplay=1&rel=0&cc_load_policy=1&playsinline=1" allow="accelerometer;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen></iframe>`+(ext?`<a class="btnlink" href="https://www.youtube.com/watch?v=${esc(id)}" target="_blank" rel="noopener"><span class="material-icons">open_in_new</span>Open in YouTube</a>`:''))},
 async playb(id,t){return this.play(id,t,false)},
+async playv(u,t,ext=true){const src=decodeURIComponent(u||'').trim();if(!/^https?:\/\//i.test(src))return wrap(back+empty);return wrap(back+`<h2 class="pageTitle">${esc(decodeURIComponent(t||''))}</h2><video class="v" style="width:100%;border-radius:12px;background:#000" controls playsinline ${ext?'':'controlsList="nodownload" oncontextmenu="return false"'} src="${esc(src)}"></video>`)},
+async playvb(u,t){return this.playv(u,t,false)},
 async pdfs(){
  let cur=ls.get('pt')=='paid'?'paid':'free';
  const [f,bs]=await Promise.all([cl('pffree',db.collection('pdfFolders').where('type','==','free'),6,['newPdfsAt','newBatchesAt']),cl('batches',db.collection('batches'),3,['newBatchesAt'])]);f.sort(ord);bs.sort(ord);
@@ -1155,7 +1161,7 @@ async pdf(l,t,ext=true){const u=decodeURIComponent(l).trim(),ti=decodeURICompone
  const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u),dl=id?`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`:u;
  let fn=(ti.replace(/[\\/:*?"<>|]/g,'_').trim()||'Yash Study Hub PDF');if(!/\.pdf$/i.test(fn))fn+='.pdf';
  window.pdfLoaded=false;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
- return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b>${esc(ti)}</b><a href="${esc(dl)}" target="_blank" rel="noopener" download="${esc(fn)}" title="Download PDF"><span class="material-icons">download</span></a><a title="Reload" onclick="pdfReload()"><span class="material-icons">refresh</span></a>${ext?`<a href="${esc(u)}" target="_blank" rel="noopener" title="Open outside the app"><span class="material-icons">open_in_new</span></a>`:''}</div>
+ return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b>${esc(ti)}</b>${ext?`<a href="${esc(dl)}" target="_blank" rel="noopener" download="${esc(fn)}" title="Download PDF"><span class="material-icons">download</span></a>`:''}<a title="Reload" onclick="pdfReload()"><span class="material-icons">refresh</span></a>${ext?`<a href="${esc(u)}" target="_blank" rel="noopener" title="Open outside the app"><span class="material-icons">open_in_new</span></a>`:''}</div>
  <div class="pdfbox"><div id="pdfpg" class="pdfpg"></div><iframe id="pdfv" class="pdf" ${ext?'':'sandbox="allow-scripts allow-same-origin allow-forms"'} src="${esc(src)}" onload="pdfOk()"></iframe>${ext?'':'<div class="pdfblk"></div>'}<div id="pdfer" class="pdfer" hidden><span class="material-icons" style="font-size:40px;opacity:.5">picture_as_pdf</span><span>Could not load this PDF. Check your internet connection and try again.<br>PDF लोड नहीं हो सका। इंटरनेट जाँचकर फिर कोशिश करें।</span><button class="p" onclick="pdfReload()">Try again</button></div></div>`)},
 async pdfb(l,t){return this.pdf(l,t,false)},
 async batches(){const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).sort(ord),g=await bgranted(bs);
@@ -1244,19 +1250,24 @@ async ca(){
   +`<div class="chips">${[['both','Both'],['hi','हिंदी'],['en','English']].map(([k,t])=>`<a class="chip ${CAS.lang==k?'on':''}" onclick="caSet('lang','${k}')">${t}</a>`).join('')}</div>`
   +note+(shown.length?shown.map(x=>caCard(x,CAS.lang)).join(''):empty))},
 async mocks(){const f=(await cl('mfall',db.collection('mockTestFolders'),6,['newMocksAt','newBatchesAt'])).filter(x=>!(x.batchIds||[]).length).sort(ord);return wrap(`<h2 class="pageTitle">Mock Tests</h2>`+(f.length?'<div>'+f.map(x=>lrow('mf/'+x.id,'📝',x.examName)).join('')+'</div>':empty))},
-async mf(id,st){const t=(await list(db.collection('mockTests').where('folderId','==',id))).sort(ord);if(!t.length)return wrap(back+empty);
+async mf(id,st){const t=(await cl('mtin_'+id,db.collection('mockTests').where('folderId','==',id),6,['newMocksAt','newBatchesAt'])).sort(ord);if(!t.length)return wrap(back+empty);
  const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''},P=t.filter(x=>sg(x)=='prelims'),M=t.filter(x=>sg(x)=='mains'),N=t.filter(x=>!sg(x)),has=P.length||M.length;
- const tt=mrow;
- const subj=(arr,sk)=>{const g={},u=[];arr.forEach(x=>{const k=(x.subject||'').trim().toLowerCase();if(!k)u.push(x);else(g[k]=g[k]||{name:x.subject.trim(),n:0}).n++});const ks=Object.keys(g);
-  return (ks.length?'<div>'+ks.map(k=>lrow('ms/'+id+'/'+sk+'.'+encodeURIComponent(k),'📚',g[k].name,g[k].n+(g[k].n==1?' test':' tests'))).join('')+'</div>':'')+(u.length?(ks.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div>'+u.map(tt).join('')+'</div>':'')};
+ const tt=mrow,sp=s=>String(s||'').split('/').map(z=>z.trim()).filter(Boolean);
+ const subj=(arr,sk)=>{const g={},u=[];arr.forEach(x=>{const segs=sp(x.subject);if(!segs.length)u.push(x);else{const k=segs[0].toLowerCase();(g[k]=g[k]||{name:segs[0],n:0}).n++}});const ks=Object.keys(g);
+  return (ks.length?'<div>'+ks.map(k=>lrow('ms/'+id+'/'+sk+'.'+encodeURIComponent(g[k].name),'📚',g[k].name,g[k].n+(g[k].n==1?' test':' tests'))).join('')+'</div>':'')+(u.length?(ks.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div>'+u.map(tt).join('')+'</div>':'')};
  if(!st&&has)return wrap(back+'<div>'+(P.length?lrow('mf/'+id+'/prelims','🎯','Prelims',P.length+(P.length==1?' test':' tests')):'')+(M.length?lrow('mf/'+id+'/mains','✍️','Mains',M.length+(M.length==1?' test':' tests')):'')+'</div>'+(N.length?'<h2 class="pageTitle">Other tests</h2>'+subj(N,'none'):''));
  const arr=!st?t:st=='prelims'?P:st=='mains'?M:N,ttl=st=='prelims'?'Prelims':st=='mains'?'Mains':st=='none'?'Other tests':'';
  return wrap(back+(ttl?`<h2 class="pageTitle">${ttl}</h2>`:'')+subj(arr,st||''))},
-async ms(folderId,b){const i=String(b||'').indexOf('.'),st=i<0?'':b.slice(0,i),k=decodeURIComponent(i<0?b:b.slice(i+1));
+async ms(folderId,b){const i=String(b||'').indexOf('.'),st=i<0?'':b.slice(0,i),rawPath=decodeURIComponent(i<0?b:b.slice(i+1));
+ const sp=s=>String(s||'').split('/').map(z=>z.trim()).filter(Boolean),cur=sp(rawPath),curLow=cur.map(z=>z.toLowerCase());
  const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
- const t=(await list(db.collection('mockTests').where('folderId','==',folderId))).filter(x=>(x.subject||'').trim().toLowerCase()==k&&(!st||(st=='none'?!sg(x):sg(x)==st))).sort(ord);
- const name=t[0]?t[0].subject.trim():'',pre=st=='prelims'?'Prelims • ':st=='mains'?'Mains • ':'';
- return wrap(back+`<h2 class="pageTitle">${esc(pre+name)}</h2>`+(t.length?'<div>'+t.map(mrow).join('')+'</div>':empty))},
+ const all=(await cl('mtin_'+folderId,db.collection('mockTests').where('folderId','==',folderId),6,['newMocksAt','newBatchesAt'])).filter(x=>{if(st&&(st=='none'?!!sg(x):sg(x)!=st))return false;const segs=sp(x.subject);if(segs.length<cur.length)return false;for(let j=0;j<cur.length;j++)if(segs[j].toLowerCase()!=curLow[j])return false;return true}).sort(ord);
+ const subs={},direct=[];
+ all.forEach(x=>{const segs=sp(x.subject);if(segs.length===cur.length)direct.push(x);else{const nx=segs[cur.length],k=nx.toLowerCase();(subs[k]=subs[k]||{name:nx,n:0}).n++}});
+ const subKeys=Object.keys(subs),pre=st=='prelims'?'Prelims • ':st=='mains'?'Mains • ':'',heading=cur.join(' › ');
+ const subHtml=subKeys.length?'<div>'+subKeys.map(k=>lrow('ms/'+folderId+'/'+st+'.'+encodeURIComponent([...cur,subs[k].name].join('/')),'📂',subs[k].name,subs[k].n+(subs[k].n==1?' test':' tests'))).join('')+'</div>':'';
+ const dirHtml=direct.length?(subKeys.length?'<h2 class="pageTitle">Other tests</h2>':'')+'<div>'+direct.map(mrow).join('')+'</div>':'';
+ return wrap(back+`<h2 class="pageTitle">${esc(pre+heading)}</h2>`+(subHtml||dirHtml?subHtml+dirHtml:empty))},
 async test(id){const d=await db.doc('mockTests/'+id).get();if(!d.exists)return wrap(back+empty);const t=d.data(),Q=t.questions||[];window.T={t,Q,id,start:Date.now(),ans:[],i:0,pal:false,done:false,hi:lang=='hi'};
  return wrap(back+`<h2 class="pageTitle">${esc(t.title)}</h2><div id="mtest"></div>`)},
 async board(id){const s=await db.collection('mockScores').doc(id).collection('scores').limit(300).get();
@@ -1410,7 +1421,7 @@ async function admBanners(){
  const [bs,b]=await Promise.all([list(db.collection('batches')),list(db.collection('banners')).then(bsort)]);const st=ABS(),BT={};bs.forEach(x=>BT[x.id]=x.title);
  return `<div class="adh" style="margin-top:6px">Home Screen — auto-scroll banner slider</div><p class="mu" style="font-size:12px">16:9 landscape images look best (for example 1280×720). A new banner shows on the Home screen right away, no rebuild needed.</p>
  <div style="aspect-ratio:16/9;border-radius:12px;border:1px solid var(--line);overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px">${st.i?`<img src="${esc(st.i)}" style="width:100%;height:100%;object-fit:cover">`:'🖼️'}</div>
- <input style="width:100%;margin-top:8px" value="${esc(st.i)}" placeholder="Banner image URL (https://…)" onchange="ABS().i=this.value.trim();route()">
+ <div class="row" style="margin-top:8px"><input style="flex:1;margin:0" value="${esc(st.i)}" placeholder="Banner image URL (https://…)" onchange="ABS().i=this.value.trim();route()"><button type="button" class="s" onclick="admPickUpload('image/*','banner',u=>{ABS().i=u;route()},this)">📤 Upload</button></div>
  <select style="width:100%;margin-top:8px" onchange="ABS().b=this.value;route()"><option value="">No batch (use link below)</option>${bs.map(x=>`<option value="${esc(x.id)}" ${x.id==st.b?'selected':''}>${esc(x.title)}</option>`).join('')}</select>
  ${st.b?'<p class="mu" style="font-size:12px">Tapping this banner opens the batch’s payment page ("Pay & Get").</p>':`<span class="adl">Link (optional — opens when the banner is tapped)</span><input style="width:100%" value="${esc(st.l)}" onchange="ABS().l=this.value.trim()">`}
  <button class="p" style="width:100%;margin-top:12px" ${st.i?'':'disabled'} onclick="admBanner(${b.length})">Add banner</button>
@@ -1474,7 +1485,7 @@ async function admBatches(){
  const b=bsort(await list(db.collection('batches')));
  const ic=window.ADBI||'';
  return `<div class="adh" style="margin-top:6px">Add new batch</div>
- <span class="adl">Batch icon/picture</span><div class="row"><div style="width:48px;height:48px;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#fff">${ic?`<img src="${esc(ic)}" style="width:100%;height:100%;object-fit:cover">`:'🖼️'}</div><input id="bu" value="${esc(ic)}" placeholder="Image URL (https://…)" style="flex:1" onchange="ADBI=this.value.trim();route()"></div>
+ <span class="adl">Batch icon/picture</span><div class="row"><div id="bu_prev" style="width:48px;height:48px;border-radius:10px;border:1px solid var(--line);overflow:hidden;display:flex;align-items:center;justify-content:center;background:#fff">${ic?`<img src="${esc(ic)}" style="width:100%;height:100%;object-fit:cover">`:'🖼️'}</div><input id="bu" value="${esc(ic)}" placeholder="Image URL (https://…)" style="flex:1" onchange="ADBI=this.value.trim();admSetImgPreview('bu_prev','bu',ADBI)"><button type="button" class="s" onclick="admPickUpload('image/*','batch_icon',u=>{ADBI=u;admSetImgPreview('bu_prev','bu',u)},this)">📤 Upload</button></div>
  <span class="adl">Batch title</span><input id="bt" style="width:100%">
  <span class="adl">Price (number only)</span><input id="bp" type="number" min="0" style="width:100%">
  <span class="adl">Validity in months (empty = lifetime)</span><input id="bv" type="number" min="0" style="width:100%"><small class="mu">How long a student keeps access after you grant it, e.g. 6.</small>
@@ -1547,7 +1558,7 @@ async function ameBack(){ameSync();if(window.AME.dirty&&!confirm('Discard change
 async function ameView(){const E=window.AME,fs=await list(db.collection('mockTestFolders')).then(bsort);
  const HR=AMHR,Q=E.qi!==null?E.qf:null;
  const fld=(id,l,v,ro)=>`<span class="adl">${l}</span><input id="${id}" value="${esc(v||'')}" style="width:100%">`,ta=(id,l,v,r)=>`<span class="adl">${l}</span><textarea id="${id}" rows="${r}" style="width:100%">${esc(v||'')}</textarea>`;
- const qed=Q?`<div class="card" style="border:2px solid var(--navy)"><b>${E.qi<0?'Add question':'Edit question'}</b>${ta('qe_pass','Directions / information (English, optional)',Q.passage,5)}${fld('qe_img','DI image link (https://..., optional)',Q.passageImage)}${ta('qe_q','Question (English)',Q.text,3)}${[0,1,2,3].map(i=>`<div class="row" style="margin-top:6px"><input type="radio" name="qec" value="${i}" ${Q.correctIndex==i?'checked':''} style="width:20px;height:20px;flex:none"><input id="qe_o${i}" value="${esc((Q.options||[])[i]||'')}" placeholder="Option ${'ABCD'[i]}" style="flex:1"></div>`).join('')}<small class="mu">Radio = correct answer</small>${ta('qe_exp','Explanation (English, optional)',Q.explanation,3)}<div class="adh">Hindi (optional)</div>${ta('qe_passHi','Directions / information (Hindi)',Q.passageHi,4)}${ta('qe_qHi','Question (Hindi)',Q.textHi,3)}${[0,1,2,3].map(i=>fld('qe_oHi'+i,'Option '+'ABCD'[i]+' (Hindi)',(Q.optionsHi||[])[i])).join('')}${ta('qe_expHi','Explanation (Hindi)',Q.explanationHi,3)}<div id="qe_err" class="err" style="font-size:12px"></div><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="s" onclick="ameQCancel()">Cancel</button><button class="p" onclick="ameQOk()">OK</button></div></div>`:'';
+ const qed=Q?`<div class="card" style="border:2px solid var(--navy)"><b>${E.qi<0?'Add question':'Edit question'}</b>${ta('qe_pass','Directions / information (English, optional)',Q.passage,5)}<span class="adl">DI image link (https://..., optional)</span><div class="row" style="margin:0"><input id="qe_img" value="${esc(Q.passageImage||'')}" style="flex:1;margin:4px 0" placeholder="https://… or upload"><button type="button" class="s" onclick="admPickUpload('image/*','di_graph',u=>{const e=document.getElementById('qe_img');if(e)e.value=u},this)">📤 Upload</button></div>${ta('qe_q','Question (English)',Q.text,3)}${[0,1,2,3].map(i=>`<div class="row" style="margin-top:6px"><input type="radio" name="qec" value="${i}" ${Q.correctIndex==i?'checked':''} style="width:20px;height:20px;flex:none"><input id="qe_o${i}" value="${esc((Q.options||[])[i]||'')}" placeholder="Option ${'ABCD'[i]}" style="flex:1"></div>`).join('')}<small class="mu">Radio = correct answer</small>${ta('qe_exp','Explanation (English, optional)',Q.explanation,3)}<div class="adh">Hindi (optional)</div>${ta('qe_passHi','Directions / information (Hindi)',Q.passageHi,4)}${ta('qe_qHi','Question (Hindi)',Q.textHi,3)}${[0,1,2,3].map(i=>fld('qe_oHi'+i,'Option '+'ABCD'[i]+' (Hindi)',(Q.optionsHi||[])[i])).join('')}${ta('qe_expHi','Explanation (Hindi)',Q.explanationHi,3)}<div id="qe_err" class="err" style="font-size:12px"></div><div class="row" style="justify-content:flex-end;margin-top:8px"><button class="s" onclick="ameQCancel()">Cancel</button><button class="p" onclick="ameQOk()">OK</button></div></div>`:'';
  return `<div class="row" style="justify-content:space-between;margin:6px 0"><button class="s" onclick="ameBack()">← Back</button><b>Edit mock test</b><button class="p" onclick="ameSave()">Save</button></div>
  <div oninput="AME.dirty=1" onchange="AME.dirty=1">${fld('ae_t','Test title',E.t)}
  <div class="row"><div style="flex:1">${fld('ae_m','Time (minutes)',E.m)}</div><div style="flex:1">${fld('ae_k','Marks / question',E.k)}</div><div style="flex:1">${fld('ae_n','Negative marks',E.n)}</div></div>
@@ -1676,11 +1687,14 @@ const BRF=[['appName','App name'],['tagline','Tagline'],['upiId','UPI ID'],['tel
 async function admBranding(){
  const c=(await db.doc('appConfig/main').get().then(d=>d.data()).catch(()=>null))||{},lg=window.ALG!==undefined?window.ALG:(c.logoUrl||'');
  return `<div class="adh" style="margin-top:6px">App logo (shown on splash screen + home header)</div>
- <div class="row"><div style="width:64px;height:64px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none">${lg?`<img src="${esc(lg)}" style="width:100%;height:100%;object-fit:cover">`:'🎓'}</div><input id="lg" value="${esc(lg)}" placeholder="New logo URL (https://…)" style="flex:1" onchange="ALG=this.value.trim();route()"></div>
+ <div class="row"><div id="lg_prev" style="width:64px;height:64px;border-radius:14px;overflow:hidden;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:26px;flex:none">${lg?`<img src="${esc(lg)}" style="width:100%;height:100%;object-fit:cover">`:'🎓'}</div><input id="lg" value="${esc(lg)}" placeholder="New logo URL (https://…)" style="flex:1" onchange="ALG=this.value.trim();admSetImgPreview('lg_prev','lg',ALG)"><button type="button" class="s" onclick="admPickUpload('image/*','logo',u=>{ALG=u;admSetImgPreview('lg_prev','lg',u)},this)">📤 Upload</button></div>
  <button class="p" style="width:100%;margin-top:10px" onclick="admLogo()">Save logo</button>
  <hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div class="adh" style="margin-top:0">App name, tagline, UPI ID & social links</div><p class="mu" style="font-size:12px">Changes show up in the whole app right away — no rebuild needed. Double-check the UPI ID: students pay to it.</p>
  ${BRF.map(f=>`<span class="adl">${f[1]}</span><input id="br_${f[0]}" value="${esc(c[f[0]]||'')}" style="width:100%">`).join('')}
- <button class="p" style="width:100%;margin-top:12px" onclick="admBrand()">Save</button>`+await admOrder();
+ <button class="p" style="width:100%;margin-top:12px" onclick="admBrand()">Save</button>
+ <hr style="border:0;border-top:1px solid var(--line);margin:22px 0"><div class="adh" style="margin-top:0">Direct Upload Setup (Images &amp; PDFs)</div>
+ <p class="mu" style="font-size:12px">Paste your fine-grained GitHub token (<code>ysh-images</code> repo, Contents: Read &amp; Write). Saved <b>only in this browser</b> — never sent to Firebase. Status: <b>${ghTok()?'✅ Token saved':'⚠️ Not set'}</b></p>
+ <div class="row"><input id="ghtok" type="password" value="${esc(ghTok())}" placeholder="github_pat_…" style="flex:1;margin:0"><button type="button" class="p" onclick="admGhTokSave()">Save token</button>${ghTok()?`<button type="button" class="s" onclick="ghTokSet('');toast('Token cleared');route()">Clear</button>`:''}</div>`+await admOrder();
 }
 async function admLogo(){const u=$v('lg').trim();if(!/^https:\/\//.test(u))return alert('Logo URL https:// se shuru hona chahiye');try{await db.doc('appConfig/main').set({logoUrl:u},{merge:true});window.ALG=undefined;toast('Logo saved ✅');route()}catch(e){alert('Save nahi hua: '+e.message)}}
 async function admBrand(){const d={};BRF.forEach(f=>d[f[0]]=$v('br_'+f[0]).trim());
@@ -2241,7 +2255,7 @@ function showNav(p){
 const monthsText=n=>n==1?'1 month':n+' months';
 const bsub=b=>(b.mockOnly?'Mock Test Series':(+b.videos||0)+' videos • '+(+b.pdfs||0)+' PDFs')+((+b.validityMonths||0)>0?' • Valid for '+monthsText(+b.validityMonths):'');
 const bico=b=>b.iconUrl?`<img class="bico" src="${esc(b.iconUrl)}" alt="" onerror="this.outerHTML='<span class=&quot;bico&quot;>🎓</span>'">`:'<span class="bico">🎓</span>';
-const vrow=x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/play/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span></a>`};
+const vrow=x=>{const y=yid(x.youtubeLink),href=y?`#/play/${y}/${encodeURIComponent(x.title||'')}`:`#/playv/${encodeURIComponent(x.youtubeLink||'')}/${encodeURIComponent(x.title||'')}`,th=x.thumbUrl||(y?'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg':'');return `<a class="card cr bxr" href="${href}">${th?`<img loading="lazy" class="bth" src="${esc(th)}" alt="">`:'<span class="bth" style="display:grid;place-items:center;background:var(--card2);font-size:20px">🎬</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span></a>`};
 const prow=(x,batch)=>`<a class="card cr bxr" href="#/${batch?'pdfb':'pdf'}/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:24px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`;
 async function bchk(id,code){
  const em=String(auth.currentUser.email||'').trim().toLowerCase();
@@ -2368,14 +2382,15 @@ async function btOpen(el,bid,silent){
  if(!el.open||el.dataset.done)return;el.dataset.done='1';
  const body=el.querySelector('.bxb'),k=el.dataset.k,fid=el.dataset.id,none='<p class="mu" style="margin:8px 6px">Empty</p>';
  try{
-  if(k=='v'){const v=(await cl('vin_'+fid,db.collection('videos').where('folderId','==',fid),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&yid(x.youtubeLink)).sort(ord);
-   body.innerHTML=v.length?v.map(x=>{const y=yid(x.youtubeLink);return `<a class="card cr bxr" href="#/playb/${y}/${encodeURIComponent(x.title||'')}"><img loading="lazy" class="bth" src="${esc(x.thumbUrl||'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg')}" alt=""><span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">play_circle_outline</span></a>`}).join(''):none}
+  if(k=='v'){const v=(await cl('vin_'+fid,db.collection('videos').where('folderId','==',fid),6,['newVideosAt','newBatchesAt'])).filter(x=>!x.hidden&&hasVid(x.youtubeLink)).sort(ord);
+   body.innerHTML=v.length?v.map(x=>{const y=yid(x.youtubeLink),href=y?`#/playb/${y}/${encodeURIComponent(x.title||'')}`:`#/playvb/${encodeURIComponent(x.youtubeLink||'')}/${encodeURIComponent(x.title||'')}`,th=x.thumbUrl||(y?'https://i.ytimg.com/vi/'+y+'/mqdefault.jpg':'');return `<a class="card cr bxr" href="${href}">${th?`<img loading="lazy" class="bth" src="${esc(th)}" alt="">`:'<span class="bth" style="display:grid;place-items:center;background:var(--card2);font-size:20px">🎬</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">play_circle_outline</span></a>`}).join(''):none}
   else if(k=='p'){const p=(await cl('pin_'+fid,db.collection('pdfs').where('folderId','==',fid),6,['newPdfsAt','newBatchesAt'])).sort(ord);
    body.innerHTML=p.length?p.map(x=>`<a class="card cr bxr" href="#/pdfb/${encodeURIComponent(x.driveLink)}/${encodeURIComponent(x.title)}">${x.iconUrl?`<img class="bth sq" src="${esc(x.iconUrl)}" alt="">`:'<span style="font-size:22px">📄</span>'}<span style="flex:1"><b>${esc(x.title)}</b></span><span class="material-icons mu">chevron_right</span></a>`).join(''):none}
   else{const t=(await list(db.collection('mockTests').where('folderId','==',fid))).sort(ord);
    const sg=x=>{const v=String(x.examStage||'').trim().toLowerCase();return v=='prelims'||v=='mains'?v:''};
-   const sub=arr=>{const g={},u=[];arr.forEach(x=>{const n=(x.subject||'').trim();if(!n)u.push(x);else(g[n.toLowerCase()]=g[n.toLowerCase()]||{name:n,a:[]}).a.push(x)});
-    return Object.values(g).map(s=>`<details class="bx sub"><summary><span class="i">📚</span><span class="t">${esc(s.name)}<small class="mu">${s.a.length} ${s.a.length==1?'test':'tests'}</small></span><span class="material-icons ch">expand_more</span></summary><div class="bxb">${s.a.map(mrow).join('')}</div></details>`).join('')+u.map(mrow).join('')};
+   const sp=s=>String(s||'').split('/').map(z=>z.trim()).filter(Boolean);
+   const sub=(arr,d=0)=>{const g={},u=[];arr.forEach(x=>{const segs=sp(x.subject);if(segs.length<=d)u.push(x);else{const nm=segs[d],k=nm.toLowerCase();(g[k]=g[k]||{name:nm,a:[]}).a.push(x)}});
+    return Object.values(g).map(s=>`<details class="bx sub"><summary><span class="i">${d?'📂':'📚'}</span><span class="t">${esc(s.name)}<small class="mu">${s.a.length} ${s.a.length==1?'test':'tests'}</small></span><span class="material-icons ch">expand_more</span></summary><div class="bxb">${sub(s.a,d+1)}</div></details>`).join('')+u.map(mrow).join('')};
    const P=t.filter(x=>sg(x)=='prelims'),M=t.filter(x=>sg(x)=='mains'),N=t.filter(x=>!sg(x));
    const stg=(l,e,a)=>a.length?`<details class="bx sub"><summary><span class="i">${e}</span><span class="t">${l}<small class="mu">${a.length} ${a.length==1?'test':'tests'}</small></span><span class="material-icons ch">expand_more</span></summary><div class="bxb">${sub(a)}</div></details>`:'';
    body.innerHTML=t.length?((P.length||M.length)?stg('Prelims','🎯',P)+stg('Mains','✍️',M)+sub(N):sub(t)):none}
@@ -2387,7 +2402,7 @@ async function route(){
  if(window.NEEDSETUP){setupView();return}
  tsInit();TS.screenOpen=location.hash.startsWith('#/timer');tsPill();
  if(!location.hash.startsWith('#/tracker'))window.XTE=null;
- const[p,a,b]=(location.hash.slice(2)||'home').split('/');
+ const _hp=(location.hash.slice(2)||'home').split('/'),p=_hp[0],a=_hp[1],b=_hp.length>2?_hp.slice(2).join('/'):undefined;
  if(!V[p]){location.hash='#/home';return}
  app.innerHTML='<p class="mu" style="padding:16px">Loading…</p>';
  showNav(p);
@@ -2416,7 +2431,7 @@ async function route(){
  f();[mq,co].forEach(m=>m.addEventListener&&m.addEventListener('change',f));addEventListener('resize',f);addEventListener('orientationchange',f);
  /* Landscape me pehle tap par browser ki top bar + status bar chhupa do (fullscreen). Portrait me wapas normal. */
  document.addEventListener('click',()=>{if(tried||!d.classList.contains('land')||document.fullscreenElement||!d.requestFullscreen)return;tried=1;d.requestFullscreen({navigationUI:'hide'}).catch(()=>{})},true);
- try{if('serviceWorker' in navigator&&location.protocol=='https:')navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}})();
+ try{if('serviceWorker' in navigator&&(location.protocol=='https:'||location.hostname=='localhost'||location.hostname=='127.0.0.1'))navigator.serviceWorker.register('./sw.js').catch(()=>{})}catch(e){}})();
 window.addEventListener('hashchange',()=>auth.currentUser&&route());
 auth.onAuthStateChanged(async u=>{
  if(!u){clearT();window.NEEDSETUP=false;return loginView();}
@@ -2624,6 +2639,70 @@ async function apMove(col,key,id,d){try{const a=(window.AOL||{})[key]||[],i=a.in
  await apWrites(a.map((x,k)=>w=>w.update(db.collection(col).doc(x),{order:k})));try{fqClear()}catch(e){}route()}catch(e){alert('Could not save the new order: '+e.message)}}
 const apHint='<small class="mu" style="display:block;margin:2px 0 6px">Use the arrows. Students see the same order.</small>';
 
+// ---- Direct File Upload for Web Admin Panel (Images & PDFs -> free GitHub ysh-images + jsDelivr; Videos -> Firebase Storage if Blaze enabled) ----
+const GH_UP={owner:'yashpcmishra-cyber',repo:'ysh-images',branch:'main',key:'ysh_gh_tok'};
+const ghTok=()=>String(ls.get(GH_UP.key)||'').trim();
+function ghTokSet(v){try{v=String(v||'').trim();if(v)localStorage.setItem(GH_UP.key,v);else localStorage.removeItem(GH_UP.key)}catch(e){}}
+function ghReadB64(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const s=String(r.result||''),i=s.indexOf(',');res(i>=0?s.slice(i+1):s)};r.onerror=()=>rej(new Error('Could not read file'));r.readAsDataURL(file)})}
+async function admGhUpload(file,prefix){
+ let tok=ghTok();
+ if(!tok){
+  const entered=prompt('First time setup: paste your GitHub IMAGE_UPLOAD_TOKEN (fine-grained token for ysh-images repo).\nयह केवल आपके इस ब्राउज़र में सेव रहेगा — Firebase में नहीं जाएगा।');
+  if(!entered||!entered.trim())throw new Error('Upload cancelled — GitHub token not set.');
+  tok=entered.trim();ghTokSet(tok);
+ }
+ if(file.size>24*1024*1024)throw new Error('File is larger than 24 MB. For bigger files, upload to Google Drive and paste the link. / 24 MB से बड़ी फ़ाइल के लिए Google Drive लिंक डालें।');
+ const b64=await ghReadB64(file);
+ const rawExt=(file.name&&file.name.includes('.'))?file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g,''):'bin';
+ const ext=rawExt||(prefix=='pdf'?'pdf':'jpg');
+ const path=`uploads/${prefix}_${Date.now()}.${ext}`;
+ const resp=await fetch(`https://api.github.com/repos/${GH_UP.owner}/${GH_UP.repo}/contents/${path}`,{
+  method:'PUT',
+  headers:{'Authorization':'Bearer '+tok,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+  body:JSON.stringify({message:`Upload ${prefix} via Yash Study Hub Web Admin`,content:b64,branch:GH_UP.branch})
+ });
+ if(!resp.ok){
+  if(resp.status===401||resp.status===403)throw new Error('GitHub token rejected (expired, wrong, or missing Contents Read/Write permission on ysh-images). Update it in Admin > Branding.');
+  if(resp.status===404)throw new Error(`Repo ${GH_UP.owner}/${GH_UP.repo} not found or token has no access.`);
+  const tx=await resp.text().catch(()=>'');
+  throw new Error(`Upload failed (${resp.status}): ${tx.slice(0,140)}`);
+ }
+ const j=await resp.json().catch(()=>({}));
+ const sha=j&&j.commit&&j.commit.sha?j.commit.sha:GH_UP.branch;
+ return `https://cdn.jsdelivr.net/gh/${GH_UP.owner}/${GH_UP.repo}@${sha}/${path}`;
+}
+async function admStorageUpload(file,folder){
+ if(!firebase.storage)throw new Error('Firebase Storage SDK is not loaded. Use a YouTube/Drive link instead.');
+ const safe=(file.name||'file').replace(/[^a-zA-Z0-9._-]/g,'_');
+ const ref=firebase.storage().ref().child(`${folder}/${Date.now()}_${safe}`);
+ try{await ref.put(file);return await ref.getDownloadURL()}
+ catch(e){
+  const code=(e&&e.code)||'';
+  if(code.includes('bucket-not-found')||code.includes('project-not-found')||code.includes('unauthorized')||code.includes('unknown')){
+   throw new Error('Firebase Storage is not enabled (needs Blaze plan). Upload video on YouTube (Unlisted) and paste the YouTube link here. / वीडियो YouTube (Unlisted) पर अपलोड करके लिंक पेस्ट करें।');
+  }
+  throw new Error('Video upload failed: '+(e.message||code));
+ }
+}
+function admPickUpload(accept,kind,onDone,btn){
+ const inp=document.createElement('input');inp.type='file';inp.accept=accept;
+ inp.onchange=async()=>{
+  const file=inp.files&&inp.files[0];if(!file)return;
+  const oldTxt=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳ Uploading…'}
+  toast('Uploading '+file.name+'… / अपलोड हो रहा है…',8000);
+  try{
+   const url=kind==='video'?await admStorageUpload(file,'videos/'+(APS.vb||'free')):await admGhUpload(file,kind);
+   toast('Uploaded ✅ / अपलोड हो गया ✅');
+   onDone(url,file);
+  }catch(e){alert(e.message||String(e))}
+  finally{if(btn){btn.disabled=false;btn.textContent=oldTxt}}
+ };
+ inp.click();
+}
+function admSetImgPreview(boxId,inputId,url){const inp=document.getElementById(inputId);if(inp)inp.value=url;const box=document.getElementById(boxId);if(box)box.innerHTML=`<img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover">`}
+function admGhTokSave(){const v=$v('ghtok').trim();ghTokSet(v);toast(v?'Upload token saved in this browser ✅':'Upload token cleared');route()}
+
 async function admPdfs(){
  const S=APS,bs=bsort(await list(db.collection('batches'))),free=S.pt=='free';let fs=[];
  if(free)fs=await list(db.collection('pdfFolders').where('type','==','free'));
@@ -2640,7 +2719,7 @@ async function admPdfs(){
  ${(free||S.pb)&&fs.length>=2?`<details class="card" style="margin-top:8px"><summary><b>Change folder order</b></summary>${apHint}${apOrderList('pf','pdfFolders',fs,x=>'<b style="font-size:13px">'+esc(x.name)+'</b>')}</details>`:''}
  <div class="row" style="margin-top:8px"><input id="apfn" placeholder="New folder name" style="flex:1"><button class="p" onclick="apCreateFolder('pdf')">＋</button></div>
  ${hr}<div class="adh" style="margin-top:0">3. Add PDF</div>
- <div class="card"><span class="adl">PDF title</span><input id="apt" style="width:100%"><span class="adl">Google Drive link</span><input id="apl" style="width:100%" placeholder="https://drive.google.com/…"><span class="adl">Icon image link (optional)</span><input id="api" style="width:100%" placeholder="https://…"><button class="p" style="width:100%;margin-top:10px" onclick="apAddPdf()">Add PDF</button><small class="mu" style="display:block;margin-top:6px">Uploading a file straight from the device is an App feature — here, paste a Google Drive link.</small></div>
+ <div class="card"><span class="adl">PDF title</span><input id="apt" style="width:100%"><span class="adl">PDF file / Google Drive link</span><div class="row" style="margin:0"><input id="apl" style="flex:1;margin:4px 0" placeholder="https://drive.google.com/… or upload"><button type="button" class="s" onclick="admPickUpload('application/pdf,.pdf','pdf',(u,f)=>{const l=document.getElementById('apl'),t=document.getElementById('apt');if(l)l.value=u;if(t&&!t.value.trim())t.value=f.name.replace(/\.pdf$/i,'')},this)">📤 Upload PDF</button></div><span class="adl">Icon image (optional)</span><div class="row" style="margin:0"><input id="api" style="flex:1;margin:4px 0" placeholder="https://… or upload"><button type="button" class="s" onclick="admPickUpload('image/*','pdf_icon',u=>{const e=document.getElementById('api');if(e)e.value=u},this)">📤 Upload</button></div><button class="p" style="width:100%;margin-top:10px" onclick="apAddPdf()">Add PDF</button><small class="mu" style="display:block;margin-top:6px">Direct PDF &amp; icon upload (up to 24 MB) uses your free GitHub ysh-images repo. Larger PDFs can use a Google Drive link.</small></div>
  ${S.pf?`${hr}<div class="adh" style="margin-top:0">Existing PDFs in this folder</div>`+(items.length?apHint+`<div class="card" style="padding:4px 10px">`+apOrderList('pi','pdfs',items,x=>`<span class="row" style="gap:8px;flex-wrap:nowrap"><span style="width:34px;height:34px;border-radius:6px;overflow:hidden;flex:none;display:flex;align-items:center;justify-content:center;background:var(--card2)">${x.iconUrl?`<img src="${esc(x.iconUrl)}" style="width:100%;height:100%;object-fit:cover">`:'📄'}</span><span style="font-size:13px;overflow-wrap:anywhere">${esc(x.title)}</span></span>`,x=>apBtn('🗑️','Delete',"apDelPdf('"+esc(x.id)+"')",'var(--bad)'))+`</div>`:'<p class="mu">There is no PDF in this folder yet</p>'):''}`;
 }
 async function admVideos(){
@@ -2659,7 +2738,7 @@ async function admVideos(){
  ${fs.length>=2?`<details class="card" style="margin-top:8px"><summary><b>Change folder order</b></summary>${apHint}${apOrderList('vfo','videoFolders',fs,x=>'<b style="font-size:13px">'+esc(x.name)+'</b>')}</details>`:''}
  <div class="row" style="margin-top:8px"><input id="apfn" placeholder="New folder name" style="flex:1"><button class="p" onclick="apCreateFolder('video')">＋</button></div>
  ${hr}<div class="adh" style="margin-top:0">3. Add video</div>
- <div class="card"><span class="adl">Video title</span><input id="apt" style="width:100%"><span class="adl">YouTube link</span><input id="apl" style="width:100%" placeholder="https://youtu.be/…"><span class="adl">Thumbnail image link (optional)</span><input id="api" style="width:100%" placeholder="https://…"><button class="p" style="width:100%;margin-top:10px" onclick="apAddVideo()">Add video</button><small class="mu" style="display:block;margin-top:6px">Uploading a video file straight from the device is an App feature — here, paste a YouTube link.</small></div>
+ <div class="card"><span class="adl">Video title</span><input id="apt" style="width:100%"><span class="adl">YouTube link / Video upload</span><div class="row" style="margin:0"><input id="apl" style="flex:1;margin:4px 0" placeholder="https://youtu.be/…"><button type="button" class="s" onclick="admPickUpload('video/*','video',(u,f)=>{const l=document.getElementById('apl'),t=document.getElementById('apt');if(l)l.value=u;if(t&&!t.value.trim())t.value=f.name.replace(/\.[^.]+$/,'')},this)">📤 Upload Video</button></div><span class="adl">Thumbnail image (optional)</span><div class="row" style="margin:0"><input id="api" style="flex:1;margin:4px 0" placeholder="https://… or upload"><button type="button" class="s" onclick="admPickUpload('image/*','thumb',u=>{const e=document.getElementById('api');if(e)e.value=u},this)">📤 Upload</button></div><button class="p" style="width:100%;margin-top:10px" onclick="apAddVideo()">Add video</button><small class="mu" style="display:block;margin-top:6px">Thumbnails upload free via GitHub ysh-images. Direct video upload uses Firebase Storage (Blaze plan) — otherwise paste an Unlisted YouTube link.</small></div>
  ${(!b||S.vf)?`${hr}<div class="adh" style="margin-top:0">${loose?'Existing free videos (not in a folder)':'Existing videos in this folder'}</div>`+(items.length?(loose?'<small class="mu" style="display:block;margin-bottom:6px">These stay newest-first. To arrange videos by hand, put them in a folder.</small><div class="card" style="padding:4px 10px">'+items.map((x,k)=>`<div class="row" style="padding:6px 0;${k?'border-top:1px solid var(--line)':''}"><span style="flex:1;min-width:0">${tile(x)}</span>${del(x)}</div>`).join('')+'</div>':apHint+'<div class="card" style="padding:4px 10px">'+apOrderList('vi','videos',items,tile,del)+'</div>'):'<p class="mu">There is no video here yet</p>'):''}`;
 }
 
@@ -2751,16 +2830,25 @@ function fcReset(){if(!confirm('Reset progress? / रीसेट करें?\
 rfInit();
 </script>
 <script>
-/* ===== Yash Study Hub: "bookmark this website" reminder + cleanup of the old service worker (added separately; the app code above is untouched) ===== */
+/* ===== Yash Study Hub: offline status indicator + "bookmark this website" reminder ===== */
 (function () {
-  // 1) Remove the old service worker / saved copies (from the earlier install-as-app version), so students always get the live page.
+  // 1) Offline indicator bar (Network-First sw.js handles offline caching while always serving the live page when online)
   try {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
+    function syncNetBar() {
+      var id = 'yshOffBar', bar = document.getElementById(id);
+      if (navigator.onLine) { if (bar) bar.remove(); return; }
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = id;
+        bar.setAttribute('role', 'status');
+        bar.style.cssText = 'background:#334155;color:#fff;padding:6px 12px;font-size:12px;text-align:center;position:sticky;top:0;z-index:85';
+        bar.textContent = '📡 Offline mode — cached lists & offline tools are ready / ऑफ़लाइन मोड चालू है';
+        document.body.insertBefore(bar, document.body.firstChild);
+      }
     }
-    if (window.caches && caches.keys) {
-      caches.keys().then(function (ks) { ks.forEach(function (k) { if (k.indexOf('ysh-') === 0) caches.delete(k); }); }).catch(function () {});
-    }
+    window.addEventListener('online', syncNetBar);
+    window.addEventListener('offline', syncNetBar);
+    if (!navigator.onLine) syncNetBar();
   } catch (e) {}
 
   // 2) Bookmark reminder (shows again only after 30 days once closed)
