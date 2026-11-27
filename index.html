@@ -1129,7 +1129,7 @@ async home(){
  const bn=banners.length?`<div class="ban"><div class="track" id="trk">${banners.map(b=>`<img src="${esc(b.imageUrl)}" data-b="${esc(b.batchId||'')}" data-l="${esc(b.linkUrl||'')}" alt="">`).join('')}</div></div><div class="dots">${banners.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`:'';
  return topBar()+`<div class="wrap">`+(name?`<p class="hi">Hello! Welcome <span>${esc(name)}</span></p>`:'')+bn
  +`<div class="tiles">${TILES.filter(tileOn).map(t=>`<a class="tile" id="tl_${t[0]}" href="#/${t[0]}">${tileDot(t[0])?'<i class="rdot"></i>':''}<span class="e">${t[1]}</span><span class="l">${esc(t[2])}</span></a>`).join('')}</div>`
- +`<div id="soc" class="soc"></div>`+studyCard()+hsRender(toolsCards(),moreCard(),rfOn('feature_exam_boost')?boostCard():'',gyanCard(),
+ +`<a class="card cr" href="#/downloads" style="margin-top:14px;border:1.5px solid var(--ac);background:var(--card)"><span style="width:44px;height:44px;border-radius:12px;background:var(--navy);color:var(--yel);display:grid;place-items:center;font-size:22px;flex:none">📥</span><span style="flex:1;min-width:0"><b>Downloads / मेरे डाउनलोड्स</b><br><small class="mu" id="dlHomeSub">Web mein download ki gayi PDFs yahan milengi</small></span><span class="material-icons mu">chevron_right</span></a>`+`<div id="soc" class="soc"></div>`+studyCard()+hsRender(toolsCards(),moreCard(),rfOn('feature_exam_boost')?boostCard():'',gyanCard(),
  `<div class="sec">YouTube Videos <a href="${esc(cfg.youtubeUrl)}" target="_blank" rel="noopener">Channel</a></div>`
  +(vids.length?`<div class="strip">${vids.map(v=>{const id=yid(v.youtubeLink);return `<a class="vc" href="#/play/${id}/${encodeURIComponent(v.title||'')}"><img loading="lazy" src="${esc(v.thumbUrl||'https://i.ytimg.com/vi/'+id+'/mqdefault.jpg')}" alt=""><div>${esc(v.title)}</div></a>`}).join('')}</div>`:'<p class="mu">New videos will show up here.</p>'))
  +`</div>`},
@@ -1160,10 +1160,12 @@ async pdf(l,t,ext=true){const u=decodeURIComponent(l).trim(),ti=decodeURICompone
  if(!id&&(g||h.host=='docs.google.com')){setTimeout(()=>{if(!/^#\/pdfb?\//.test(location.hash))return;if(ext)window.open(u,'_blank','noopener');else alert('This link cannot be opened inside the app. Ask the admin to add the PDF’s own Drive file link. / कृपया एडमिन से PDF का अपना Drive फाइल लिंक जुड़वाएँ।');history.back()},50);return wrap('<p class="mu">Opening…</p>')}
  const src=id?`https://drive.google.com/file/d/${id}/preview`:'https://docs.google.com/gview?embedded=1&url='+encodeURIComponent(u),dl=id?`https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t`:u;
  let fn=(ti.replace(/[\\/:*?"<>|]/g,'_').trim()||'Yash Study Hub PDF');if(!/\.pdf$/i.test(fn))fn+='.pdf';
- window.pdfLoaded=false;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
- return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b>${esc(ti)}</b>${ext?`<a href="${esc(dl)}" target="_blank" rel="noopener" download="${esc(fn)}" title="Download PDF"><span class="material-icons">download</span></a>`:''}<a title="Reload" onclick="pdfReload()"><span class="material-icons">refresh</span></a>${ext?`<a href="${esc(u)}" target="_blank" rel="noopener" title="Open outside the app"><span class="material-icons">open_in_new</span></a>`:''}</div>
+ window.CUR_PDF={url:u,dl,src,title:ti,paid:!ext};window.pdfLoaded=false;clearTimeout(window.pdfT);window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
+ return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b>${esc(ti)}</b><a id="pdfdlb" title="Download in Web / वेब में डाउनलोड करें" onclick="dlSaveCurrent(this)"><span class="material-icons">download</span></a><a title="Reload" onclick="pdfReload()"><span class="material-icons">refresh</span></a></div>
  <div class="pdfbox"><div id="pdfpg" class="pdfpg"></div><iframe id="pdfv" class="pdf" ${ext?'':'sandbox="allow-scripts allow-same-origin allow-forms"'} src="${esc(src)}" onload="pdfOk()"></iframe>${ext?'':'<div class="pdfblk"></div>'}<div id="pdfer" class="pdfer" hidden><span class="material-icons" style="font-size:40px;opacity:.5">picture_as_pdf</span><span>Could not load this PDF. Check your internet connection and try again.<br>PDF लोड नहीं हो सका। इंटरनेट जाँचकर फिर कोशिश करें।</span><button class="p" onclick="pdfReload()">Try again</button></div></div>`)},
 async pdfb(l,t){return this.pdf(l,t,false)},
+async downloads(){return wrap(back+`<h2 class="pageTitle">Downloads / मेरे डाउनलोड्स</h2><input id="dlq" type="search" placeholder="Search downloaded PDFs / डाउनलोड की गई PDF खोजें" oninput="dlFilter(this.value)" style="margin:6px 0 8px"><div id="dll"><p class="mu">Loading…</p></div><p class="mu" style="font-size:11.5px;margin-top:14px">Ye PDFs sirf is Web ke Downloads section mein save rehti hain (phone storage mein save nahi hoti). Browser data clear karne par ye hat sakti hain.<br>ये PDFs केवल वेब के Downloads सेक्शन में सेव रहती हैं (फ़ोन स्टोरेज में नहीं)।</p>`)},
+async dlview(id){return wrap(`<div class="pdfhd"><a href="javascript:history.back()" title="Back"><span class="material-icons">arrow_back</span></a><b id="dlvt">PDF</b><a id="dlvz1" title="Zoom out" style="display:none" onclick="dlZoom(-0.25)"><span class="material-icons">zoom_out</span></a><a id="dlvz2" title="Zoom in" style="display:none" onclick="dlZoom(0.25)"><span class="material-icons">zoom_in</span></a></div><div id="dlvb"><p class="mu" style="padding:16px;text-align:center">Loading PDF… / PDF लोड हो रही है…</p></div>`)},
 async batches(){const bs=(await cl('batches',db.collection('batches'),3,['newBatchesAt'])).sort(ord),g=await bgranted(bs);
  const row=b=>{const on=g.has(b.id);return `<a class="card cr${on?' bgr':''}" href="#/batch/${esc(b.id)}">${bico(b)}<span style="flex:1;min-width:0"><b>${esc(b.title)}</b><br><small class="mu">${esc(bsub(b))}</small></span>${on?'<span class="unl">✅ Unlocked</span>':'<b class="pr">₹'+esc(b.price)+'</b>'}</a>`};
  return wrap(`<h2 class="pageTitle">Paid Batches</h2>`+(bs.length?[...bs.filter(b=>g.has(b.id)),...bs.filter(b=>!g.has(b.id))].map(row).join(''):'<p class="mu" style="text-align:center;margin:28px 0">No batch found</p>'))},
@@ -2349,7 +2351,7 @@ function spaceSync(){
  if(!themeDark()){SP.run=false;if(SP.c)SP.c.style.display='none';return}
  if(!SP.c){const c=document.createElement('canvas');c.id='space';document.body.prepend(c);SP.c=c;SP.x=c.getContext('2d');addEventListener('resize',spaceSize);spaceSize()}
  SP.c.style.display='block';
- const r=(location.hash.slice(2)||'home').split('/')[0],still=(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)||['test','revmock','fmq','pdf','pdfb','play','playb'].includes(r)||document.hidden;
+ const r=(location.hash.slice(2)||'home').split('/')[0],still=(window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches)||['test','revmock','fmq','pdf','pdfb','dlview','play','playb','playv','playvb'].includes(r)||document.hidden;
  SP.run=!still;if(SP.run){if(!SP.raf)SP.raf=requestAnimationFrame(spaceLoop)}else spaceDraw(0)}
 addEventListener('hashchange',spaceSync);document.addEventListener('visibilitychange',spaceSync);
 /* ---- Profile / news / notification helpers (same data as the app) ---- */
@@ -2411,7 +2413,10 @@ async function route(){
   const body=await V[p](a,b);
   if(my!==window.RT)return;
   app.innerHTML=(p=='home'?'':topBar())+body;
-  if(p=='home'){initHome();qDot()}
+  if(p=='home'){initHome();qDot();dlHomeBadge()}
+  if(p=='downloads')dlListDraw()
+  if(p=='dlview'&&a)dlOpenView(a)
+  if((p=='pdf'||p=='pdfb')&&window.CUR_PDF)dlMarkBtn()
   if(p=='batch'&&a)btInit(a);
   checkBell();
   if((p=='test'||p=='revmock'||p=='fmq')&&window.T&&document.getElementById('mtest'))initTest();
@@ -2638,6 +2643,180 @@ function apOrderList(key,col,arr,render,extra){window.AOL=window.AOL||{};AOL[key
 async function apMove(col,key,id,d){try{const a=(window.AOL||{})[key]||[],i=a.indexOf(id),j=i+d;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];
  await apWrites(a.map((x,k)=>w=>w.update(db.collection(col).doc(x),{order:k})));try{fqClear()}catch(e){}route()}catch(e){alert('Could not save the new order: '+e.message)}}
 const apHint='<small class="mu" style="display:block;margin:2px 0 6px">Use the arrows. Students see the same order.</small>';
+
+// ---- In-Web PDF Downloads (IndexedDB private browser storage — NEVER saved to phone storage) ----
+const DL_DB='ysh_web_downloads',DL_STORE='pdfs';
+function dlOpenDb(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error('IndexedDB not supported'));const r=indexedDB.open(DL_DB,1);r.onupgradeneeded=()=>{const d=r.result;if(!d.objectStoreNames.contains(DL_STORE))d.createObjectStore(DL_STORE,{keyPath:'id'})};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error||new Error('DB error'))})}
+async function dlPut(rec){const d=await dlOpenDb();return new Promise((res,rej)=>{const tx=d.transaction(DL_STORE,'readwrite');tx.objectStore(DL_STORE).put(rec);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+async function dlGet(id){const d=await dlOpenDb();return new Promise((res,rej)=>{const tx=d.transaction(DL_STORE,'readonly');const q=tx.objectStore(DL_STORE).get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error)})}
+async function dlDel(id){const d=await dlOpenDb();return new Promise((res,rej)=>{const tx=d.transaction(DL_STORE,'readwrite');tx.objectStore(DL_STORE).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error)})}
+async function dlAll(){const d=await dlOpenDb();return new Promise((res,rej)=>{const tx=d.transaction(DL_STORE,'readonly');const q=tx.objectStore(DL_STORE).getAll();q.onsuccess=()=>res((q.result||[]).sort((a,b)=>(b.savedAt||0)-(a.savedAt||0)));q.onerror=()=>rej(q.error)})}
+function dlIdFor(url){let h=5381;const s=String(url||'');for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))>>>0;return 'p'+h.toString(36)+'_'+s.length}
+const dlFmtSize=b=>!b?'':b<1048576?Math.max(1,Math.round(b/1024))+' KB':(b/1048576).toFixed(1)+' MB';
+
+function dlPopup(title,already,offlineOk){
+ const old=document.getElementById('dldlg');if(old)old.remove();
+ const o=document.createElement('div');o.className='ysx-ov';o.id='dldlg';
+ o.onclick=e=>{if(e.target===o)o.remove()};
+ o.innerHTML=`<div class="ysx-md" style="text-align:center">
+  <div style="font-size:40px;line-height:1">${already?'📥':'✅'}</div>
+  <h3 style="margin:8px 0 6px">${already?'Already in Downloads / पहले से डाउनलोड है':'PDF Downloaded / PDF डाउनलोड हो गई'}</h3>
+  <p style="font-weight:600;margin:0 0 8px;font-size:14px">${esc(title)}</p>
+  <p style="font-size:13px;line-height:1.45;margin:0 0 6px">Ye PDF <b>Home Screen ke &ldquo;Downloads&rdquo; section</b> mein save ho gayi hai (phone storage mein save nahi hui).<br><span class="mu">यह PDF <b>होम स्क्रीन के &ldquo;Downloads&rdquo; सेक्शन</b> में सेव हो गई है (फ़ोन स्टोरेज में नहीं)।</span></p>
+  <p class="mu" style="font-size:12px;margin:0 0 12px">${offlineOk?'⚡ Offline ready — bina internet bhi khul jayegi. / बिना इंटरनेट भी खुलेगी।':'☁️ Web ke Downloads section se seedha khol kar padh sakte hain.'}</p>
+  <div class="row" style="justify-content:center;margin:0">
+   <button type="button" class="s" onclick="document.getElementById('dldlg').remove()">OK / ठीक है</button>
+   <button type="button" class="p" onclick="document.getElementById('dldlg').remove();location.hash='#/downloads'">📥 Open Downloads</button>
+  </div></div>`;
+ document.body.appendChild(o);
+}
+
+async function dlMarkBtn(){
+ try{const cur=window.CUR_PDF,btn=document.getElementById('pdfdlb');if(!cur||!btn)return;
+  const ex=await dlGet(dlIdFor(cur.url));
+  if(ex)btn.innerHTML='<span class="material-icons" style="color:var(--yel)">download_done</span>';
+ }catch(e){}
+}
+
+async function dlSaveCurrent(btn){
+ const cur=window.CUR_PDF;if(!cur||btn&&btn.dataset.busy)return;
+ const id=dlIdFor(cur.url);
+ try{
+  const ex=await dlGet(id);
+  if(ex){dlPopup(ex.title,true,ex.mode==='blob');return}
+  if(btn){btn.dataset.busy='1';btn.innerHTML='<span class="material-icons">hourglass_top</span>'}
+  toast('Downloading to Web Downloads… / डाउनलोड हो रहा है…',8000);
+  let blob=null,mode='link',size=0;
+  // Try fetching actual PDF binary for true offline viewing (succeeds for jsDelivr/direct PDFs; Google Drive falls back cleanly to in-web link)
+  try{
+   const resp=await fetch(cur.dl||cur.url,{mode:'cors',credentials:'omit'});
+   if(resp.ok){
+    const b=await resp.blob();
+    if(b&&b.size>100){
+     const head=new Uint8Array(await b.slice(0,5).arrayBuffer());
+     const isPdf=(head[0]===0x25&&head[1]===0x50&&head[2]===0x44&&head[3]===0x46)||/pdf/i.test(b.type||'');
+     if(isPdf){blob=b;mode='blob';size=b.size}
+    }
+   }
+  }catch(e){}
+  await dlPut({id,title:cur.title||'PDF',url:cur.url,src:cur.src,paid:!!cur.paid,mode,blob,size,savedAt:Date.now()});
+  if(btn){btn.innerHTML='<span class="material-icons" style="color:var(--yel)">download_done</span>'}
+  dlPopup(cur.title||'PDF',false,mode==='blob');
+ }catch(e){
+  if(btn)btn.innerHTML='<span class="material-icons">download</span>';
+  alert('Download failed: '+(e.message||e));
+ }finally{if(btn)delete btn.dataset.busy}
+}
+
+async function dlHomeBadge(){
+ try{const el=document.getElementById('dlHomeSub');if(!el)return;
+  const all=await dlAll();
+  el.textContent=all.length?`${all.length} ${all.length==1?'PDF':'PDFs'} saved in Web • Tap to open / खोलने के लिए टैप करें`:'Web mein download ki gayi PDFs yahan milengi / डाउनलोड की गई PDFs यहाँ मिलेंगी';
+ }catch(e){}
+}
+
+function dlFilter(q){
+ q=String(q||'').trim().toLowerCase();
+ document.querySelectorAll('.dlrow').forEach(e=>{e.style.display=!q||e.dataset.t.includes(q)?'':'none'});
+}
+
+async function dlListDraw(){
+ const el=document.getElementById('dll');if(!el)return;
+ try{
+  const all=await dlAll();
+  if(!all.length){
+   el.innerHTML='<div class="card" style="text-align:center;padding:22px"><div style="font-size:36px">📥</div><b>Abhi koi PDF download nahi ki hai</b><p class="mu" style="margin:6px 0 12px">Kisi bhi PDF ko khol kar upar <b>Download (⬇)</b> icon dabaiye — wo yahan Web mein save ho jayegi.<br>किसी भी PDF में ऊपर <b>Download (⬇)</b> दबाएँ — वह यहीं सेव हो जाएगी।</p><a class="btnlink" href="#/pdfs">📚 Open PDF Library</a></div>';
+   return;
+  }
+  const totBytes=all.reduce((s,x)=>s+(x.size||0),0);
+  el.innerHTML=`<p class="mu" style="font-size:12px;margin:4px 2px 10px">${all.length} ${all.length==1?'PDF':'PDFs'} saved${totBytes?' • '+dlFmtSize(totBytes)+' stored offline':''}</p>`
+   +all.map(x=>{
+    const dt=x.savedAt?new Date(x.savedAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}):'';
+    const tag=x.mode==='blob'?`<span style="color:var(--okc);font-weight:600">⚡ Offline Ready${x.size?' · '+dlFmtSize(x.size):''}</span>`:'<span>☁️ Saved in Web</span>';
+    return `<div class="card cr dlrow" data-t="${esc((x.title||'').toLowerCase())}" style="cursor:pointer" onclick="location.hash='#/dlview/${esc(x.id)}'"><span style="font-size:24px">📄</span><span style="flex:1;min-width:0"><b>${esc(x.title)}</b><br><small class="mu">${tag}${x.paid?' · 🔒 Batch':''}${dt?' · '+esc(dt):''}</small></span><button type="button" class="s" title="Remove / हटाएँ" onclick="event.stopPropagation();dlRemove('${esc(x.id)}')">🗑️</button></div>`;
+   }).join('');
+ }catch(e){el.innerHTML='<p class="err">Downloads load nahi ho sake: '+esc(e.message||e)+'</p>'}
+}
+
+async function dlRemove(id){
+ if(!confirm('Remove this PDF from Downloads? / क्या इस PDF को Downloads से हटाएँ?'))return;
+ try{await dlDel(id);toast('Removed from Downloads / हटा दिया गया');dlListDraw()}catch(e){alert(e.message||e)}
+}
+
+// PDF.js lazy loader (cached by sw.js for 100% offline canvas rendering on Android/iOS/Desktop)
+function dlLoadPdfJs(){
+ if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+ if(window._pdfjsP)return window._pdfjsP;
+ window._pdfjsP=new Promise((res,rej)=>{
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js';
+  s.onload=()=>{try{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';res(window.pdfjsLib)}catch(e){rej(e)}};
+  s.onerror=()=>rej(new Error('PDF viewer script could not load. Connect to internet once to cache it.'));
+  document.head.appendChild(s);
+ });
+ return window._pdfjsP;
+}
+
+async function dlRenderCanvas(doc,scale){
+ const box=document.getElementById('dlvc');if(!box)return;
+ box.innerHTML='';
+ const dpr=Math.min(window.devicePixelRatio||1,2);
+ const baseW=Math.max(280,(box.clientWidth||window.innerWidth-32)-8);
+ for(let n=1;n<=doc.numPages;n++){
+  if(!document.getElementById('dlvc'))return;
+  const page=await doc.getPage(n);
+  const vp0=page.getViewport({scale:1});
+  const fitScale=(baseW/vp0.width)*scale;
+  const vp=page.getViewport({scale:fitScale});
+  const wrapDiv=document.createElement('div');
+  wrapDiv.style.cssText='margin:0 auto 12px;text-align:center';
+  const cv=document.createElement('canvas');
+  cv.width=Math.floor(vp.width*dpr);cv.height=Math.floor(vp.height*dpr);
+  cv.style.cssText=`width:${Math.floor(vp.width)}px;height:${Math.floor(vp.height)}px;max-width:none;background:#fff;border-radius:6px;box-shadow:0 2px 10px rgba(0,0,0,.15);display:block;margin:0 auto`;
+  cv.oncontextmenu=()=>false;
+  const ctx=cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  wrapDiv.appendChild(cv);
+  const cap=document.createElement('small');cap.className='mu';cap.textContent=`Page ${n} / ${doc.numPages}`;
+  wrapDiv.appendChild(cap);
+  box.appendChild(wrapDiv);
+  await page.render({canvasContext:ctx,viewport:vp}).promise;
+ }
+}
+
+function dlZoom(delta){
+ if(!window.DLV||!window.DLV.doc)return;
+ window.DLV.scale=Math.max(0.75,Math.min(2.5,+(window.DLV.scale+delta).toFixed(2)));
+ toast('Zoom: '+Math.round(window.DLV.scale*100)+'%');
+ dlRenderCanvas(window.DLV.doc,window.DLV.scale);
+}
+
+async function dlOpenView(id){
+ const box=document.getElementById('dlvb'),tt=document.getElementById('dlvt');if(!box)return;
+ try{
+  const rec=await dlGet(id);
+  if(!rec){box.innerHTML='<div class="card"><p class="mu">PDF Downloads mein nahi mili.</p><a class="btnlink" href="#/downloads">← Back to Downloads</a></div>';return}
+  if(tt)tt.textContent=rec.title||'PDF';
+  if(rec.mode==='blob'&&rec.blob){
+   box.innerHTML='<p class="mu" style="padding:16px;text-align:center">Rendering PDF… / PDF खुल रही है…</p>';
+   const pdfjs=await dlLoadPdfJs();
+   const ab=await rec.blob.arrayBuffer();
+   const doc=await pdfjs.getDocument({data:new Uint8Array(ab)}).promise;
+   window.DLV={doc,scale:1};
+   const z1=document.getElementById('dlvz1'),z2=document.getElementById('dlvz2');
+   if(z1)z1.style.display='';if(z2)z2.style.display='';
+   box.innerHTML='<div id="dlvc" style="overflow:auto;padding:8px 2px 24px;-webkit-overflow-scrolling:touch"></div>';
+   await dlRenderCanvas(doc,1);
+  }else{
+   // Drive-linked PDF: open inside sandboxed in-web viewer (no download / no external open)
+   window.pdfLoaded=false;clearTimeout(window.pdfT);
+   window.pdfT=setTimeout(()=>{const e=document.getElementById('pdfer');if(e&&!window.pdfLoaded){e.hidden=false;const b=document.getElementById('pdfpg');if(b)b.hidden=true}},20000);
+   box.innerHTML=`<div class="pdfbox"><div id="pdfpg" class="pdfpg"></div><iframe id="pdfv" class="pdf" sandbox="allow-scripts allow-same-origin allow-forms" src="${esc(rec.src)}" onload="pdfOk()"></iframe><div class="pdfblk"></div><div id="pdfer" class="pdfer" hidden><span class="material-icons" style="font-size:40px;opacity:.5">picture_as_pdf</span><span>Could not load this PDF. Check your internet connection and try again.<br>PDF लोड नहीं हो सका। इंटरनेट जाँचकर फिर कोशिश करें।</span><button class="p" onclick="pdfReload()">Try again</button></div></div>`;
+  }
+ }catch(e){
+  box.innerHTML='<div class="card"><p class="err">PDF khul nahi saki: '+esc(e.message||e)+'</p><a class="btnlink" href="#/downloads">← Back to Downloads</a></div>';
+ }
+}
 
 // ---- Direct File Upload for Web Admin Panel (Images & PDFs -> free GitHub ysh-images + jsDelivr; Videos -> Firebase Storage if Blaze enabled) ----
 const GH_UP={owner:'yashpcmishra-cyber',repo:'ysh-images',branch:'main',key:'ysh_gh_tok'};

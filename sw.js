@@ -1,14 +1,16 @@
 /* Yash Study Hub — Network-First Offline Service Worker
  * Online: always fetches the latest live page & updates cache in the background.
- * Offline: serves the cached app shell, Firebase SDKs, fonts, icons & images.
+ * Offline: serves the cached app shell, Firebase SDKs, PDF.js viewer, fonts, icons & images.
  */
-const CACHE_NAME = 'ysh-web-v1';
+const CACHE_NAME = 'ysh-web-v2';
 const APP_SHELL = [
   './',
   './index.html',
   './logo.png',
   './manifest.webmanifest',
-  './icon-192.png'
+  './icon-192.png',
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+  'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'
 ];
 
 // Dynamic API hosts that must ALWAYS bypass the service worker cache
@@ -26,7 +28,7 @@ const BYPASS_HOSTS = [
   'docs.google.com'
 ];
 
-// Static third-party hosts safe to cache for offline use (Firebase SDK, Fonts, Icons, CDN images)
+// Static third-party hosts safe to cache for offline use (Firebase SDK, PDF.js, Fonts, Icons, CDN images)
 const CACHEABLE_CDN_HOSTS = [
   'www.gstatic.com',
   'fonts.googleapis.com',
